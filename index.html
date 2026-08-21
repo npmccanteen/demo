@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="refresh" content="6;url=https://npmccanteen.github.io/home/">
+<title>NPMC Canteen Management System</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #fbfaf8;
+    --ink: #14161a;
+    --ink-soft: #5c6069;
+    --line: #e7e4de;
+    --accent: #2f6f4f;
+    --accent-soft: #eaf3ee;
+    --card: #ffffff;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Manrope', 'Hind Siliguri', sans-serif;
+  }
+
+  body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    padding: 24px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .glow{
+    position:absolute;
+    width: 520px; height: 520px;
+    border-radius:50%;
+    background: radial-gradient(circle, rgba(47,111,79,0.10), transparent 70%);
+    top: -160px; right: -160px;
+    pointer-events:none;
+  }
+  .glow2{
+    position:absolute;
+    width: 420px; height: 420px;
+    border-radius:50%;
+    background: radial-gradient(circle, rgba(47,111,79,0.06), transparent 70%);
+    bottom: -140px; left: -140px;
+    pointer-events:none;
+  }
+
+  .card{
+    position:relative;
+    width:100%;
+    max-width: 420px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 44px 36px 36px;
+    box-shadow: 0 1px 2px rgba(20,22,26,0.04), 0 24px 48px -20px rgba(20,22,26,0.12);
+  }
+
+  .mark{
+    width: 46px; height: 46px;
+    border-radius: 12px;
+    background: var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    margin: 0 auto 22px;
+  }
+
+  .brand{
+    text-align:center;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .brand b{ color: var(--ink); }
+
+  h1{
+    font-family:'Hind Siliguri', sans-serif;
+    font-weight: 600;
+    font-size: 22px;
+    line-height: 1.5;
+    text-align:center;
+    color: var(--ink);
+    margin: 4px 0 10px;
+  }
+
+  p.desc{
+    font-family:'Hind Siliguri', sans-serif;
+    text-align:center;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--ink-soft);
+    margin: 0 auto 28px;
+    max-width: 320px;
+  }
+
+  .link-row{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    background: var(--accent-soft);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+  }
+
+  .link-row svg{ flex-shrink:0; }
+
+  .link-row a{
+    color: var(--accent);
+    text-decoration:none;
+    font-size: 13.5px;
+    font-weight: 600;
+    word-break: break-all;
+  }
+
+  .cta{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap: 8px;
+    text-align:center;
+    text-decoration:none;
+    font-family:'Hind Siliguri', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: #ffffff;
+    background: var(--ink);
+    padding: 14px 20px;
+    border-radius: 12px;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .cta:hover{ background: #262a31; }
+  .cta:active{ transform: scale(0.98); }
+  .cta svg{ transition: transform 0.15s ease; }
+  .cta:hover svg{ transform: translateX(3px); }
+
+  .progress-wrap{
+    margin-top: 22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap: 8px;
+  }
+
+  .progress-track{
+    width: 120px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--line);
+    overflow:hidden;
+  }
+
+  .progress-fill{
+    height:100%;
+    width: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transform-origin: left;
+    animation: shrink 6s linear forwards;
+  }
+
+  @keyframes shrink{
+    from{ transform: scaleX(1); }
+    to{ transform: scaleX(0); }
+  }
+
+  .progress-label{
+    font-family:'Hind Siliguri', sans-serif;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    white-space:nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .progress-fill{ animation: none; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="glow"></div>
+  <div class="glow2"></div>
+
+  <div class="card">
+    <div class="mark">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2v6a3 3 0 0 0 3 3h0a3 3 0 0 0 3-3V2"/>
+        <path d="M9 11v11"/>
+        <path d="M18 2c-1.1 1.4-1.6 3-1.6 5.5S16.9 12 18 13c1.1-1 1.6-2 1.6-5.5S19.1 3.4 18 2z" transform="translate(0,0)"/>
+        <path d="M18 13v9"/>
+      </svg>
+    </div>
+
+    <div class="brand">NPMC <b>Canteen</b> Management System</div>
+    <h1>আমাদের ওয়েবসাইটের ঠিকানা পরিবর্তন হয়েছে</h1>
+    <p class="desc">
+      পুরোনো ঠিকানাটি খুব শীঘ্রই বন্ধ হয়ে যাবে। নতুন ঠিকানায় আপনাকে
+      স্বয়ংক্রিয়ভাবে নিয়ে যাওয়া হচ্ছে।
+    </p>
+
+    <div class="link-row">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2f6f4f" stroke-width="2">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+      </svg>
+      <a href="https://npmccanteen.github.io/home/">npmccanteen.github.io/home</a>
+    </div>
+
+    <a class="cta" href="https://npmccanteen.github.io/home/">
+      নতুন ওয়েবসাইটে যান
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14"/>
+        <path d="M12 5l7 7-7 7"/>
+      </svg>
+    </a>
+
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill"></div></div>
+      <span class="progress-label">রিডাইরেক্ট হচ্ছে…</span>
+    </div>
+  </div>
+
+</body>
+</html>
