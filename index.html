@@ -211,6 +211,24 @@
     max-height: 85vh; overflow-y: auto;
   }
   .hidden { display: none !important; }
+
+  /* Reader tab */
+  .reader-canvas-wrap { position: relative; display: inline-block; border: 1px solid var(--paper-line); background: #222; }
+  #readerCanvas { display: block; max-width: 100%; cursor: crosshair; }
+  .reader-steps { display: flex; gap: 8px; margin: 10px 0 16px 0; flex-wrap: wrap; }
+  .reader-step {
+    padding: 5px 11px; border-radius: 12px; font-size: 11.5px; font-weight: 600;
+    background: #EFEAD9; color: #9299AB;
+  }
+  .reader-step.done { background: #EAF3EC; color: var(--ok); }
+  .reader-step.active { background: var(--maroon); color: #fff; }
+  .roll-display {
+    font-family: 'JetBrains Mono', monospace; font-size: 22px; letter-spacing: 3px;
+    background: #FBF9F4; border: 1px solid var(--paper-line); padding: 10px 16px; border-radius: 3px;
+    display: inline-block;
+  }
+  .score-display { font-family: 'Fraunces', serif; font-size: 30px; color: var(--maroon); font-weight: 600; }
+  .low-confidence { color: var(--maroon); font-weight: 700; }
   .helper-text { font-size: 12px; color: #9299AB; margin-top: 4px; }
   a.link { color: var(--maroon); }
 
@@ -237,6 +255,19 @@
   </div>
 </div>
 
+<div id="loginOverlay" class="config-overlay hidden">
+  <div class="config-box" style="width:360px;">
+    <h2 style="font-family:'Fraunces',serif; margin-top:0;">Admin Login</h2>
+    <p class="page-desc" style="margin-bottom:16px;">Firebase Console &gt; Authentication এ যে email/password বানিয়েছ, সেটা দিয়ে login করো।</p>
+    <label>Email</label><input type="text" id="loginEmail" placeholder="you@example.com">
+    <label>Password</label><input type="text" id="loginPassword" placeholder="••••••••">
+    <div id="loginError" class="banner error hidden"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="doLogin()">Login</button>
+    </div>
+  </div>
+</div>
+
 <div class="app" id="mainApp">
   <div class="sidebar">
     <div class="brand">
@@ -246,8 +277,12 @@
     <div class="nav-item active" data-tab="bank" onclick="switchTab('bank')">📘 Question Bank</div>
     <div class="nav-item" data-tab="exams" onclick="switchTab('exams')">🗂 Exam Builder</div>
     <div class="nav-item" data-tab="sheets" onclick="switchTab('sheets')">🧾 OMR Sheets</div>
+    <div class="nav-item" data-tab="reader" onclick="switchTab('reader')">🔍 OMR Reader</div>
     <div class="nav-item" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</div>
-    <div class="nav-footer">Phase 1 — Bank, Builder &amp; Sheet Generator<br>Reader module comes next.</div>
+    <div class="nav-footer">
+      <div id="loggedInAs" style="margin-bottom:8px;"></div>
+      <span style="cursor:pointer; text-decoration:underline;" onclick="doLogout()">Logout</span>
+    </div>
   </div>
 
   <div class="main">
@@ -373,6 +408,71 @@
       </div>
     </div>
 
+    <!-- OMR READER -->
+    <div id="tab-reader" class="tab-content hidden">
+      <h1 class="page-title">OMR Reader</h1>
+      <div class="page-desc">Scan করা/তোলা ছবি আপলোড করো — 4 কোণার কালো মার্কারে ক্লিক করে align করো, তারপর automatically answer detect হবে।</div>
+
+      <div class="panel">
+        <div class="panel-title">1. Exam &amp; Image</div>
+        <label>Exam বেছে নাও</label>
+        <select id="readerExamSelect" onchange="resetReader()"><option value="">-- Exam --</option></select>
+        <label>Roll Number Digits (sheet generate করার সময় যা দিয়েছিলে)</label>
+        <select id="readerRollDigits">
+          <option value="5">5 digit</option>
+          <option value="6" selected>6 digit</option>
+        </select>
+        <label>Sheet-এর ছবি আপলোড করো</label>
+        <input type="file" id="readerFileInput" accept="image/*" onchange="loadReaderImage(event)">
+
+        <div id="readerStepsWrap" class="hidden">
+          <div class="reader-steps">
+            <span class="reader-step" id="rs-corners">1. চারটা কোণার মার্কারে ক্লিক করো</span>
+            <span class="reader-step" id="rs-analyze">2. Analyze</span>
+            <span class="reader-step" id="rs-review">3. Review &amp; Save</span>
+          </div>
+          <div class="reader-canvas-wrap">
+            <canvas id="readerCanvas"></canvas>
+          </div>
+          <div class="helper-text" id="cornerHint">ছবির উপরে ক্রমান্বয়ে ক্লিক করো: প্রথমে উপরের-বাম কোণার কালো বর্গ, তারপর উপরের-ডান, তারপর নিচের-বাম, তারপর নিচের-ডান।</div>
+
+          <div class="btn-row">
+            <button class="btn btn-outline btn-sm" onclick="undoCorner()">Undo Last Point</button>
+            <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeSheet()" disabled>Analyze Sheet</button>
+          </div>
+        </div>
+        <div id="readerError" class="banner error hidden" style="margin-top:14px;"></div>
+      </div>
+
+      <div class="panel hidden" id="reviewPanel">
+        <div class="panel-title">2. Review Result</div>
+        <div style="display:flex; gap:30px; align-items:center; flex-wrap:wrap;">
+          <div>
+            <label style="margin-top:0;">Detected Roll No. (ভুল হলে ঠিক করে দাও)</label>
+            <input type="text" id="detectedRoll" class="roll-display" style="font-size:18px; width:200px;">
+          </div>
+          <div>
+            <label style="margin-top:0;">Score</label>
+            <div class="score-display" id="detectedScore">—</div>
+          </div>
+        </div>
+        <div id="lowConfidenceNote" class="banner error hidden" style="margin-top:14px;"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveResult()">✓ Save Result</button>
+          <button class="btn btn-outline" onclick="resetReader()">Scan Next Sheet</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Results — <span id="resultsExamTitle">exam বেছে নাও</span></div>
+        <div class="stat-row" id="resultStats"></div>
+        <div id="resultsListWrap"><div class="empty-state">Exam বেছে নিলে result দেখাবে।</div></div>
+        <div class="btn-row">
+          <button class="btn btn-outline btn-sm" onclick="downloadResultsCSV()">⬇ Download CSV</button>
+        </div>
+      </div>
+    </div>
+
     <!-- SETTINGS -->
     <div id="tab-settings" class="tab-content hidden">
       <h1 class="page-title">Settings</h1>
@@ -405,14 +505,39 @@ function initFirebase(cfg) {
     firebase.initializeApp(cfg);
     db = firebase.firestore();
     document.getElementById('configOverlay').classList.add('hidden');
-    document.getElementById('mainApp').classList.remove('hidden');
-    loadQuestions();
-    loadExams();
     renderSettings(cfg);
+
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById('loginOverlay').classList.add('hidden');
+        document.getElementById('mainApp').classList.remove('hidden');
+        document.getElementById('loggedInAs').textContent = user.email || 'Logged in';
+        loadQuestions();
+        loadExams();
+      } else {
+        document.getElementById('mainApp').classList.add('hidden');
+        document.getElementById('loginOverlay').classList.remove('hidden');
+      }
+    });
   } catch (e) {
     console.error(e);
     showConfigError('Connect করতে সমস্যা হয়েছে: ' + e.message);
   }
+}
+
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.classList.add('hidden');
+  firebase.auth().signInWithEmailAndPassword(email, password).catch(e => {
+    errEl.textContent = 'Login ব্যর্থ: ' + e.message;
+    errEl.classList.remove('hidden');
+  });
+}
+
+function doLogout() {
+  firebase.auth().signOut();
 }
 
 function showConfigError(msg) {
@@ -469,6 +594,7 @@ function switchTab(tab) {
   document.querySelector('.nav-item[data-tab="' + tab + '"]').classList.add('active');
   if (tab === 'exams') renderExamQuestionPicker();
   if (tab === 'sheets') populateExamSelect();
+  if (tab === 'reader') populateReaderExamSelect();
 }
 
 /* ---------------- Question Bank ---------------- */
@@ -671,6 +797,15 @@ function populateExamSelect() {
   sel.value = current;
 }
 
+function populateReaderExamSelect() {
+  const sel = document.getElementById('readerExamSelect');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">-- Exam --</option>' +
+    exams.map(e => '<option value="' + e.id + '">' + escapeHtml(e.title) + ' (' + e.totalQuestions + ' Q)</option>').join('');
+  sel.value = current;
+  if (current) loadResultsForExam(current);
+}
+
 /* ---------------- OMR Sheet PDF Generation ---------------- */
 function generateOMRSheet() {
   const examId = document.getElementById('sheetExamSelect').value;
@@ -803,6 +938,354 @@ function generateAnswerKeyPDF() {
   });
 
   doc.save(sanitizeFilename(exam.title) + '_AnswerKey.pdf');
+}
+
+/* ---------------- OMR Reader ---------------- */
+// mm-space layout constants — MUST match generateOMRSheet()
+const SHEET_M = 10, SHEET_MARKER = 6;
+const MM_CORNERS = [
+  [SHEET_M + 3, SHEET_M + 3],                                  // top-left
+  [210 - SHEET_M - SHEET_MARKER + 3, SHEET_M + 3],              // top-right
+  [SHEET_M + 3, 297 - SHEET_M - SHEET_MARKER + 3],              // bottom-left
+  [210 - SHEET_M - SHEET_MARKER + 3, 297 - SHEET_M - SHEET_MARKER + 3] // bottom-right
+];
+
+let readerImage = null;
+let readerCanvas, readerCtx;
+let cornerPoints = [];
+let currentReaderExam = null;
+let currentReaderQuestions = [];
+let lastDetected = null; // { roll, answers: [{q, letter, confidence}], score, correctCount }
+let currentResults = [];
+
+function resetReader() {
+  readerImage = null;
+  cornerPoints = [];
+  lastDetected = null;
+  document.getElementById('readerFileInput').value = '';
+  document.getElementById('readerStepsWrap').classList.add('hidden');
+  document.getElementById('reviewPanel').classList.add('hidden');
+  document.getElementById('readerError').classList.add('hidden');
+  const examId = document.getElementById('readerExamSelect').value;
+  if (examId) {
+    currentReaderExam = exams.find(e => e.id === examId);
+    currentReaderQuestions = currentReaderExam ?
+      currentReaderExam.questionIds.map(id => questions.find(q => q.id === id)).filter(Boolean) : [];
+    loadResultsForExam(examId);
+  } else {
+    currentReaderExam = null;
+    document.getElementById('resultsExamTitle').textContent = 'exam বেছে নাও';
+    document.getElementById('resultsListWrap').innerHTML = '<div class="empty-state">Exam বেছে নিলে result দেখাবে।</div>';
+    document.getElementById('resultStats').innerHTML = '';
+  }
+}
+
+function loadReaderImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const examId = document.getElementById('readerExamSelect').value;
+  if (!examId) {
+    document.getElementById('readerError').textContent = 'আগে একটা Exam বেছে নাও।';
+    document.getElementById('readerError').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('readerError').classList.add('hidden');
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      readerImage = img;
+      cornerPoints = [];
+      const targetW = Math.min(1100, img.naturalWidth);
+      const scale = targetW / img.naturalWidth;
+      readerCanvas = document.getElementById('readerCanvas');
+      readerCanvas.width = targetW;
+      readerCanvas.height = Math.round(img.naturalHeight * scale);
+      readerCtx = readerCanvas.getContext('2d');
+      redrawReaderCanvas();
+      document.getElementById('readerStepsWrap').classList.remove('hidden');
+      document.getElementById('reviewPanel').classList.add('hidden');
+      setStepState('rs-corners', 'active');
+      setStepState('rs-analyze', '');
+      setStepState('rs-review', '');
+      document.getElementById('analyzeBtn').disabled = true;
+      readerCanvas.onclick = handleCanvasClick;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function redrawReaderCanvas() {
+  if (!readerImage) return;
+  readerCtx.drawImage(readerImage, 0, 0, readerCanvas.width, readerCanvas.height);
+  const labels = ['TL', 'TR', 'BL', 'BR'];
+  cornerPoints.forEach((p, i) => {
+    readerCtx.strokeStyle = '#00FF88';
+    readerCtx.lineWidth = 2;
+    readerCtx.beginPath();
+    readerCtx.arc(p.x, p.y, 8, 0, 2 * Math.PI);
+    readerCtx.stroke();
+    readerCtx.fillStyle = '#00FF88';
+    readerCtx.font = 'bold 13px sans-serif';
+    readerCtx.fillText(labels[i], p.x + 10, p.y - 8);
+  });
+}
+
+function handleCanvasClick(e) {
+  if (cornerPoints.length >= 4) return;
+  const rect = readerCanvas.getBoundingClientRect();
+  const scaleX = readerCanvas.width / rect.width;
+  const scaleY = readerCanvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  cornerPoints.push({ x, y });
+  redrawReaderCanvas();
+  if (cornerPoints.length === 4) {
+    setStepState('rs-corners', 'done');
+    setStepState('rs-analyze', 'active');
+    document.getElementById('analyzeBtn').disabled = false;
+    document.getElementById('cornerHint').textContent = '৪টা পয়েন্টই দেওয়া হয়ে গেছে। ভুল হলে "Undo" চাপো, ঠিক থাকলে Analyze চাপো।';
+  }
+}
+
+function undoCorner() {
+  if (cornerPoints.length === 0) return;
+  cornerPoints.pop();
+  redrawReaderCanvas();
+  document.getElementById('analyzeBtn').disabled = true;
+  setStepState('rs-corners', 'active');
+  setStepState('rs-analyze', '');
+}
+
+function setStepState(id, state) {
+  const el = document.getElementById(id);
+  el.classList.remove('done', 'active');
+  if (state) el.classList.add(state);
+}
+
+/* ---- Homography (mm-space -> pixel-space), 4-point DLT ---- */
+function computeHomography(src, dst) {
+  // src, dst: arrays of 4 [x,y] pairs
+  const A = [], b = [];
+  for (let i = 0; i < 4; i++) {
+    const [x, y] = src[i], [u, v] = dst[i];
+    A.push([x, y, 1, 0, 0, 0, -x * u, -y * u]); b.push(u);
+    A.push([0, 0, 0, x, y, 1, -x * v, -y * v]); b.push(v);
+  }
+  const h = solveLinearSystem(A, b); // 8 unknowns
+  return [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
+}
+
+function solveLinearSystem(A, b) {
+  const n = A.length;
+  const M = A.map((row, i) => [...row, b[i]]);
+  for (let col = 0; col < n; col++) {
+    let pivot = col;
+    for (let r = col + 1; r < n; r++) if (Math.abs(M[r][col]) > Math.abs(M[pivot][col])) pivot = r;
+    [M[col], M[pivot]] = [M[pivot], M[col]];
+    const pv = M[col][col];
+    if (Math.abs(pv) < 1e-12) continue;
+    for (let c = col; c <= n; c++) M[col][c] /= pv;
+    for (let r = 0; r < n; r++) {
+      if (r === col) continue;
+      const factor = M[r][col];
+      for (let c = col; c <= n; c++) M[r][c] -= factor * M[col][c];
+    }
+  }
+  return M.map(row => row[n]);
+}
+
+function mapMmToPx(H, x, y) {
+  const denom = H[6] * x + H[7] * y + H[8];
+  return [(H[0] * x + H[1] * y + H[2]) / denom, (H[3] * x + H[4] * y + H[5]) / denom];
+}
+
+function sampleDarkness(px, py, rPx) {
+  const x0 = Math.max(0, Math.round(px - rPx)), y0 = Math.max(0, Math.round(py - rPx));
+  const w = Math.min(readerCanvas.width - x0, Math.round(rPx * 2));
+  const h = Math.min(readerCanvas.height - y0, Math.round(rPx * 2));
+  if (w <= 0 || h <= 0) return 255;
+  const data = readerCtx.getImageData(x0, y0, w, h).data;
+  let sum = 0, count = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    sum += (data[i] + data[i + 1] + data[i + 2]) / 3;
+    count++;
+  }
+  return count ? sum / count : 255;
+}
+
+function pickDarkest(darknessArr) {
+  let minVal = 999, minIdx = -1, secondVal = 999;
+  darknessArr.forEach((v, i) => {
+    if (v < minVal) { secondVal = minVal; minVal = v; minIdx = i; }
+    else if (v < secondVal) { secondVal = v; }
+  });
+  const contrast = secondVal - minVal;
+  if (minVal > 195) return { idx: -1, confident: true }; // nothing filled
+  if (contrast < 18) return { idx: minIdx, confident: false }; // ambiguous
+  return { idx: minIdx, confident: true };
+}
+
+function analyzeSheet() {
+  const errEl = document.getElementById('readerError');
+  if (cornerPoints.length !== 4) { errEl.textContent = '৪টা কোণার পয়েন্ট দাও আগে।'; errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
+
+  const dst = cornerPoints.map(p => [p.x, p.y]);
+  const H = computeHomography(MM_CORNERS, dst);
+
+  // px-per-mm scale (for bubble sampling radius)
+  const dx = cornerPoints[1].x - cornerPoints[0].x, dy = cornerPoints[1].y - cornerPoints[0].y;
+  const pxPerMm = Math.sqrt(dx * dx + dy * dy) / 184;
+  const rPx = Math.max(3, pxPerMm * 1.4);
+
+  const rollDigits = parseInt(document.getElementById('readerRollDigits').value, 10);
+  const rollStartX = SHEET_M + SHEET_MARKER + 30, rollColW = 8, bubbleGap = 5.2;
+  const rollBaseY = SHEET_M + 40 + 4; // = 54
+
+  let rollStr = '';
+  let rollLowConfidence = false;
+  for (let col = 0; col < rollDigits; col++) {
+    const cxMm = rollStartX + col * rollColW;
+    const darkness = [];
+    for (let d = 0; d <= 9; d++) {
+      const cyMm = rollBaseY + d * bubbleGap;
+      const [px, py] = mapMmToPx(H, cxMm, cyMm);
+      darkness.push(sampleDarkness(px, py, rPx));
+    }
+    const pick = pickDarkest(darkness);
+    if (pick.idx === -1) { rollStr += '_'; rollLowConfidence = true; }
+    else { rollStr += String(pick.idx); if (!pick.confident) rollLowConfidence = true; }
+  }
+
+  const qStartY = rollBaseY + 10 * bubbleGap + 14;
+  const usableW = 210 - 2 * (SHEET_M + SHEET_MARKER + 6);
+  const cols = 5, colW = usableW / cols, rowH = 8;
+  const perCol = Math.ceil(currentReaderQuestions.length / cols);
+  const letters = ['A', 'B', 'C', 'D'];
+
+  let correctCount = 0;
+  let anyLowConfidence = rollLowConfidence;
+  const answerRows = currentReaderQuestions.map((q, i) => {
+    const col = Math.floor(i / perCol), row = i % perCol;
+    const xMm = SHEET_M + SHEET_MARKER + 6 + col * colW;
+    const qyMm = qStartY + row * rowH;
+    const darkness = letters.map((letter, li) => {
+      const bxMm = xMm + 9 + li * 7.5;
+      const [px, py] = mapMmToPx(H, bxMm, qyMm);
+      return sampleDarkness(px, py, rPx);
+    });
+    const pick = pickDarkest(darkness);
+    const letter = pick.idx === -1 ? null : letters[pick.idx];
+    if (!pick.confident) anyLowConfidence = true;
+    const isCorrect = letter && letter === q.correct;
+    if (isCorrect) correctCount++;
+    return { qIndex: i + 1, letter, correct: q.correct, isCorrect, confident: pick.confident };
+  });
+
+  lastDetected = {
+    roll: rollStr,
+    answers: answerRows,
+    correctCount,
+    total: currentReaderQuestions.length,
+    lowConfidence: anyLowConfidence
+  };
+
+  document.getElementById('detectedRoll').value = rollStr;
+  document.getElementById('detectedScore').textContent = correctCount + ' / ' + currentReaderQuestions.length;
+  const lcNote = document.getElementById('lowConfidenceNote');
+  if (anyLowConfidence) {
+    lcNote.textContent = '⚠ কিছু bubble স্পষ্টভাবে পড়া যায়নি (হালকা দাগ, একাধিক দাগ, অথবা কোনো দাগই নেই) — Roll number আর নিচের কোনো প্রশ্নগুলো check করো একবার।';
+    lcNote.classList.remove('hidden');
+  } else {
+    lcNote.classList.add('hidden');
+  }
+
+  setStepState('rs-analyze', 'done');
+  setStepState('rs-review', 'active');
+  document.getElementById('reviewPanel').classList.remove('hidden');
+  document.getElementById('reviewPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function saveResult() {
+  if (!lastDetected || !currentReaderExam) return;
+  const roll = document.getElementById('detectedRoll').value.trim();
+  if (!roll) { alert('Roll number দাও।'); return; }
+
+  db.collection('results').add({
+    examId: currentReaderExam.id,
+    examTitle: currentReaderExam.title,
+    roll,
+    correctCount: lastDetected.correctCount,
+    total: lastDetected.total,
+    answers: lastDetected.answers.map(a => ({ q: a.qIndex, letter: a.letter })),
+    flaggedLowConfidence: lastDetected.lowConfidence,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    setStepState('rs-review', 'done');
+    loadResultsForExam(currentReaderExam.id);
+    resetReader();
+    document.getElementById('readerExamSelect').value = currentReaderExam.id;
+    currentReaderExam = exams.find(e => e.id === currentReaderExam.id);
+  }).catch(e => {
+    document.getElementById('readerError').textContent = 'Save করতে সমস্যা: ' + e.message;
+    document.getElementById('readerError').classList.remove('hidden');
+  });
+}
+
+function loadResultsForExam(examId) {
+  const exam = exams.find(e => e.id === examId);
+  document.getElementById('resultsExamTitle').textContent = exam ? exam.title : 'exam বেছে নাও';
+  db.collection('results').where('examId', '==', examId).get().then(snap => {
+    currentResults = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => b.correctCount - a.correctCount);
+    renderResultsList(exam);
+  }).catch(e => console.error(e));
+}
+
+function renderResultsList(exam) {
+  const wrap = document.getElementById('resultsListWrap');
+  const statsWrap = document.getElementById('resultStats');
+  if (currentResults.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">এখনো কোনো sheet scan হয়নি।</div>';
+    statsWrap.innerHTML = '';
+    return;
+  }
+  const avg = (currentResults.reduce((s, r) => s + r.correctCount, 0) / currentResults.length).toFixed(1);
+  const highest = Math.max(...currentResults.map(r => r.correctCount));
+  statsWrap.innerHTML =
+    '<div class="stat-box"><div class="stat-num">' + currentResults.length + '</div><div class="stat-label">Sheets scanned</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + avg + '</div><div class="stat-label">Average score</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + highest + '</div><div class="stat-label">Highest score</div></div>';
+
+  let html = '<table><tr><th>Roll</th><th>Score</th><th>Flag</th><th></th></tr>';
+  currentResults.forEach(r => {
+    html += '<tr><td>' + escapeHtml(r.roll) + '</td><td>' + r.correctCount + ' / ' + r.total + '</td>' +
+      '<td>' + (r.flaggedLowConfidence ? '<span class="low-confidence">⚠ Review</span>' : '—') + '</td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="deleteResult(\'' + r.id + '\')">Delete</button></td></tr>';
+  });
+  html += '</table>';
+  wrap.innerHTML = html;
+}
+
+function deleteResult(id) {
+  if (!confirm('এই result মুছে ফেলবে?')) return;
+  db.collection('results').doc(id).delete().then(() => loadResultsForExam(currentReaderExam.id));
+}
+
+function downloadResultsCSV() {
+  if (currentResults.length === 0) { alert('কোনো result নেই।'); return; }
+  let csv = 'Roll,Score,Total,Flagged\n';
+  currentResults.forEach(r => {
+    csv += r.roll + ',' + r.correctCount + ',' + r.total + ',' + (r.flaggedLowConfidence ? 'yes' : 'no') + '\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = sanitizeFilename(currentReaderExam ? currentReaderExam.title : 'results') + '_results.csv';
+  a.click();
 }
 
 /* ---------------- Helpers ---------------- */
