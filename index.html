@@ -879,67 +879,132 @@ function generateOMRSheet() {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const PW = 210, PH = 297;
 
-  // ---- Fiducial corner markers (for later perspective correction) ----
-  const M = 10; // margin
-  const markerSize = 6;
-  function fiducial(x, y) { doc.setFillColor(0, 0, 0); doc.rect(x, y, markerSize, markerSize, 'F'); }
+  // Palette
+  const MAROON = [163, 46, 46], INK = [22, 33, 62], GOLD = [199, 154, 61], GREY = [110, 110, 110];
+
+  // ---- Fiducial corner markers — EXACT position/size unchanged (required by OMR Reader) ----
+  const M = 10, markerSize = 6;
+  function fiducial(x, y) {
+    doc.setFillColor(255, 255, 255);
+    doc.rect(x - 1, y - 1, markerSize + 2, markerSize + 2, 'F');
+    doc.setFillColor(0, 0, 0);
+    doc.rect(x, y, markerSize, markerSize, 'F');
+  }
   fiducial(M, M);
   fiducial(PW - M - markerSize, M);
   fiducial(M, PH - M - markerSize);
   fiducial(PW - M - markerSize, PH - M - markerSize);
 
-  // ---- Header ----
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(20, 20, 20);
-  doc.text(institution, PW / 2, M + 12, { align: 'center' });
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text(exam.title + (exam.date ? '   |   Date: ' + exam.date : ''), PW / 2, M + 18, { align: 'center' });
-  doc.setLineWidth(0.4);
-  doc.line(M + markerSize + 4, M + 22, PW - M - markerSize - 4, M + 22);
+  const frameTop = M + markerSize + 1;      // 17
+  const contentL = M + markerSize + 6;      // 22
+  const contentR = PW - M - markerSize - 6; // 188
+  const contentW = contentR - contentL;     // 166 — same as original usableW
 
-  // ---- Student info row ----
-  let y = M + 30;
-  doc.setFontSize(9.5);
-  doc.text('Student Name:', M + markerSize + 6, y);
-  doc.line(M + markerSize + 30, y + 0.5, M + 100, y + 0.5);
-  doc.text('Exam ID: ' + exam.id.slice(0, 8), PW - M - markerSize - 45, y);
+  // ---- Outer frame ----
+  doc.setDrawColor(...INK);
+  doc.setLineWidth(0.5);
+  doc.rect(frameTop, frameTop, PW - 2 * frameTop, PH - 2 * frameTop);
 
-  // ---- Roll number bubble grid ----
-  y += 10;
+  // ---- Header band ----
+  doc.setFillColor(...MAROON);
+  doc.rect(frameTop, frameTop, PW - 2 * frameTop, 9, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.text('ROLL NO.', M + markerSize + 6, y);
+  doc.setFontSize(12.5);
+  doc.setTextColor(255, 255, 255);
+  doc.text(institution, PW / 2, frameTop + 6.2, { align: 'center' });
+  doc.setFillColor(...GOLD);
+  doc.rect(frameTop, frameTop + 9, PW - 2 * frameTop, 0.8, 'F');
+
   doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...INK);
+  doc.text(exam.title, PW / 2, frameTop + 14, { align: 'center' });
+  doc.setFontSize(7.5);
+  doc.setTextColor(...GREY);
+  doc.text((exam.date ? 'Date: ' + exam.date + '    ' : '') + 'Exam ID: ' + exam.id.slice(0, 8), PW / 2, frameTop + 18, { align: 'center' });
+
+  // ---- Student info box ----
+  doc.setDrawColor(214, 208, 190);
+  doc.setLineWidth(0.3);
+  doc.setFillColor(250, 248, 242);
+  doc.roundedRect(contentL, frameTop + 21, contentW, 7, 1, 1, 'FD');
+  doc.setFontSize(9);
+  doc.setTextColor(...INK);
+  doc.text('Student Name:', contentL + 3, frameTop + 25.5);
+  doc.setDrawColor(...INK);
+  doc.line(contentL + 27, frameTop + 26, contentL + contentW * 0.62, frameTop + 26);
+
+  // ---- Roll number section (y = 50, fixed — OMR Reader assumes this exact baseline) ----
+  let y = M + 40; // 50
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...MAROON);
+  doc.text('ROLL NUMBER', contentL, y - 2);
+  doc.setDrawColor(...INK);
+  doc.setLineWidth(0.25);
+  doc.line(contentL, y - 0.6, contentL + 28, y - 0.6);
+
   const rollStartX = M + markerSize + 30;
   const rollColW = 8;
   const bubbleR = 2.1;
   const bubbleGap = 5.2;
+
+  doc.setDrawColor(214, 208, 190);
+  doc.setLineWidth(0.3);
+  doc.rect(rollStartX - 4, y - 5, rollDigits * rollColW + 2, 6 + 10 * bubbleGap, 'S');
+
   for (let col = 0; col < rollDigits; col++) {
     const cx = rollStartX + col * rollColW;
-    // digit box at top
-    doc.rect(cx - 3, y - 5, 6, 6);
+    doc.setFillColor(...INK);
+    doc.rect(cx - 3, y - 5, 6, 6, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7);
     for (let d = 0; d <= 9; d++) {
       const cy = y + 4 + d * bubbleGap;
+      doc.setDrawColor(60, 60, 60);
+      doc.setLineWidth(0.25);
       doc.circle(cx, cy, bubbleR);
+      doc.setTextColor(90, 90, 90);
       doc.setFontSize(6.5);
       doc.text(String(d), cx, cy + 1, { align: 'center' });
     }
   }
 
-  // ---- Instructions ----
-  doc.setFontSize(8.5);
+  // ---- Instructions box ----
+  const instrY = y + 4 + 10 * bubbleGap + 3;
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.7);
+  doc.line(contentL, instrY, contentL, instrY + 6.5);
+  doc.setDrawColor(214, 208, 190);
+  doc.setLineWidth(0.2);
+  doc.rect(contentL, instrY, contentW, 6.5, 'S');
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
-  doc.text('Instructions: Use a black/blue ball pen. Fill the bubble completely. One answer per question only.',
-    M + markerSize + 6, y + 4 + 10 * bubbleGap + 6);
+  doc.setTextColor(...INK);
+  doc.text('Use a black/blue ball pen. Fill each bubble completely — ● not ○. One answer per question.',
+    contentL + 3, instrY + 4.2);
 
-  // ---- Question bubble grid ----
+  // ---- Question bubble grid (positions unchanged — required by OMR Reader) ----
   let qStartY = y + 4 + 10 * bubbleGap + 14;
   const usableW = PW - 2 * (M + markerSize + 6);
   const cols = 5;
   const colW = usableW / cols;
   const rowH = 8;
   const perCol = Math.ceil(examQuestions.length / cols);
+  const letters = ['A', 'B', 'C', 'D'];
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...MAROON);
+  doc.text('ANSWERS', contentL, qStartY - 5);
+  doc.setDrawColor(...INK);
+  doc.setLineWidth(0.25);
+  doc.line(contentL, qStartY - 3.4, contentL + 20, qStartY - 3.4);
+
+  const gridH = perCol * rowH + 4;
+  doc.setDrawColor(214, 208, 190);
+  doc.setLineWidth(0.25);
+  doc.rect(contentL, qStartY - 6, contentW, gridH + 6, 'S');
 
   doc.setFont('helvetica', 'normal');
   examQuestions.forEach((q, i) => {
@@ -949,21 +1014,29 @@ function generateOMRSheet() {
     const qy = qStartY + row * rowH;
 
     doc.setFontSize(8.5);
+    doc.setTextColor(...INK);
     doc.text(String(i + 1) + '.', x, qy + 2);
 
-    const letters = ['A', 'B', 'C', 'D'];
     letters.forEach((letter, li) => {
       const bx = x + 9 + li * 7.5;
+      doc.setDrawColor(60, 60, 60);
+      doc.setLineWidth(0.25);
       doc.circle(bx, qy, 2);
       doc.setFontSize(6);
+      doc.setTextColor(90, 90, 90);
       doc.text(letter, bx, qy + 1, { align: 'center' });
     });
   });
 
   // ---- Footer ----
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.4);
+  doc.line(contentL, PH - frameTop - 4, contentR, PH - frameTop - 4);
   doc.setFontSize(7.5);
-  doc.setTextColor(120, 120, 120);
-  doc.text('Generated by অরুণদীপ্ত OMR System', M + markerSize + 6, PH - M - 2);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...GREY);
+  doc.text('অরুণদীপ্ত OMR System', contentL, PH - frameTop - 1);
+  doc.text('Print at actual size (100%) — do not scale to fit page', contentR, PH - frameTop - 1, { align: 'right' });
 
   doc.save(sanitizeFilename(exam.title) + '_OMR_Sheet.pdf');
 }
@@ -1363,7 +1436,7 @@ async function callGeminiVision(base64, mimeType, apiKey) {
     'Set "correct" to null if the correct answer is not visibly marked or given in the image. Keep original language and script exactly as written. ' +
     'If a question has more or fewer than 4 options, still map the first four into A-D as best as possible.';
 
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=' + apiKey;
   const body = {
     contents: [{
       parts: [
