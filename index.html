@@ -293,6 +293,37 @@
       <div class="page-desc">সব প্রশ্ন এখানে জমা থাকবে — পরে exam বানানোর সময় এখান থেকেই বাছাই করবে।</div>
 
       <div class="panel">
+        <div class="panel-title">📷 ছবি থেকে AI দিয়ে প্রশ্ন বসাও</div>
+        <div class="page-desc" style="margin-bottom:14px;">Question paper-এর ছবি (একাধিক দেওয়া যায়) আপলোড করো — Gemini প্রশ্ন+option গুলো বের করে দেবে, নিচে review করে ঠিকঠাক থাকলে bank-এ যোগ করবে।</div>
+        <div style="display:flex; gap:12px;">
+          <div style="flex:1;">
+            <label>Subject (সব ছবির জন্য)</label>
+            <input type="text" id="aiSubject" placeholder="e.g. Physiology">
+          </div>
+          <div style="flex:1;">
+            <label>Chapter / Topic (সব ছবির জন্য)</label>
+            <input type="text" id="aiChapter" placeholder="e.g. Nerve-Muscle">
+          </div>
+        </div>
+        <label>ছবি বাছাই করো (একাধিক নেওয়া যাবে)</label>
+        <input type="file" id="aiImageInput" accept="image/*" multiple>
+        <div id="aiExtractError" class="banner error hidden" style="margin-top:14px;"></div>
+        <div id="aiExtractStatus" class="banner hidden" style="margin-top:14px;"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="aiExtractBtn" onclick="extractQuestionsFromImages()">✨ Extract Questions</button>
+        </div>
+
+        <div id="aiReviewWrap" class="hidden" style="margin-top:22px;">
+          <div class="panel-title" style="margin-bottom:10px;">Review করো (correct answer ছবিতে না থাকলে নিজে বসাও)</div>
+          <div id="aiReviewTable"></div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="addAllExtractedToBank()">✓ বাছাইকৃত সব প্রশ্ন Bank-এ যোগ করো</button>
+            <button class="btn btn-outline" onclick="discardAIExtraction()">বাতিল করো</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
         <div class="panel-title">নতুন প্রশ্ন যোগ করো</div>
         <div style="display:flex; gap:12px;">
           <div style="flex:1;">
@@ -484,6 +515,19 @@
           <button class="btn btn-danger btn-sm" onclick="resetConfig()">Disconnect / Change Project</button>
         </div>
       </div>
+
+      <div class="panel">
+        <div class="panel-title">Gemini API Key (ছবি থেকে প্রশ্ন বসানোর জন্য)</div>
+        <div class="page-desc" style="margin-bottom:10px;">
+          <a class="link" href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> থেকে বিনামূল্যে key নিতে পারো। এই key শুধু তোমার এই browser-এ save থাকে।
+        </div>
+        <label>API Key</label>
+        <input type="text" id="geminiKeyInput" placeholder="AIzaSy...">
+        <div id="geminiKeyStatus" class="banner success hidden" style="margin-top:10px;"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-sm" onclick="saveGeminiKey()">Save Key</button>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -575,6 +619,17 @@ function renderSettings(cfg) {
     '<tr><td>Auth Domain</td><td>' + cfg.authDomain + '</td></tr></table>';
 }
 
+/* ---- Gemini key ---- */
+function getGeminiKey() { return localStorage.getItem('omr_gemini_key') || ''; }
+function saveGeminiKey() {
+  const key = document.getElementById('geminiKeyInput').value.trim();
+  if (!key) return;
+  localStorage.setItem('omr_gemini_key', key);
+  const el = document.getElementById('geminiKeyStatus');
+  el.textContent = 'Key save হয়েছে।';
+  el.classList.remove('hidden');
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('mainApp').classList.add('hidden');
   const cfg = getStoredConfig();
@@ -595,6 +650,7 @@ function switchTab(tab) {
   if (tab === 'exams') renderExamQuestionPicker();
   if (tab === 'sheets') populateExamSelect();
   if (tab === 'reader') populateReaderExamSelect();
+  if (tab === 'settings') document.getElementById('geminiKeyInput').value = getGeminiKey();
 }
 
 /* ---------------- Question Bank ---------------- */
@@ -1287,6 +1343,166 @@ function downloadResultsCSV() {
   a.download = sanitizeFilename(currentReaderExam ? currentReaderExam.title : 'results') + '_results.csv';
   a.click();
 }
+
+/* ---------------- AI Question Extraction (Gemini Vision) ---------------- */
+let aiExtractedQuestions = [];
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function callGeminiVision(base64, mimeType, apiKey) {
+  const prompt = 'You are given an image of an MCQ (multiple choice) question paper, possibly in Bengali and/or English. ' +
+    'Extract every question you can clearly read. Return ONLY a raw JSON array (no markdown fences, no explanation), where each item is: ' +
+    '{"text": "the question text exactly as written", "options": {"A": "...", "B": "...", "C": "...", "D": "..."}, "correct": "A" | "B" | "C" | "D" | null}. ' +
+    'Set "correct" to null if the correct answer is not visibly marked or given in the image. Keep original language and script exactly as written. ' +
+    'If a question has more or fewer than 4 options, still map the first four into A-D as best as possible.';
+
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
+  const body = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: mimeType, data: base64 } }
+      ]
+    }]
+  };
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message || 'Gemini API error');
+  const textOut = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const cleaned = textOut.replace(/```json/gi, '').replace(/```/g, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.error('Failed to parse Gemini output:', textOut);
+    throw new Error('Gemini-এর output JSON আকারে parse করা যায়নি।');
+  }
+}
+
+async function extractQuestionsFromImages() {
+  const errEl = document.getElementById('aiExtractError');
+  const statusEl = document.getElementById('aiExtractStatus');
+  errEl.classList.add('hidden');
+  statusEl.classList.add('hidden');
+
+  const apiKey = getGeminiKey();
+  if (!apiKey) {
+    errEl.textContent = 'আগে Settings ট্যাবে গিয়ে Gemini API Key বসাও।';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  const files = document.getElementById('aiImageInput').files;
+  if (!files || files.length === 0) {
+    errEl.textContent = 'অন্তত একটা ছবি বাছাই করো।';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  const subject = document.getElementById('aiSubject').value.trim();
+  const chapter = document.getElementById('aiChapter').value.trim();
+  const btn = document.getElementById('aiExtractBtn');
+  btn.disabled = true;
+
+  aiExtractedQuestions = [];
+  for (let i = 0; i < files.length; i++) {
+    statusEl.textContent = 'ছবি ' + (i + 1) + ' / ' + files.length + ' পড়া হচ্ছে...';
+    statusEl.classList.remove('hidden');
+    try {
+      const base64 = await fileToBase64(files[i]);
+      const extracted = await callGeminiVision(base64, files[i].type || 'image/jpeg', apiKey);
+      extracted.forEach(q => {
+        aiExtractedQuestions.push({
+          include: true,
+          subject: subject,
+          chapter: chapter,
+          text: q.text || '',
+          options: {
+            A: q.options?.A || '', B: q.options?.B || '',
+            C: q.options?.C || '', D: q.options?.D || ''
+          },
+          correct: ['A', 'B', 'C', 'D'].includes(q.correct) ? q.correct : 'A'
+        });
+      });
+    } catch (e) {
+      errEl.textContent = 'ছবি ' + (i + 1) + ' প্রসেস করতে সমস্যা: ' + e.message;
+      errEl.classList.remove('hidden');
+    }
+  }
+  statusEl.classList.add('hidden');
+  btn.disabled = false;
+
+  if (aiExtractedQuestions.length === 0) {
+    errEl.textContent = 'কোনো প্রশ্ন খুঁজে পাওয়া যায়নি। ছবি স্পষ্ট কিনা দেখো।';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  renderAIReviewTable();
+}
+
+function renderAIReviewTable() {
+  document.getElementById('aiReviewWrap').classList.remove('hidden');
+  const wrap = document.getElementById('aiReviewTable');
+  let html = '<div class="checkbox-list" style="max-height:520px;">';
+  aiExtractedQuestions.forEach((q, i) => {
+    html += '<div class="checkbox-item" style="flex-direction:column; align-items:stretch;">' +
+      '<div style="display:flex; gap:10px; align-items:flex-start;">' +
+      '<input type="checkbox" ' + (q.include ? 'checked' : '') + ' onchange="updateAIField(' + i + ', \'include\', this.checked)" style="margin-top:8px;">' +
+      '<div style="flex:1;">' +
+        '<textarea style="min-height:36px;" oninput="updateAIField(' + i + ', \'text\', this.value)">' + escapeHtml(q.text) + '</textarea>' +
+        '<div class="opt-row"><label>A</label><input type="text" value="' + escapeAttr(q.options.A) + '" oninput="updateAIOption(' + i + ',\'A\',this.value)"></div>' +
+        '<div class="opt-row"><label>B</label><input type="text" value="' + escapeAttr(q.options.B) + '" oninput="updateAIOption(' + i + ',\'B\',this.value)"></div>' +
+        '<div class="opt-row"><label>C</label><input type="text" value="' + escapeAttr(q.options.C) + '" oninput="updateAIOption(' + i + ',\'C\',this.value)"></div>' +
+        '<div class="opt-row"><label>D</label><input type="text" value="' + escapeAttr(q.options.D) + '" oninput="updateAIOption(' + i + ',\'D\',this.value)"></div>' +
+        '<div class="radio-row">' +
+          ['A', 'B', 'C', 'D'].map(l => '<label><input type="radio" name="aiCorrect' + i + '" value="' + l + '" ' + (q.correct === l ? 'checked' : '') + ' onchange="updateAIField(' + i + ',\'correct\',\'' + l + '\')"> ' + l + '</label>').join('') +
+        '</div>' +
+      '</div></div></div>';
+  });
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+function updateAIField(i, field, value) { aiExtractedQuestions[i][field] = value; }
+function updateAIOption(i, letter, value) { aiExtractedQuestions[i].options[letter] = value; }
+
+function addAllExtractedToBank() {
+  const toAdd = aiExtractedQuestions.filter(q => q.include && q.text.trim());
+  if (toAdd.length === 0) { alert('কিছু বাছাই করা নেই।'); return; }
+  const promises = toAdd.map(q => db.collection('questions').add({
+    subject: q.subject,
+    chapter: q.chapter,
+    text: q.text,
+    options: q.options,
+    correct: q.correct,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }));
+  Promise.all(promises).then(() => {
+    discardAIExtraction();
+    loadQuestions();
+  }).catch(e => {
+    const errEl = document.getElementById('aiExtractError');
+    errEl.textContent = 'Save করতে সমস্যা: ' + e.message;
+    errEl.classList.remove('hidden');
+  });
+}
+
+function discardAIExtraction() {
+  aiExtractedQuestions = [];
+  document.getElementById('aiReviewWrap').classList.add('hidden');
+  document.getElementById('aiImageInput').value = '';
+}
+
+function escapeAttr(str) { return escapeHtml(str).replace(/\n/g, ' '); }
 
 /* ---------------- Helpers ---------------- */
 function escapeHtml(str) {
