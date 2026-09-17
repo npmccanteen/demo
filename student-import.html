@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Student Import — OCR</title>
+<title>Student Import — Gemini AI</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #222; }
@@ -38,27 +38,30 @@
   .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
   .badge-ok { background: #d4edda; color: #155724; }
   .badge-warn { background: #fff3cd; color: #856404; }
+  .badge-ai { background: #e0e7ff; color: #3730a3; padding: 4px 10px; font-size: 12px; }
   .log { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; margin-top: 12px; display: none; white-space: pre-wrap; }
+  .loading-spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid #fff; border-top-color: transparent;
+    border-radius: 50%; animation: spin 1s linear infinite;
+    margin-right: 6px; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
 <div class="container">
   <h1>📋 Student List Import</h1>
-  <p class="sub">Batch Admin: ছবি বা PDF আপলোড কর — OCR নিজে নাম-রোল বের করবে</p>
+  <p class="sub">
+    ছবি বা PDF আপলোড কর — <span class="badge badge-ai">🤖 Gemini AI</span> নিজে নাম-রোল বের করবে
+  </p>
 
   <div class="card">
     <div class="row">
       <div class="col">
         <label>Batch Name</label>
         <input type="text" id="batchName" placeholder="যেমন: Batch A, CSE-2024" />
-      </div>
-      <div class="col">
-        <label>OCR Language</label>
-        <select id="ocrLang">
-          <option value="eng">English (Recommended)</option>
-          <option value="eng+ben">English + বাংলা</option>
-        </select>
       </div>
     </div>
   </div>
@@ -78,11 +81,10 @@
   <div class="card" id="resultCard" style="display:none;">
     <h3 style="margin-bottom:5px;">✏️ যাচাই করে ঠিক কর</h3>
     <p style="color:#666; font-size:13px; margin-bottom:10px;">
-      Roll আর Name edit করতে পারিস। ভুল হলে মুছে ফেল বা নতুন লাইন যোগ কর।
+      AI যা বের করেছে — চেক কর, ভুল থাকলে edit কর।
     </p>
     <div style="margin-bottom:10px;">
       <button class="btn-secondary" onclick="addEmptyRow()">+ নতুন Row</button>
-      <button class="btn-secondary" onclick="reparse()">🔄 আবার Parse কর</button>
       <span id="countBadge" style="margin-left:10px; font-size:13px; color:#555;"></span>
     </div>
     <table id="studentTable">
@@ -101,23 +103,19 @@
     </div>
     <div id="saveStatus" style="margin-top:12px; font-size:14px;"></div>
   </div>
-
-  <div class="card" id="rawCard" style="display:none;">
-    <label>Raw OCR Text (প্রয়োজনে edit কর)</label>
-    <textarea id="rawText" rows="8"></textarea>
-  </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <script type="module">
 import { db, collection, addDoc, getDocs, query, where, serverTimestamp }
   from './js/firebase-init.js';
+import { GEMINI_API_KEY } from './firebase-config.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+// ---------- Elements ----------
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
 const progressBar = document.getElementById('progressBar');
@@ -126,23 +124,23 @@ const statusEl = document.getElementById('status');
 const logEl = document.getElementById('log');
 const previewImg = document.getElementById('previewImg');
 const resultCard = document.getElementById('resultCard');
-const rawCard = document.getElementById('rawCard');
-const rawText = document.getElementById('rawText');
 
+// ---------- Helpers ----------
 function log(msg) {
   logEl.style.display = 'block';
   logEl.textContent += msg + '\n';
   logEl.scrollTop = logEl.scrollHeight;
 }
-function setStatus(msg) {
+function setStatus(msg, loading) {
   statusEl.style.display = 'block';
-  statusEl.textContent = msg;
+  statusEl.innerHTML = (loading ? '<span class="loading-spinner"></span>' : '') + msg;
 }
 function setProgress(pct) {
   progressBar.style.display = 'block';
   progressFill.style.width = pct + '%';
 }
 
+// ---------- Upload ----------
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
@@ -154,32 +152,59 @@ fileInput.addEventListener('change', e => {
   if (e.target.files.length) handleFile(e.target.files[0]);
 });
 
+// ---------- Main Flow ----------
 async function handleFile(file) {
+  if (GEMINI_API_KEY === 'PASTE_YOUR_GEMINI_API_KEY_HERE') {
+    alert('⚠️ firebase-config.js এ Gemini API key বসা হয়নি!\n\nGoogle AI Studio থেকে key নিয়ে ওখানে paste কর।');
+    return;
+  }
+
   logEl.textContent = '';
   resultCard.style.display = 'none';
-  rawCard.style.display = 'none';
   setProgress(0);
-  setStatus('ফাইল পড়া হচ্ছে...');
 
-  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-    await processPDF(file);
-  } else if (file.type.startsWith('image/')) {
-    await processImage(file);
-  } else {
-    alert('শুধু ছবি বা PDF দেওয়া যাবে');
+  try {
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      await processPDF(file);
+    } else if (file.type.startsWith('image/')) {
+      await processImage(file);
+    } else {
+      alert('শুধু ছবি বা PDF দেওয়া যাবে');
+    }
+  } catch (e) {
+    console.error(e);
+    setStatus('❌ সমস্যা: ' + e.message);
+    log('❌ Error: ' + e.message);
   }
 }
 
+async function processImage(file) {
+  setStatus('ছবি পড়া হচ্ছে...', true);
+  previewImg.src = URL.createObjectURL(file);
+  previewImg.style.display = 'block';
+
+  const base64 = await fileToBase64(file);
+  setProgress(30);
+
+  const students = await callGemini(base64, file.type);
+  setProgress(100);
+  setStatus(`✅ ${students.length} জন পাওয়া গেছে!`);
+  renderTable(students);
+  resultCard.style.display = 'block';
+}
+
 async function processPDF(file) {
-  setStatus('PDF লোড হচ্ছে...');
+  setStatus('PDF লোড হচ্ছে...', true);
   const buf = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-  log(`📄 PDF-এ ${pdf.numPages} page পাওয়া গেছে`);
+  log(`📄 PDF-এ ${pdf.numPages} page`);
 
-  let allText = '';
+  let allStudents = [];
+
   for (let p = 1; p <= pdf.numPages; p++) {
-    setStatus(`Page ${p}/${pdf.numPages} process হচ্ছে...`);
-    setProgress((p - 1) / pdf.numPages * 100);
+    setStatus(`Page ${p}/${pdf.numPages} — AI পড়ছে...`, true);
+    setProgress(Math.round((p - 1) / pdf.numPages * 100));
+
     const page = await pdf.getPage(p);
     const viewport = page.getViewport({ scale: 2.0 });
     const canvas = document.createElement('canvas');
@@ -187,85 +212,111 @@ async function processPDF(file) {
     canvas.height = viewport.height;
     const ctx = canvas.getContext('2d');
     await page.render({ canvasContext: ctx, viewport }).promise;
+
     if (p === 1) {
       previewImg.src = canvas.toDataURL('image/png');
       previewImg.style.display = 'block';
     }
-    const text = await runOCR(canvas);
-    allText += text + '\n';
-    log(`✅ Page ${p} done`);
+
+    const base64 = canvas.toDataURL('image/png').split(',')[1];
+    const students = await callGemini(base64, 'image/png');
+    log(`✅ Page ${p}: ${students.length} জন`);
+    allStudents = allStudents.concat(students);
   }
+
+  // Duplicate roll merge
+  const seen = new Set();
+  allStudents = allStudents.filter(s => {
+    if (seen.has(s.roll)) return false;
+    seen.add(s.roll);
+    return true;
+  });
+
   setProgress(100);
-  setStatus('OCR শেষ!');
-  finalizeOCR(allText);
+  setStatus(`✅ ${allStudents.length} জন পাওয়া গেছে!`);
+  renderTable(allStudents);
+  resultCard.style.display = 'block';
 }
 
-async function processImage(file) {
-  return new Promise((resolve) => {
+// ---------- File → Base64 ----------
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = async (e) => {
-      previewImg.src = e.target.result;
-      previewImg.style.display = 'block';
-      const img = new Image();
-      img.onload = async () => {
-        const text = await runOCR(img);
-        finalizeOCR(text);
-        resolve();
-      };
-      img.src = e.target.result;
-    };
+    reader.onload = e => resolve(e.target.result.split(',')[1]);
+    reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
 
-async function runOCR(imageSource) {
-  const lang = document.getElementById('ocrLang').value;
-  setStatus(`OCR চলছে (${lang})...`);
-  log(`🔍 OCR শুরু — language: ${lang}`);
-  const result = await Tesseract.recognize(imageSource, lang, {
-    logger: m => {
-      if (m.status === 'recognizing text') {
-        setProgress(Math.round(m.progress * 100));
-        setStatus(`OCR: ${Math.round(m.progress * 100)}%`);
-      }
+// ---------- Gemini API Call ----------
+async function callGemini(base64Data, mimeType) {
+  log('🤖 Gemini API কে পাঠানো হচ্ছে...');
+
+  const prompt = `You are an expert OCR assistant. Analyze the attached image of a student list.
+Extract ALL student records visible.
+For each student, identify their Roll number and full Name.
+Return ONLY a valid JSON array of objects, nothing else. No markdown, no explanation.
+Each object must have exactly two keys: "roll" (string) and "name" (string).
+Example format:
+[{"roll":"101","name":"Rahim Uddin"},{"roll":"102","name":"Karim Ahmed"}]
+Rules:
+- If roll or name cannot be read clearly, skip that record.
+- Keep names exactly as they appear.
+- Preserve leading zeros in roll numbers.`;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+  const body = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: mimeType, data: base64Data } }
+      ]
+    }],
+    generationConfig: {
+      temperature: 0.1,
+      responseMimeType: "application/json"
     }
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
   });
-  return result.data.text;
-}
 
-function finalizeOCR(text) {
-  rawText.value = text;
-  rawCard.style.display = 'block';
-  parseRawText();
-  resultCard.style.display = 'block';
-  setStatus('✅ OCR শেষ! নিচে যাচাই কর।');
-}
-
-function parseLine(line) {
-  line = line.trim();
-  if (!line) return null;
-  const match = line.match(/^(\d{1,6})[\s.\-:)]+(.+)$/);
-  if (match) return { roll: match[1].trim(), name: match[2].trim() };
-  return null;
-}
-
-function parseRawText() {
-  const lines = rawText.value.split('\n');
-  const parsed = [];
-  const seen = new Set();
-  for (const line of lines) {
-    const item = parseLine(line);
-    if (!item) continue;
-    if (seen.has(item.roll)) continue;
-    seen.add(item.roll);
-    parsed.push(item);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini API error (${res.status}): ${errText.slice(0, 200)}`);
   }
-  renderTable(parsed);
+
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  log(`📥 Gemini response: ${text.length} chars`);
+
+  // Parse JSON
+  let cleaned = text.trim();
+  cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
+
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (!Array.isArray(parsed)) throw new Error('Response is not an array');
+    return parsed.map(s => ({
+      roll: String(s.roll || '').trim(),
+      name: String(s.name || '').trim()
+    })).filter(s => s.roll && s.name);
+  } catch (e) {
+    log('⚠️ JSON parse failed. Raw text:');
+    log(text.slice(0, 500));
+    throw new Error('AI response parse করা যায়নি');
+  }
 }
 
+// ---------- Table Rendering ----------
 function renderTable(students) {
   const tbody = document.querySelector('#studentTable tbody');
   tbody.innerHTML = '';
+
   students.forEach((s, i) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -306,13 +357,14 @@ window.addEmptyRow = function() {
   updateCount();
 };
 
-window.reparse = function() { parseRawText(); };
-
+// ---------- Save to Firestore ----------
 window.saveToFirestore = async function() {
   const batchName = document.getElementById('batchName').value.trim();
   if (!batchName) return alert('Batch Name দে');
+
   const rows = document.querySelectorAll('#studentTable tbody tr');
   if (rows.length === 0) return alert('কোনো স্টুডেন্ট নেই');
+
   const students = [];
   for (const tr of rows) {
     const roll = tr.querySelector('[data-field="roll"]').value.trim();
@@ -320,12 +372,13 @@ window.saveToFirestore = async function() {
     if (!roll || !name) continue;
     students.push({ roll, name });
   }
+
   if (students.length === 0) return alert('সব row খালি');
   if (!confirm(`${students.length} জন স্টুডেন্ট সেভ করব — batch "${batchName}"?`)) return;
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
-  btn.textContent = 'সেভ হচ্ছে...';
+  btn.innerHTML = '<span class="loading-spinner"></span>সেভ হচ্ছে...';
   const saveStatus = document.getElementById('saveStatus');
   saveStatus.textContent = '';
 
@@ -337,11 +390,8 @@ window.saveToFirestore = async function() {
         where('batchName', '==', batchName),
         where('roll', '==', s.roll)
       ));
-      if (!dup.empty) {
-        skipped++;
-        log(`⚠️ Duplicate skipped: ${s.roll} ${s.name}`);
-        continue;
-      }
+      if (!dup.empty) { skipped++; log(`⚠️ Duplicate: ${s.roll}`); continue; }
+
       await addDoc(collection(db, 'students'), {
         roll: s.roll,
         name: s.name,
@@ -351,12 +401,12 @@ window.saveToFirestore = async function() {
         createdAt: serverTimestamp()
       });
       success++;
-      log(`✅ Saved: ${s.roll} — ${s.name}`);
       saveStatus.textContent = `Progress: ${success}/${students.length}`;
     } catch (e) {
-      log(`❌ Error on ${s.roll}: ${e.message}`);
+      log(`❌ ${s.roll}: ${e.message}`);
     }
   }
+
   btn.disabled = false;
   btn.textContent = '💾 Firestore-এ Save কর';
   saveStatus.innerHTML = `<span class="badge badge-ok">✅ ${success} জন সেভ হয়েছে</span>` +
