@@ -16,10 +16,36 @@ import {
   setDoc,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updatePassword
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import { firebaseConfig } from "../firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+export const auth = getAuth(app);
+
+// ----- createStudentAuth: secondary app দিয়ে user বানায় (admin session নষ্ট না করে) -----
+let _secondaryApp = null;
+function getSecondaryAuth() {
+  if (!_secondaryApp) {
+    _secondaryApp = initializeApp(firebaseConfig, "Secondary");
+  }
+  return getAuth(_secondaryApp);
+}
+
+export async function createStudentAuth(email, password) {
+  const auth2 = getSecondaryAuth();
+  const cred = await createUserWithEmailAndPassword(auth2, email, password);
+  const uid = cred.user.uid;
+  await signOut(auth2);
+  return uid;
+}
 
 export {
   collection,
@@ -34,5 +60,9 @@ export {
   updateDoc,
   getDoc,
   setDoc,
-  writeBatch
+  writeBatch,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updatePassword
 };
