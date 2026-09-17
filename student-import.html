@@ -12,7 +12,7 @@
   .sub { color: #666; margin-bottom: 25px; font-size: 14px; }
   .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px; }
   label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 14px; }
-  input[type="text"], textarea {
+  input[type="text"], textarea, input[type="password"] {
     width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px;
     font-size: 14px; font-family: inherit;
   }
@@ -28,8 +28,10 @@
   .btn-secondary:hover { background: #5a6268; }
   .btn-danger { background: #dc3545; color: white; }
   .btn-danger:hover { background: #b02a37; }
+  .btn-warning { background: #ff9800; color: white; }
+  .btn-warning:hover { background: #e68900; }
+  .btn-warning:disabled { background: #999; cursor: not-allowed; }
 
-  /* Tabs */
   .tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; }
   .tab {
     padding: 12px 22px; background: transparent; border: none; cursor: pointer;
@@ -69,6 +71,7 @@
   .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
   .badge-ok { background: #d4edda; color: #155724; }
   .badge-warn { background: #fff3cd; color: #856404; }
+  .badge-info { background: #cfe2ff; color: #084298; }
 
   .loading-spinner {
     display: inline-block; width: 16px; height: 16px;
@@ -97,28 +100,36 @@
   }
   .tip-box strong { color: #e68900; }
   .tip-box code { background: #fff; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+
+  .credentials-box {
+    background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px;
+    padding: 15px; margin-top: 15px; max-height: 300px; overflow-y: auto;
+    font-family: 'Courier New', monospace; font-size: 13px;
+    display: none;
+  }
+  .credentials-box.show { display: block; }
+  .credentials-box .row { padding: 4px 0; border-bottom: 1px dashed #e0e0e0; }
+  .credentials-box .row:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
 
 <div class="container">
   <h1>📋 Student Import</h1>
-  <p class="sub">Batch Name দে → স্টুডেন্ট যোগ কর → Firestore-এ Save কর</p>
+  <p class="sub">Batch Name দে → স্টুডেন্ট যোগ কর → Login Accounts তৈরি কর</p>
 
-  <!-- Batch Name -->
   <div class="card">
     <label>Batch Name *</label>
     <input type="text" id="batchName" placeholder="যেমন: Batch A, CSE-2024" />
   </div>
 
-  <!-- Tabs -->
   <div class="card">
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('paste')">📋 Manual Paste</button>
-      <button class="tab" onclick="switchTab('ocr')">📷 OCR Upload</button>
+      <button class="tab active" onclick="switchTab('paste', event)">📋 Manual Paste</button>
+      <button class="tab" onclick="switchTab('ocr', event)">📷 OCR Upload</button>
     </div>
 
-    <!-- TAB 1: MANUAL PASTE -->
+    <!-- TAB 1 -->
     <div class="tab-content active" id="tab-paste">
       <label>এখানে স্টুডেন্ট লিস্ট paste কর</label>
       <p style="font-size:13px; color:#666; margin-bottom:8px;">
@@ -131,16 +142,15 @@
 105 - Naeem Islam"></textarea>
 
       <div class="tip-box">
-        <strong>💡 Excel/Google Sheets থেকে:</strong> রোল + নাম সিলেক্ট কর → কপি → এখানে paste কর।<br>
-        <strong>💡 ভুল হলে:</strong> নিচে টেবিলে edit করতে পারবি।<br>
-        <strong>💡 টিপস:</strong> Roll আর Name-এর মাঝে যেকোনো চিহ্ন (space, comma, dash, dot) থাকলেই হবে।
+        <strong>💡 Excel/Google Sheets থেকে:</strong> Roll + Name সিলেক্ট কর → কপি → এখানে paste কর।<br>
+        <strong>💡 ভুল হলে:</strong> নিচে টেবিলে edit করতে পারবি।
       </div>
 
       <button class="btn-primary" onclick="parsePaste()">➡️ টেবিলে দেখাও</button>
       <button class="btn-secondary" onclick="document.getElementById('pasteInput').value=''">🧹 Clear</button>
     </div>
 
-    <!-- TAB 2: OCR UPLOAD -->
+    <!-- TAB 2 -->
     <div class="tab-content" id="tab-ocr">
       <div class="dropzone" id="dropzone">
         <div class="icon">📷</div>
@@ -156,8 +166,7 @@
         <strong>💡 ভালো ফলাফলের জন্য:</strong><br>
         • পরিষ্কার, সোজা ছবি — কাত না<br>
         • ভালো আলোতে — শ্যাডো ছাড়া<br>
-        • প্রিন্ট করা লিস্ট হলে ভালো, হাতের লেখা হলে কম<br>
-        • OCR-এ error হলে উপরের <strong>Manual Paste</strong> tab use কর
+        • OCR-এ error হলে Manual Paste tab use কর
       </div>
     </div>
   </div>
@@ -191,6 +200,29 @@
     </div>
     <div id="saveStatus" style="margin-top:12px; font-size:14px;"></div>
   </div>
+
+  <!-- LOGIN ACCOUNTS CARD -->
+  <div class="card" id="loginCard" style="display:none; background: #f0f7ff; border-left: 4px solid #2c5aa0;">
+    <h3 style="color:#2c5aa0; margin-bottom:8px;">🔐 Login Accounts তৈরি কর</h3>
+    <p style="font-size:13px; color:#555; margin-bottom:12px;">
+      প্রতিটা স্টুডেন্টের জন্য Firebase Auth account তৈরি হবে — তারা Batch + Roll + Password দিয়ে login করতে পারবে।
+    </p>
+
+    <label>Default Password (পুরো batch-এর জন্য)</label>
+    <input type="password" id="defaultPassword" placeholder="কমপক্ষে ৬ অক্ষর" />
+    <p style="font-size:12px; color:#856404; margin-top:5px;">
+      ⚠️ এই password সব স্টুডেন্টকে জানিয়ে দিবি। পরে তারা নিজে change করতে পারবে।
+    </p>
+
+    <div style="margin-top:15px;">
+      <button class="btn-warning" onclick="createLoginAccounts()" id="createAccountsBtn">
+        🔐 Login Accounts তৈরি কর
+      </button>
+    </div>
+
+    <div id="accountProgress" style="margin-top:15px; font-size:14px;"></div>
+    <div class="credentials-box" id="credentialsBox"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -198,8 +230,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <script type="module">
-import { db, collection, addDoc, getDocs, query, where, serverTimestamp }
-  from './js/firebase-init.js';
+import {
+  db, collection, addDoc, getDocs, query, where,
+  serverTimestamp, updateDoc, doc, createStudentAuth
+} from './js/firebase-init.js';
 import { OCR_API_KEY } from './firebase-config.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -216,14 +250,12 @@ function setStatus(msg, type) {
   el.innerHTML = msg;
 }
 function setProgress(pct) {
-  const pb = document.getElementById('progressBar');
-  pb.style.display = 'block';
+  document.getElementById('progressBar').style.display = 'block';
   document.getElementById('progressFill').style.width = pct + '%';
 }
 function hideProgress() {
   document.getElementById('progressBar').style.display = 'none';
 }
-
 let toastTimer;
 function showToast(msg, type) {
   const t = document.getElementById('toast');
@@ -233,29 +265,28 @@ function showToast(msg, type) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ---------- Tabs ----------
-window.switchTab = function(name) {
+window.switchTab = function(name, e) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  event.target.classList.add('active');
+  e.target.classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
 };
 
-// ==========================================================
-// 📋 PASTE PARSING
-// ==========================================================
-const parsedStudents = [];  // global — টেবিলে যা আছে
+// ---------- Email builder ----------
+function makeEmail(batchName, roll) {
+  // batch-name → "batcha" (lowercase, only alphanumerics)
+  const slug = batchName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return `${slug}_${roll}@npmc.meal`.toLowerCase();
+}
 
+// ==========================================================
+// PASTE PARSING
+// ==========================================================
 window.parsePaste = function() {
   const text = document.getElementById('pasteInput').value.trim();
   if (!text) return showToast('⚠️ কিছু paste কর', 'error');
-
   const students = parseStudents(text);
-  if (students.length === 0) {
-    showToast('⚠️ কোনো স্টুডেন্ট পাওয়া যায়নি', 'error');
-    return;
-  }
-
+  if (students.length === 0) return showToast('⚠️ কোনো স্টুডেন্ট পাওয়া যায়নি', 'error');
   renderTable(students);
   document.getElementById('resultCard').style.display = 'block';
   showToast(`✅ ${students.length} জন পাওয়া গেছে`, 'success');
@@ -268,11 +299,9 @@ function parseStudents(text) {
   const seen = new Set();
 
   for (let line of lines) {
-    // Skip headers
     if (/^(roll|name|sl|no|student|list|page|batch|#)/i.test(line)) continue;
     if (line.length < 2) continue;
 
-    // Pattern 1: "101 Rahim Uddin" / "101, Rahim" / "101. Rahim" / "101 - Rahim" / "101) Rahim"
     let match = line.match(/^(\d{1,8})[\s,.\-:)\]|]+(.+)$/);
     if (match) {
       const roll = match[1];
@@ -284,7 +313,6 @@ function parseStudents(text) {
       continue;
     }
 
-    // Pattern 2: "Rahim Uddin, 101" or "Rahim Uddin 101"
     match = line.match(/^(.+?)[\s,]+(\d{1,8})$/);
     if (match) {
       const name = match[1].trim().replace(/[,.\-\s]+$/, '');
@@ -293,24 +321,13 @@ function parseStudents(text) {
         seen.add(roll);
         students.push({ roll, name });
       }
-      continue;
-    }
-
-    // Pattern 3: Just a name — assign auto roll
-    if (/^[a-zA-Z\s.'-]{2,}$/.test(line)) {
-      const autoRoll = String(students.length + 1).padStart(3, '0');
-      if (!seen.has(autoRoll)) {
-        seen.add(autoRoll);
-        students.push({ roll: autoRoll, name: line });
-      }
     }
   }
-
   return students;
 }
 
 // ==========================================================
-// 📷 OCR UPLOAD (OCR.space API)
+// OCR UPLOAD
 // ==========================================================
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
@@ -354,7 +371,6 @@ async function handleFile(file) {
     previewImg.style.display = 'block';
     setProgress(20);
 
-    // OCR.space API call
     setStatus('OCR চলছে... (৫-১৫ সেকেন্ড)', '');
     const text = await ocrSpaceCall(canvas);
     setProgress(90);
@@ -364,7 +380,6 @@ async function handleFile(file) {
       return;
     }
 
-    // Parse
     const students = parseStudents(text);
     if (students.length === 0) {
       setStatus('⚠️ নাম-রোল বের করা যায়নি — Manual Paste use কর', 'error');
@@ -408,7 +423,6 @@ function imageToCanvas(file) {
 
 async function ocrSpaceCall(canvas) {
   const base64 = canvas.toDataURL('image/png').split(',')[1];
-
   const form = new FormData();
   form.append('base64Image', 'data:image/png;base64,' + base64);
   form.append('language', 'eng');
@@ -424,7 +438,6 @@ async function ocrSpaceCall(canvas) {
   });
 
   if (!res.ok) throw new Error('OCR API error: HTTP ' + res.status);
-
   const data = await res.json();
 
   if (data.IsErroredOnProcessing) {
@@ -433,7 +446,6 @@ async function ocrSpaceCall(canvas) {
       : (data.ErrorMessage || 'OCR failed');
     throw new Error(errMsg);
   }
-
   return data.ParsedResults?.[0]?.ParsedText || '';
 }
 
@@ -443,7 +455,6 @@ async function ocrSpaceCall(canvas) {
 function renderTable(students) {
   const tbody = document.querySelector('#studentTable tbody');
   tbody.innerHTML = '';
-
   students.forEach(s => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -465,12 +476,10 @@ function renumber() {
     tr.children[0].textContent = i + 1;
   });
 }
-
 function updateCount() {
   const n = document.querySelectorAll('#studentTable tbody tr').length;
   document.getElementById('countBadge').textContent = `মোট: ${n} জন`;
 }
-
 window.addEmptyRow = function() {
   const tbody = document.querySelector('#studentTable tbody');
   const tr = document.createElement('tr');
@@ -486,7 +495,6 @@ window.addEmptyRow = function() {
   renumber();
   updateCount();
 };
-
 window.clearAllRows = function() {
   if (!confirm('সব row মুছে ফেলব?')) return;
   document.querySelector('#studentTable tbody').innerHTML = '';
@@ -539,6 +547,10 @@ window.saveToFirestore = async function() {
         name: s.name,
         batchName: batchName,
         balance: 0,
+        totalDeposit: 0,
+        totalBill: 0,
+        uid: null,
+        loginEmail: null,
         active: true,
         createdAt: serverTimestamp()
       });
@@ -554,6 +566,103 @@ window.saveToFirestore = async function() {
   saveStatus.innerHTML = `<span class="badge badge-ok">✅ ${success} জন সেভ হয়েছে</span>` +
     (skipped ? ` <span class="badge badge-warn">⚠️ ${skipped} ডুপ্লিকেট বাদ</span>` : '');
   showToast(`✅ ${success} জন সেভ হয়েছে`, 'success');
+
+  // Show login-accounts card
+  document.getElementById('loginCard').style.display = 'block';
+  document.getElementById('loginCard').scrollIntoView({ behavior: 'smooth' });
+};
+
+// ==========================================================
+// Create Login Accounts
+// ==========================================================
+window.createLoginAccounts = async function() {
+  const batchName = document.getElementById('batchName').value.trim();
+  const password = document.getElementById('defaultPassword').value.trim();
+
+  if (!batchName) return showToast('⚠️ Batch Name দে', 'error');
+  if (password.length < 6) return showToast('⚠️ Password কমপক্ষে ৬ অক্ষর', 'error');
+
+  const btn = document.getElementById('createAccountsBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner"></span>তৈরি হচ্ছে...';
+
+  const progress = document.getElementById('accountProgress');
+  const credBox = document.getElementById('credentialsBox');
+  credBox.innerHTML = '';
+  credBox.classList.add('show');
+
+  try {
+    // Fetch all students for this batch without uid
+    const q = query(collection(db, 'students'), where('batchName', '==', batchName));
+    const snap = await getDocs(q);
+
+    const needAccounts = snap.docs.filter(d => !d.data().uid);
+
+    if (needAccounts.length === 0) {
+      progress.innerHTML = '<span class="badge badge-info">✅ সব স্টুডেন্টের account আগেই তৈরি হয়ে গেছে</span>';
+      btn.disabled = false;
+      btn.textContent = '🔐 Login Accounts তৈরি কর';
+      return;
+    }
+
+    progress.textContent = `0/${needAccounts.length} তৈরি হচ্ছে...`;
+
+    let created = 0, failed = 0;
+
+    for (const docSnap of needAccounts) {
+      const s = docSnap.data();
+      const email = makeEmail(batchName, s.roll);
+      const row = document.createElement('div');
+      row.className = 'row';
+
+      try {
+        const uid = await createStudentAuth(email, password);
+        await updateDoc(doc(db, 'students', docSnap.id), {
+          uid: uid,
+          loginEmail: email
+        });
+        row.innerHTML = `✅ <strong>${s.roll}</strong> — ${escapeHtml(s.name)} → <code>${email}</code>`;
+        created++;
+      } catch (e) {
+        if (e.code === 'auth/email-already-in-use') {
+          // Account already exists, just mark
+          row.innerHTML = `⚠️ <strong>${s.roll}</strong> — ${escapeHtml(s.name)} → account আগেই আছে (Firebase Console-এ reset কর)`;
+        } else {
+          row.innerHTML = `❌ <strong>${s.roll}</strong> — ${escapeHtml(s.name)} → ${escapeHtml(e.message)}`;
+        }
+        failed++;
+      }
+
+      credBox.appendChild(row);
+      credBox.scrollTop = credBox.scrollHeight;
+      progress.textContent = `${created}/${needAccounts.length} তৈরি হয়েছে`;
+
+      // Small delay to avoid rate-limits
+      await new Promise(r => setTimeout(r, 400));
+    }
+
+    progress.innerHTML = `<span class="badge badge-ok">✅ ${created} জন তৈরি</span>` +
+      (failed ? ` <span class="badge badge-warn">⚠️ ${failed} জন fail</span>` : '');
+
+    credBox.insertAdjacentHTML('afterbegin',
+      `<div style="margin-bottom:10px; padding:8px; background:#fffbe6; border-radius:6px;">
+        <strong>🔑 Login Credentials</strong><br>
+        Batch: <code>${escapeHtml(batchName)}</code><br>
+        Password: <code>${escapeHtml(password)}</code><br>
+        <em style="font-size:12px; color:#856404;">প্রতিটা স্টুডেন্টকে এই তথ্য জানিয়ে দে।</em>
+      </div>`
+    );
+
+    showToast(`✅ ${created} জনের account তৈরি হয়েছে`, 'success');
+
+  } catch (e) {
+    console.error(e);
+    progress.innerHTML = `<span class="badge badge-warn">❌ ${escapeHtml(e.message)}</span>`;
+    showToast('❌ ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔐 Login Accounts তৈরি কর';
 };
 </script>
 
