@@ -7,6 +7,3 @@ export const firebaseConfig = {
   messagingSenderId: "177224931219",
   appId: "1:177224931219:web:328101a5af09a197adfa66"
 };
-
-// ✅ তোর নতুন AQ. ফরম্যাটের কী এখানে বসানো হলো
-export const GEMINI_API_KEY = "AIzaSyCmMJ1oQSaespqPdo4Lr8B0d0bXRalPjQA"; // <-- এখানে তোর পুরো কী-টা বসাবি
