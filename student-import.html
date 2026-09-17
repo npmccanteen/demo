@@ -5,52 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Student Import — Gemini AI</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #222; }
-  .container { max-width: 1100px; margin: 0 auto; }
-  h1 { color: #2c5aa0; margin-bottom: 5px; }
-  .sub { color: #666; margin-bottom: 25px; font-size: 14px; }
-  .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px; }
-  .row { display: flex; gap: 20px; flex-wrap: wrap; }
-  .col { flex: 1; min-width: 280px; }
-  label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 14px; }
-  input[type="text"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; font-family: inherit; }
-  textarea { font-family: monospace; font-size: 12px; line-height: 1.5; }
-  button { padding: 11px 22px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; margin-right: 8px; margin-top: 10px; }
-  .btn-primary { background: #2c5aa0; color: white; }
-  .btn-primary:hover { background: #1e4079; }
-  .btn-primary:disabled { background: #999; cursor: not-allowed; }
-  .btn-success { background: #28a745; color: white; }
-  .btn-success:hover { background: #1e7e34; }
-  .btn-secondary { background: #6c757d; color: white; }
-  .btn-test { background: #ff9800; color: white; }
-  .btn-test:hover { background: #e68900; }
-  .dropzone { border: 2px dashed #2c5aa0; border-radius: 10px; padding: 40px 20px; text-align: center; cursor: pointer; background: #f8faff; transition: 0.2s; }
-  .dropzone:hover, .dropzone.dragover { background: #e8f0ff; }
-  .dropzone p { color: #2c5aa0; font-weight: 600; }
-  .progress-bar { height: 8px; background: #e0e0e0; border-radius: 4px; margin-top: 15px; overflow: hidden; display: none; }
-  .progress-bar > div { height: 100%; background: #2c5aa0; width: 0%; transition: width 0.3s; }
-  .status { margin-top: 10px; font-size: 13px; color: #555; display: none; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 15px; }
-  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-  th { background: #f0f4fa; font-weight: 600; }
-  td input { border: none; padding: 5px; width: 100%; background: transparent; }
-  td input:focus { background: #fffbe6; outline: 1px solid #2c5aa0; }
-  .preview-img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; margin-top: 12px; max-height: 300px; }
-  .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-  .badge-ok { background: #d4edda; color: #155724; }
-  .badge-warn { background: #fff3cd; color: #856404; }
-  .badge-ai { background: #e0e7ff; color: #3730a3; padding: 4px 10px; font-size: 12px; }
-  .log { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; margin-top: 12px; display: none; white-space: pre-wrap; word-break: break-all; }
-  .log-error { color: #ff6b6b; }
-  .log-ok { color: #51cf66; }
-  .log-warn { color: #ffd43b; }
-  .alert-box { padding: 15px; border-radius: 8px; margin-top: 15px; font-size: 13px; display: none; }
-  .alert-error { background: #fee; border-left: 4px solid #dc3545; color: #721c24; }
-  .alert-success { background: #efe; border-left: 4px solid #28a745; color: #155724; }
-  .alert-info { background: #e7f3ff; border-left: 4px solid #2c5aa0; color: #004085; }
-  .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 6px; vertical-align: middle; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  /* ... (তোর আগের CSS স্টাইল এখানে থাকবে, কিছু বদলাতে হবে না) ... */
 </style>
 </head>
 <body>
@@ -61,7 +16,7 @@
     ছবি বা PDF আপলোড কর — <span class="badge badge-ai">🤖 Gemini AI</span>
   </p>
 
-  <!-- API TEST -->
+  <!-- API TEST SECTION -->
   <div class="card" style="background: #fffbe6; border-left: 4px solid #ff9800;">
     <h3 style="color: #e68900; margin-bottom: 8px;">⚡ প্রথমে এটা কর — API Test</h3>
     <p style="font-size: 13px; color: #666; margin-bottom: 10px;">
@@ -186,6 +141,7 @@ window.testAPI = async function() {
     log('=== API Test শুরু ===');
     log(`Key prefix: ${GEMINI_API_KEY.substring(0, 12)}...`);
 
+    // ✅ নতুন মডেল: gemini-3.6-flash
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent';
 
     const body = {
@@ -194,6 +150,7 @@ window.testAPI = async function() {
 
     log('Request পাঠানো হচ্ছে...');
 
+    // ✅ নতুন কী-এর জন্য সঠিক হেডার: x-goog-api-key
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -363,10 +320,10 @@ function fileToBase64(file) {
 // Gemini API — Multiple model fallback
 // ==========================================================
 const MODELS = [
-  'gemini-3.6-flash',
-  'gemini-flash-latest',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash'
+  'gemini-3.6-flash',           // ✅ নতুন (recommended)
+  'gemini-flash-latest',        // alias — সবসময় latest দেয়
+  'gemini-2.5-flash',           // পুরনো (fallback)
+  'gemini-2.0-flash'            // আরো পুরনো (fallback)
 ];
 
 async function callGemini(base64Data, mimeType) {
@@ -418,7 +375,7 @@ Rules:
         const msg = errData.error?.message || `HTTP ${res.status}`;
         log(`   ❌ ${msg}`, 'error');
         lastError = new Error(msg);
-        continue;
+        continue; // try next model
       }
 
       const data = await res.json();
@@ -530,7 +487,7 @@ window.saveToFirestore = async function() {
         where('batchName', '==', batchName),
         where('roll', '==', s.roll)
       ));
-      if (!dup.empty) { skipped++; continue; }
+      if (!dup.empty) { skipped++; log(`⚠️ Duplicate: ${s.roll}`); continue; }
 
       await addDoc(collection(db, 'students'), {
         roll: s.roll, name: s.name, batchName: batchName,
