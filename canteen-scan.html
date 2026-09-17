@@ -65,7 +65,7 @@
 
   details.debug { margin-top: 15px; background: #f8f9fa; border-radius: 8px; padding: 10px 15px; font-size: 12px; }
   details.debug summary { cursor: pointer; font-weight: 600; color: #2c5aa0; }
-  details.debug pre { font-family: monospace; font-size: 11px; margin-top: 8px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow: auto; }
+  details.debug pre { font-family: monospace; font-size: 11px; margin-top: 8px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow: auto; background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; }
 
   .ai-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
 </style>
@@ -147,8 +147,8 @@
       <button class="btn-secondary" onclick="clearAll()">🗑️ নতুন ছবি</button>
     </div>
 
-    <details class="debug">
-      <summary>🔍 Gemini Response (debug)</summary>
+    <details class="debug" open>
+      <summary>🔍 Detection Log (debug)</summary>
       <pre id="debugPre"></pre>
     </details>
   </div>
@@ -165,11 +165,13 @@ import {
 } from './js/firebase-init.js';
 import { GEMINI_API_KEY } from './firebase-config.js';
 
+// ---------- State ----------
 let students = [];
 let pricing = { lunchFull: 80, lunchHalf: 60, dinnerFull: 80, dinnerHalf: 60 };
 let marking = {};
 let lastFile = null;
 
+// ---------- Elements ----------
 const batchSelect = document.getElementById('batchSelect');
 const scanDate = document.getElementById('scanDate');
 const perPageSel = document.getElementById('perPage');
@@ -190,7 +192,11 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
-function dbg(msg) { document.getElementById('debugPre').textContent += msg + '\n'; }
+function dbg(msg) {
+  const el = document.getElementById('debugPre');
+  el.textContent += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+}
 
 init();
 
@@ -225,6 +231,7 @@ async function loadPricing() {
   } catch (e) { console.warn(e); }
 }
 
+// ---------- Upload ----------
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
@@ -259,6 +266,9 @@ async function handleFile(file) {
     if (students.length === 0) throw new Error('এই batch-এ কোনো student নেই');
 
     progressText.textContent = 'Gemini ছবি দেখছে...';
+    dbg(`🔑 Key prefix: ${GEMINI_API_KEY.substring(0, 15)}...`);
+    dbg(`📊 Students: ${students.length}\n`);
+
     const detected = await callGeminiVision(file);
 
     marking = {};
@@ -286,11 +296,14 @@ async function handleFile(file) {
     progressBox.classList.remove('show');
     document.getElementById('resultCard').style.display = 'block';
     document.getElementById('resultBanner').className = 'info-banner err';
-    document.getElementById('resultBanner').innerHTML = `❌ <strong>Gemini fail:</strong> ${escapeHtml(e.message)}`;
+    document.getElementById('resultBanner').innerHTML = `❌ <strong>Gemini fail:</strong> ${escapeHtml(e.message)}<br><br>Debug log-এ কোন method কী error দিয়েছে দেখ।`;
+    document.getElementById('debugPre').parentElement.open = true;
   }
 }
 
-// Direct REST API দিয়ে Gemini কল করার ফাংশন
+// ==========================================================
+//  🎯 Gemini API Call — 5 combinations auto try
+// ==========================================================
 async function callGeminiVision(file) {
   const base64 = await new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -300,77 +313,120 @@ async function callGeminiVision(file) {
   });
 
   const rollList = students.map(s => s.roll).join(', ');
-  const perPage = Number(perPageSel.value);
 
   const prompt = `You are an expert OMR sheet reader. Analyze the attached image of a meal attendance sheet from a hostel canteen.
+The sheet has a table with columns: Roll, Name, Lunch Full, Lunch Half, Dinner Full, Dinner Half.
+A bubble that is filled (dark) means the student ate that meal. Empty circle means did not eat.
 Students to look for (roll numbers): ${rollList}
-Return ONLY a valid JSON object where keys are roll numbers (as strings) and values are objects with keys: lunchFull, lunchHalf, dinnerFull, dinnerHalf (booleans).
-Example:
-{
-  "101": { "lunchFull": true, "lunchHalf": false, "dinnerFull": true, "dinnerHalf": false }
-}`;
-
-  dbg('→ Direct REST API দিয়ে Gemini কল করা হচ্ছে...');
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+Return ONLY a valid JSON object where keys are roll numbers (as strings) and values are objects with keys: lunchFull, lunchHalf, dinnerFull, dinnerHalf (booleans - true if filled).
+Example: {"101": {"lunchFull": true, "lunchHalf": false, "dinnerFull": true, "dinnerHalf": false}}
+Only include students who have AT LEAST ONE filled bubble. No markdown, no explanation.`;
 
   const body = {
-    contents: [
-      {
-        parts: [
-          { text: prompt },
-          {
-            inlineData: {
-              mimeType: file.type || 'image/jpeg',
-              data: base64
-            }
-          }
-        ]
-      }
-    ],
-    generationConfig: {
-      temperature: 0.1,
-      responseMimeType: 'application/json'
-    }
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: file.type || 'image/jpeg', data: base64 } }
+      ]
+    }],
+    generationConfig: { temperature: 0.1, responseMimeType: 'application/json' }
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+  // ৫টা different combination try করব
+  const attempts = [
+    {
+      name: 'v1beta + x-goog-api-key + gemini-3.6-flash',
+      url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY }
+    },
+    {
+      name: 'v1beta + x-goog-api-key + gemini-flash-latest',
+      url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY }
+    },
+    {
+      name: 'v1beta + x-goog-api-key + gemini-2.5-flash',
+      url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY }
+    },
+    {
+      name: 'v1beta + ?key= + gemini-3.6-flash',
+      url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
+      headers: { 'Content-Type': 'application/json' }
+    },
+    {
+      name: 'v1beta + Bearer + gemini-3.6-flash',
+      url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GEMINI_API_KEY}` }
+    }
+  ];
 
-  const data = await response.json();
-  
-  if (!response.ok) {
-    throw new Error(data.error?.message || 'API Error occurred');
+  let lastError = null;
+
+  for (const attempt of attempts) {
+    try {
+      dbg(`\n→ Trying: ${attempt.name}`);
+      const response = await fetch(attempt.url, {
+        method: 'POST',
+        headers: attempt.headers,
+        body: JSON.stringify(body)
+      });
+
+      dbg(`  Status: ${response.status}`);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const msg = data.error?.message || `HTTP ${response.status}`;
+        dbg(`  ❌ ${msg}`);
+        lastError = new Error(msg);
+        continue;
+      }
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) {
+        dbg(`  ❌ No text in response`);
+        lastError = new Error('No text in response');
+        continue;
+      }
+
+      dbg(`  ✅ SUCCESS!`);
+
+      // Parse JSON
+      let cleaned = text.trim()
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/, '')
+        .replace(/\s*```$/, '');
+      const parsed = JSON.parse(cleaned);
+
+      const validRolls = new Set(students.map(s => String(s.roll)));
+      const result = {};
+      Object.keys(parsed).forEach(roll => {
+        if (validRolls.has(String(roll))) {
+          const m = parsed[roll] || {};
+          result[String(roll)] = {
+            lunchFull: !!m.lunchFull,
+            lunchHalf: !!m.lunchHalf,
+            dinnerFull: !!m.dinnerFull,
+            dinnerHalf: !!m.dinnerHalf
+          };
+        }
+      });
+
+      return result;
+
+    } catch (e) {
+      dbg(`  ❌ ${e.message}`);
+      lastError = e;
+    }
   }
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini থেকে কোনো রেসপন্স আসেনি');
-
-  dbg(`Response: ${text.slice(0, 300)}`);
-
-  let cleaned = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
-  let parsed = JSON.parse(cleaned);
-
-  const validRolls = new Set(students.map(s => String(s.roll)));
-  const result = {};
-  Object.keys(parsed).forEach(roll => {
-    if (validRolls.has(String(roll))) {
-      const m = parsed[roll] || {};
-      result[String(roll)] = {
-        lunchFull: !!m.lunchFull,
-        lunchHalf: !!m.lunchHalf,
-        dinnerFull: !!m.dinnerFull,
-        dinnerHalf: !!m.dinnerHalf
-      };
-    }
-  });
-
-  return result;
+  throw new Error(`সব method fail। শেষ error: ${lastError?.message || 'Unknown'}`);
 }
 
+// ==========================================================
+//  Render Result
+// ==========================================================
 function renderResult() {
   const tbody = document.querySelector('#resultTable tbody');
   tbody.innerHTML = '';
@@ -437,6 +493,7 @@ function updateStats() {
   `;
 }
 
+// ---------- Actions ----------
 window.rerun = function() { if (lastFile) handleFile(lastFile); };
 window.clearAll = function() {
   document.getElementById('resultCard').style.display = 'none';
@@ -445,8 +502,11 @@ window.clearAll = function() {
   fileInput.value = '';
   lastFile = null;
   marking = {};
+  document.getElementById('debugPre').textContent = '';
+  document.getElementById('statusMsg').innerHTML = '';
 };
 
+// ---------- Save ----------
 window.saveResults = async function() {
   if (!batchSelect.value) return showToast('⚠️ Batch select কর', 'error');
   if (!scanDate.value) return showToast('⚠️ Date দে', 'error');
@@ -470,13 +530,22 @@ window.saveResults = async function() {
   });
 
   if (records.length === 0) return showToast('⚠️ কোনো meal mark করা হয়নি', 'error');
-  if (!confirm(`${records.length} জনের meal save করব? মোট Bill: ৳${totalBill}`)) return;
+  if (!confirm(`${records.length} জনের meal save করব?\n\nমোট Bill: ৳${totalBill}`)) return;
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Save হচ্ছে...';
 
   try {
+    const existingQ = query(collection(db, 'mealRecords'),
+      where('batchName', '==', batchSelect.value), where('date', '==', dateStr));
+    const existing = await getDocs(existingQ);
+    if (!existing.empty) {
+      if (!confirm('⚠️ এই date-এর record আগেই আছে। চালিয়ে যাব?')) {
+        btn.disabled = false; btn.innerHTML = '💾 Save কর — Bill কাটো'; return;
+      }
+    }
+
     const recordRef = await addDoc(collection(db, 'mealRecords'), {
       batchName: batchSelect.value, date: dateStr, perPage, totalBill,
       studentCount: records.length, source: 'gemini-vision',
@@ -487,7 +556,7 @@ window.saveResults = async function() {
       const studentRef = doc(db, 'students', r.studentId);
       const studentSnap = await getDoc(studentRef);
       if (!studentSnap.exists()) continue;
-      const sData = studentSnap.name ? studentSnap.data() : studentSnap.data(); // Safe check
+      const sData = studentSnap.data();
       await updateDoc(studentRef, {
         balance: Number(sData.balance || 0) - r.bill,
         totalBill: Number(sData.totalBill || 0) + r.bill
@@ -496,14 +565,17 @@ window.saveResults = async function() {
         studentId: r.studentId, roll: r.roll, name: r.name,
         batchName: batchSelect.value, date: dateStr,
         type: 'meal', amount: -r.bill,
-        details: { lunchFull: r.lunchFull, lunchHalf: r.lunchHalf, dinnerFull: r.dinnerFull, dinnerHalf: r.dinnerHalf },
+        details: { lunchFull: r.lunchFull, lunchHalf: r.lunchHalf,
+                   dinnerFull: r.dinnerFull, dinnerHalf: r.dinnerHalf },
         recordId: recordRef.id, createdAt: serverTimestamp()
       });
     }
 
-    showToast(`✅ ${records.length} জন — ৳${totalBill} bill হয়েছে`, 'success');
+    showToast(`✅ ${records.length} জন — ৳${totalBill}`, 'success');
+    document.getElementById('statusMsg').innerHTML = `<div class="info-banner ok">✅ Save সফল! ${records.length} জন, মোট ৳${totalBill}</div>`;
     setTimeout(() => { if (confirm('আরেকটা scan করব?')) clearAll(); }, 800);
   } catch (e) {
+    console.error(e);
     showToast('❌ ' + e.message, 'error');
   }
   btn.disabled = false;
