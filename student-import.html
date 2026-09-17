@@ -186,7 +186,7 @@ window.testAPI = async function() {
     log('=== API Test শুরু ===');
     log(`Key prefix: ${GEMINI_API_KEY.substring(0, 12)}...`);
 
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent';
 
     const body = {
       contents: [{ parts: [{ text: "Reply with exactly this text: OK" }] }]
@@ -218,7 +218,7 @@ window.testAPI = async function() {
 
     showAlert(testResult,
       `✅ <strong>API কাজ করছে!</strong><br>` +
-      `Model: <code>gemini-2.5-flash</code><br>` +
+      `Model: <code>gemini-3.6-flash</code><br>` +
       `Response: <code>${escapeHtml(text)}</code>`,
       'success'
     );
@@ -360,13 +360,13 @@ function fileToBase64(file) {
 }
 
 // ==========================================================
-// Gemini API — Multiple model fallback + x-goog-api-key header
+// Gemini API — Multiple model fallback
 // ==========================================================
 const MODELS = [
+  'gemini-3.6-flash',
+  'gemini-flash-latest',
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-latest'
+  'gemini-2.0-flash'
 ];
 
 async function callGemini(base64Data, mimeType) {
