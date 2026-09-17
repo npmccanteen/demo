@@ -9,4 +9,4 @@ export const firebaseConfig = {
 };
 
 // ✅ তোর নতুন AQ. ফরম্যাটের কী এখানে বসানো হলো
-export const GEMINI_API_KEY = "AQ.Ab8RN6LGkOACDOiCSQ5KghdIlQP6kX0Uc9mSBodniGO4iiEeiQ"; // <-- এখানে তোর পুরো কী-টা বসাবি
+export const GEMINI_API_KEY = "AIzaSyCmMJ1oQSaespqPdo4Lr8B0d0bXRalPjQA"; // <-- এখানে তোর পুরো কী-টা বসাবি
