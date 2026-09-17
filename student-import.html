@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Import — OCR</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #222; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { color: #2c5aa0; margin-bottom: 5px; }
+  .sub { color: #666; margin-bottom: 25px; font-size: 14px; }
+  .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px; }
+  .row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .col { flex: 1; min-width: 280px; }
+  label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 14px; }
+  input[type="text"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; font-family: inherit; }
+  textarea { font-family: monospace; font-size: 13px; line-height: 1.5; }
+  button { padding: 11px 22px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; margin-right: 8px; margin-top: 10px; }
+  .btn-primary { background: #2c5aa0; color: white; }
+  .btn-primary:hover { background: #1e4079; }
+  .btn-primary:disabled { background: #999; cursor: not-allowed; }
+  .btn-success { background: #28a745; color: white; }
+  .btn-success:hover { background: #1e7e34; }
+  .btn-secondary { background: #6c757d; color: white; }
+  .dropzone { border: 2px dashed #2c5aa0; border-radius: 10px; padding: 40px 20px; text-align: center; cursor: pointer; background: #f8faff; transition: 0.2s; }
+  .dropzone:hover, .dropzone.dragover { background: #e8f0ff; }
+  .dropzone p { color: #2c5aa0; font-weight: 600; }
+  .progress-bar { height: 8px; background: #e0e0e0; border-radius: 4px; margin-top: 15px; overflow: hidden; display: none; }
+  .progress-bar > div { height: 100%; background: #2c5aa0; width: 0%; transition: width 0.3s; }
+  .status { margin-top: 10px; font-size: 13px; color: #555; display: none; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 15px; }
+  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+  th { background: #f0f4fa; font-weight: 600; }
+  td input { border: none; padding: 5px; width: 100%; background: transparent; }
+  td input:focus { background: #fffbe6; outline: 1px solid #2c5aa0; }
+  .preview-img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; margin-top: 12px; max-height: 400px; }
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-ok { background: #d4edda; color: #155724; }
+  .badge-warn { background: #fff3cd; color: #856404; }
+  .log { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; margin-top: 12px; display: none; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>📋 Student List Import</h1>
+  <p class="sub">Batch Admin: ছবি বা PDF আপলোড কর — OCR নিজে নাম-রোল বের করবে</p>
+
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <label>Batch Name</label>
+        <input type="text" id="batchName" placeholder="যেমন: Batch A, CSE-2024" />
+      </div>
+      <div class="col">
+        <label>OCR Language</label>
+        <select id="ocrLang">
+          <option value="eng">English (Recommended)</option>
+          <option value="eng+ben">English + বাংলা</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="dropzone" id="dropzone">
+      <p>📷 এখানে ছবি বা PDF ড্র্যাগ কর, নাইলে ক্লিক কর</p>
+      <small style="color:#888;">Supported: JPG, PNG, PDF</small>
+      <input type="file" id="fileInput" accept="image/*,.pdf" style="display:none;" />
+    </div>
+    <div class="progress-bar" id="progressBar"><div id="progressFill"></div></div>
+    <div class="status" id="status"></div>
+    <div class="log" id="log"></div>
+    <img id="previewImg" class="preview-img" style="display:none;" />
+  </div>
+
+  <div class="card" id="resultCard" style="display:none;">
+    <h3 style="margin-bottom:5px;">✏️ যাচাই করে ঠিক কর</h3>
+    <p style="color:#666; font-size:13px; margin-bottom:10px;">
+      Roll আর Name edit করতে পারিস। ভুল হলে মুছে ফেল বা নতুন লাইন যোগ কর।
+    </p>
+    <div style="margin-bottom:10px;">
+      <button class="btn-secondary" onclick="addEmptyRow()">+ নতুন Row</button>
+      <button class="btn-secondary" onclick="reparse()">🔄 আবার Parse কর</button>
+      <span id="countBadge" style="margin-left:10px; font-size:13px; color:#555;"></span>
+    </div>
+    <table id="studentTable">
+      <thead>
+        <tr>
+          <th style="width:40px;">#</th>
+          <th style="width:120px;">Roll</th>
+          <th>Name</th>
+          <th style="width:60px;">Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div style="margin-top:20px;">
+      <button class="btn-success" onclick="saveToFirestore()" id="saveBtn">💾 Firestore-এ Save কর</button>
+    </div>
+    <div id="saveStatus" style="margin-top:12px; font-size:14px;"></div>
+  </div>
+
+  <div class="card" id="rawCard" style="display:none;">
+    <label>Raw OCR Text (প্রয়োজনে edit কর)</label>
+    <textarea id="rawText" rows="8"></textarea>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<script type="module">
+import { db, collection, addDoc, getDocs, query, where, serverTimestamp }
+  from './js/firebase-init.js';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const progressBar = document.getElementById('progressBar');
+const progressFill = document.getElementById('progressFill');
+const statusEl = document.getElementById('status');
+const logEl = document.getElementById('log');
+const previewImg = document.getElementById('previewImg');
+const resultCard = document.getElementById('resultCard');
+const rawCard = document.getElementById('rawCard');
+const rawText = document.getElementById('rawText');
+
+function log(msg) {
+  logEl.style.display = 'block';
+  logEl.textContent += msg + '\n';
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function setStatus(msg) {
+  statusEl.style.display = 'block';
+  statusEl.textContent = msg;
+}
+function setProgress(pct) {
+  progressBar.style.display = 'block';
+  progressFill.style.width = pct + '%';
+}
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
+});
+
+async function handleFile(file) {
+  logEl.textContent = '';
+  resultCard.style.display = 'none';
+  rawCard.style.display = 'none';
+  setProgress(0);
+  setStatus('ফাইল পড়া হচ্ছে...');
+
+  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+    await processPDF(file);
+  } else if (file.type.startsWith('image/')) {
+    await processImage(file);
+  } else {
+    alert('শুধু ছবি বা PDF দেওয়া যাবে');
+  }
+}
+
+async function processPDF(file) {
+  setStatus('PDF লোড হচ্ছে...');
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  log(`📄 PDF-এ ${pdf.numPages} page পাওয়া গেছে`);
+
+  let allText = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    setStatus(`Page ${p}/${pdf.numPages} process হচ্ছে...`);
+    setProgress((p - 1) / pdf.numPages * 100);
+    const page = await pdf.getPage(p);
+    const viewport = page.getViewport({ scale: 2.0 });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    if (p === 1) {
+      previewImg.src = canvas.toDataURL('image/png');
+      previewImg.style.display = 'block';
+    }
+    const text = await runOCR(canvas);
+    allText += text + '\n';
+    log(`✅ Page ${p} done`);
+  }
+  setProgress(100);
+  setStatus('OCR শেষ!');
+  finalizeOCR(allText);
+}
+
+async function processImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      previewImg.src = e.target.result;
+      previewImg.style.display = 'block';
+      const img = new Image();
+      img.onload = async () => {
+        const text = await runOCR(img);
+        finalizeOCR(text);
+        resolve();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function runOCR(imageSource) {
+  const lang = document.getElementById('ocrLang').value;
+  setStatus(`OCR চলছে (${lang})...`);
+  log(`🔍 OCR শুরু — language: ${lang}`);
+  const result = await Tesseract.recognize(imageSource, lang, {
+    logger: m => {
+      if (m.status === 'recognizing text') {
+        setProgress(Math.round(m.progress * 100));
+        setStatus(`OCR: ${Math.round(m.progress * 100)}%`);
+      }
+    }
+  });
+  return result.data.text;
+}
+
+function finalizeOCR(text) {
+  rawText.value = text;
+  rawCard.style.display = 'block';
+  parseRawText();
+  resultCard.style.display = 'block';
+  setStatus('✅ OCR শেষ! নিচে যাচাই কর।');
+}
+
+function parseLine(line) {
+  line = line.trim();
+  if (!line) return null;
+  const match = line.match(/^(\d{1,6})[\s.\-:)]+(.+)$/);
+  if (match) return { roll: match[1].trim(), name: match[2].trim() };
+  return null;
+}
+
+function parseRawText() {
+  const lines = rawText.value.split('\n');
+  const parsed = [];
+  const seen = new Set();
+  for (const line of lines) {
+    const item = parseLine(line);
+    if (!item) continue;
+    if (seen.has(item.roll)) continue;
+    seen.add(item.roll);
+    parsed.push(item);
+  }
+  renderTable(parsed);
+}
+
+function renderTable(students) {
+  const tbody = document.querySelector('#studentTable tbody');
+  tbody.innerHTML = '';
+  students.forEach((s, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="text-align:center;">${i + 1}</td>
+      <td><input type="text" value="${escapeHtml(s.roll)}" data-field="roll"></td>
+      <td><input type="text" value="${escapeHtml(s.name)}" data-field="name"></td>
+      <td style="text-align:center;">
+        <button style="background:#dc3545;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;"
+          onclick="this.closest('tr').remove(); updateCount();">✕</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  updateCount();
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function updateCount() {
+  const n = document.querySelectorAll('#studentTable tbody tr').length;
+  document.getElementById('countBadge').textContent = `মোট: ${n} জন`;
+}
+
+window.addEmptyRow = function() {
+  const tbody = document.querySelector('#studentTable tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="text-align:center;">${tbody.children.length + 1}</td>
+    <td><input type="text" value="" data-field="roll"></td>
+    <td><input type="text" value="" data-field="name"></td>
+    <td style="text-align:center;">
+      <button style="background:#dc3545;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;"
+        onclick="this.closest('tr').remove(); updateCount();">✕</button>
+    </td>`;
+  tbody.appendChild(tr);
+  updateCount();
+};
+
+window.reparse = function() { parseRawText(); };
+
+window.saveToFirestore = async function() {
+  const batchName = document.getElementById('batchName').value.trim();
+  if (!batchName) return alert('Batch Name দে');
+  const rows = document.querySelectorAll('#studentTable tbody tr');
+  if (rows.length === 0) return alert('কোনো স্টুডেন্ট নেই');
+  const students = [];
+  for (const tr of rows) {
+    const roll = tr.querySelector('[data-field="roll"]').value.trim();
+    const name = tr.querySelector('[data-field="name"]').value.trim();
+    if (!roll || !name) continue;
+    students.push({ roll, name });
+  }
+  if (students.length === 0) return alert('সব row খালি');
+  if (!confirm(`${students.length} জন স্টুডেন্ট সেভ করব — batch "${batchName}"?`)) return;
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = 'সেভ হচ্ছে...';
+  const saveStatus = document.getElementById('saveStatus');
+  saveStatus.textContent = '';
+
+  let success = 0, skipped = 0;
+  for (const s of students) {
+    try {
+      const dup = await getDocs(query(
+        collection(db, 'students'),
+        where('batchName', '==', batchName),
+        where('roll', '==', s.roll)
+      ));
+      if (!dup.empty) {
+        skipped++;
+        log(`⚠️ Duplicate skipped: ${s.roll} ${s.name}`);
+        continue;
+      }
+      await addDoc(collection(db, 'students'), {
+        roll: s.roll,
+        name: s.name,
+        batchName: batchName,
+        balance: 0,
+        active: true,
+        createdAt: serverTimestamp()
+      });
+      success++;
+      log(`✅ Saved: ${s.roll} — ${s.name}`);
+      saveStatus.textContent = `Progress: ${success}/${students.length}`;
+    } catch (e) {
+      log(`❌ Error on ${s.roll}: ${e.message}`);
+    }
+  }
+  btn.disabled = false;
+  btn.textContent = '💾 Firestore-এ Save কর';
+  saveStatus.innerHTML = `<span class="badge badge-ok">✅ ${success} জন সেভ হয়েছে</span>` +
+    (skipped ? ` <span class="badge badge-warn">⚠️ ${skipped} ডুপ্লিকেট বাদ</span>` : '');
+};
+</script>
+
+</body>
+</html>
