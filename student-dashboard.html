@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #222; }
+  .container { max-width: 700px; margin: 0 auto; }
+
+  .header {
+    background: linear-gradient(135deg, #2c5aa0, #1e4079);
+    color: white; padding: 25px; border-radius: 12px; margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(44,90,160,0.2);
+  }
+  .header h1 { font-size: 20px; margin-bottom: 6px; }
+  .header .roll { opacity: 0.92; font-size: 14px; }
+  .header .batch-badge {
+    display: inline-block; background: rgba(255,255,255,0.2);
+    padding: 3px 10px; border-radius: 12px; font-size: 12px;
+    margin-left: 6px; font-weight: 600;
+  }
+
+  .balance-card {
+    background: white; padding: 28px; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px;
+    text-align: center;
+  }
+  .balance-label {
+    color: #666; font-size: 13px; margin-bottom: 10px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .balance-amount { font-size: 44px; font-weight: 700; color: #28a745; line-height: 1; }
+  .balance-amount.neg { color: #dc3545; }
+  .balance-note { color: #999; font-size: 12px; margin-top: 8px; }
+
+  .info-card {
+    background: white; padding: 22px; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px;
+  }
+  .info-card h3 {
+    color: #2c5aa0; font-size: 15px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .info-row {
+    display: flex; justify-content: space-between; padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { color: #666; font-size: 14px; }
+  .info-value { font-weight: 600; font-size: 14px; color: #222; }
+  .info-value.mono { font-family: 'Courier New', monospace; font-size: 13px; }
+
+  .placeholder {
+    text-align: center; padding: 35px 20px; color: #999; font-size: 14px;
+    background: #f8f9fa; border-radius: 8px; line-height: 1.8;
+  }
+  .placeholder small { display: block; font-size: 12px; margin-top: 6px; }
+
+  .loading { text-align: center; padding: 80px 20px; color: #666; font-size: 15px; }
+  .loading .spinner {
+    display: inline-block; width: 32px; height: 32px;
+    border: 3px solid #e0e0e0; border-top-color: #2c5aa0;
+    border-radius: 50%; animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  button.logout-btn {
+    width: 100%; padding: 14px; background: #dc3545; color: white;
+    border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+    cursor: pointer; margin-top: 10px; transition: 0.2s;
+  }
+  button.logout-btn:hover { background: #b02a37; }
+
+  .error-box {
+    background: #fee; color: #721c24; padding: 20px;
+    border-radius: 12px; text-align: center; border-left: 4px solid #dc3545;
+  }
+  .error-box a { color: #2c5aa0; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div>লোড হচ্ছে...</div>
+  </div>
+
+  <div id="content" style="display:none;">
+    <div class="header">
+      <h1>👋 <span id="studentName">—</span></h1>
+      <div class="roll">
+        Roll: <span id="studentRoll">—</span>
+        <span class="batch-badge" id="studentBatch">—</span>
+      </div>
+    </div>
+
+    <div class="balance-card">
+      <div class="balance-label">Current Balance</div>
+      <div class="balance-amount" id="balance">৳0</div>
+      <div class="balance-note" id="balanceNote">Advance deposit থেকে কাটা হবে</div>
+    </div>
+
+    <div class="info-card">
+      <h3>📊 Account Info</h3>
+      <div class="info-row">
+        <span class="info-label">Total Deposit</span>
+        <span class="info-value" id="totalDeposit">৳0</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Total Bill</span>
+        <span class="info-value" id="totalBill">৳0</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Login Email</span>
+        <span class="info-value mono" id="loginEmail">—</span>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3>🍽️ Meal History</h3>
+      <div class="placeholder">
+        Meal history এখনো খালি<br>
+        <small>OMR স্ক্যান হলে এখানে দেখা যাবে (Phase 4)</small>
+      </div>
+    </div>
+
+    <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+  </div>
+
+  <div id="errorBox" style="display:none;"></div>
+</div>
+
+<script type="module">
+import {
+  db, auth, collection, getDocs, query, where,
+  onAuthStateChanged, signOut
+} from './js/firebase-init.js';
+
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function showError(msg) {
+  document.getElementById('loading').style.display = 'none';
+  const box = document.getElementById('errorBox');
+  box.style.display = 'block';
+  box.className = 'error-box';
+  box.innerHTML = msg + '<br><br><a href="student-login.html">← আবার Login কর</a>';
+}
+
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    window.location.href = 'student-login.html';
+    return;
+  }
+
+  try {
+    const q = query(collection(db, 'students'), where('uid', '==', user.uid));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      showError('❌ তোমার student record পাওয়া যায়নি।<br>Batch Admin-এর সাথে যোগাযোগ কর।');
+      return;
+    }
+
+    const s = snap.docs[0].data();
+    const balance = Number(s.balance || 0);
+    const totalDeposit = Number(s.totalDeposit || 0);
+    const totalBill = Number(s.totalBill || 0);
+
+    document.getElementById('studentName').textContent = s.name || '—';
+    document.getElementById('studentRoll').textContent = s.roll || '—';
+    document.getElementById('studentBatch').textContent = s.batchName || '—';
+    document.getElementById('totalDeposit').textContent = '৳' + totalDeposit;
+    document.getElementById('totalBill').textContent = '৳' + totalBill;
+    document.getElementById('loginEmail').textContent = s.loginEmail || user.email || '—';
+
+    const balEl = document.getElementById('balance');
+    balEl.textContent = '৳' + balance;
+    if (balance < 0) {
+      balEl.classList.add('neg');
+      document.getElementById('balanceNote').textContent = '⚠️ Balance negative — Admin-এর সাথে যোগাযোগ কর';
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+  } catch (e) {
+    console.error(e);
+    showError('❌ Error: ' + escapeHtml(e.message));
+  }
+});
+
+window.logout = async function() {
+  if (!confirm('Logout করব?')) return;
+  try {
+    await signOut(auth);
+    window.location.href = 'student-login.html';
+  } catch (e) {
+    alert('Logout fail: ' + e.message);
+  }
+};
+</script>
+
+</body>
+</html>
