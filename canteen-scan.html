@@ -21,7 +21,6 @@
   button { padding: 11px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-right: 6px; margin-top: 8px; transition: 0.2s; }
   .btn-primary { background: #2c5aa0; color: white; }
   .btn-primary:hover { background: #1e4079; }
-  .btn-primary:disabled { background: #999; cursor: not-allowed; }
   .btn-success { background: #28a745; color: white; }
   .btn-success:hover { background: #1e7e34; }
   .btn-success:disabled { background: #999; cursor: not-allowed; }
@@ -70,15 +69,6 @@
 
   .ai-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
 </style>
-
-<!-- Google Gen AI SDK Import Map (ব্রাউজারে সরাসরি এসডিকে ব্যবহারের জন্য) -->
-<script type="importmap">
-{
-  "imports": {
-    "@google/genai": "https://esm.run/@google/genai"
-  }
-}
-</script>
 </head>
 <body>
 
@@ -174,7 +164,6 @@ import {
   addDoc, updateDoc, serverTimestamp
 } from './js/firebase-init.js';
 import { GEMINI_API_KEY } from './firebase-config.js';
-import { GoogleGenAI } from '@google/genai';
 
 let students = [];
 let pricing = { lunchFull: 80, lunchHalf: 60, dinnerFull: 80, dinnerHalf: 60 };
@@ -301,7 +290,7 @@ async function handleFile(file) {
   }
 }
 
-// SDK দিয়ে জেমিনি কল করার ফাংশন (কোনো এরর আসবে না ইন শা আল্লাহ)
+// Direct REST API দিয়ে Gemini কল করার ফাংশন
 async function callGeminiVision(file) {
   const base64 = await new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -321,28 +310,45 @@ Example:
   "101": { "lunchFull": true, "lunchHalf": false, "dinnerFull": true, "dinnerHalf": false }
 }`;
 
-  dbg('→ SDK দিয়ে Gemini API কল করা হচ্ছে...');
-  
-  const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+  dbg('→ Direct REST API দিয়ে Gemini কল করা হচ্ছে...');
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+  const body = {
     contents: [
-      prompt,
       {
-        inlineData: {
-          data: base64,
-          mimeType: file.type || 'image/jpeg'
-        }
+        parts: [
+          { text: prompt },
+          {
+            inlineData: {
+              mimeType: file.type || 'image/jpeg',
+              data: base64
+            }
+          }
+        ]
       }
     ],
-    config: {
+    generationConfig: {
       temperature: 0.1,
       responseMimeType: 'application/json'
     }
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
   });
 
-  const text = response.text;
+  const data = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'API Error occurred');
+  }
+
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('Gemini থেকে কোনো রেসপন্স আসেনি');
+
   dbg(`Response: ${text.slice(0, 300)}`);
 
   let cleaned = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
@@ -481,7 +487,7 @@ window.saveResults = async function() {
       const studentRef = doc(db, 'students', r.studentId);
       const studentSnap = await getDoc(studentRef);
       if (!studentSnap.exists()) continue;
-      const sData = studentSnap.data();
+      const sData = studentSnap.name ? studentSnap.data() : studentSnap.data(); // Safe check
       await updateDoc(studentRef, {
         balance: Number(sData.balance || 0) - r.bill,
         totalBill: Number(sData.totalBill || 0) + r.bill
