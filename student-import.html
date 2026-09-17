@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Student Import — Gemini AI</title>
+<title>Student Import — OCR</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #222; }
@@ -21,21 +21,13 @@
   .btn-success:hover { background: #1e7e34; }
   .btn-success:disabled { background: #999; cursor: not-allowed; }
   .btn-secondary { background: #6c757d; color: white; }
-  .btn-test { background: #ff9800; color: white; padding: 8px 16px; font-size: 13px; }
-  .btn-test:hover { background: #e68900; }
-  .btn-test:disabled { background: #999; cursor: not-allowed; }
+  .btn-secondary:hover { background: #5a6268; }
 
-  .api-status {
+  .info-banner {
     display: flex; align-items: center; gap: 10px;
-    padding: 14px 18px; background: #fff3cd; border-left: 4px solid #ff9800;
-    border-radius: 6px; margin-bottom: 20px; font-size: 14px;
+    padding: 14px 18px; background: #e7f3ff; border-left: 4px solid #2c5aa0;
+    border-radius: 6px; margin-bottom: 20px; font-size: 14px; color: #004085;
   }
-  .api-status.ok { background: #d4edda; border-left-color: #28a745; color: #155724; }
-  .api-status.error { background: #f8d7da; border-left-color: #dc3545; color: #721c24; }
-  .api-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff9800; flex-shrink: 0; }
-  .api-status.ok .api-dot { background: #28a745; }
-  .api-status.error .api-dot { background: #dc3545; }
-  .api-status button { margin: 0 0 0 auto; }
 
   .dropzone {
     border: 2px dashed #2c5aa0; border-radius: 10px;
@@ -61,11 +53,12 @@
   td input { border: 1px solid transparent; padding: 6px 8px; width: 100%; background: transparent; border-radius: 4px; font-size: 14px; }
   td input:focus { background: #fff; border-color: #2c5aa0; outline: none; }
 
-  .preview-img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; margin-top: 15px; max-height: 300px; display: block; }
+  .preview-img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; margin-top: 15px; max-height: 250px; display: block; }
+  .preview-label { font-size: 12px; color: #666; margin-top: 8px; font-style: italic; }
+
   .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
   .badge-ok { background: #d4edda; color: #155724; }
   .badge-warn { background: #fff3cd; color: #856404; }
-  .badge-ai { background: #e0e7ff; color: #3730a3; padding: 4px 10px; font-size: 12px; }
 
   .loading-spinner {
     display: inline-block; width: 16px; height: 16px;
@@ -73,7 +66,6 @@
     border-radius: 50%; animation: spin 1s linear infinite;
     margin-right: 6px; vertical-align: middle;
   }
-  .loading-spinner.dark { border-color: #2c5aa0; border-top-color: transparent; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .toast {
@@ -89,20 +81,22 @@
   .actions-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
   .count-text { font-size: 14px; color: #555; }
 
-  .debug-box { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 11px; max-height: 200px; overflow-y: auto; margin-top: 12px; display: none; white-space: pre-wrap; word-break: break-all; }
-  .debug-box.show { display: block; }
+  .tip-box {
+    background: #fffbe6; padding: 12px 16px; border-left: 4px solid #ff9800;
+    border-radius: 6px; font-size: 13px; color: #856404; margin-top: 15px;
+  }
+  .tip-box strong { color: #e68900; }
 </style>
 </head>
 <body>
 
 <div class="container">
   <h1>📋 Student List Import</h1>
-  <p class="sub">ছবি বা PDF আপলোড কর — <span class="badge badge-ai">🤖 Gemini AI</span> নাম-রোল বের করবে</p>
+  <p class="sub">ছবি বা PDF আপলোড কর — OCR স্বয়ংক্রিয়ভাবে নাম-রোল বের করবে</p>
 
-  <div class="api-status" id="apiStatus">
-    <div class="api-dot"></div>
-    <span id="apiStatusText">API key যাচাই করা হয়নি — Test বাটনে ক্লিক কর</span>
-    <button class="btn-test" onclick="testAPI()" id="testBtn">🧪 Test কর</button>
+  <div class="info-banner">
+    <span>💡</span>
+    <span><strong>100% ফ্রি</strong> — কোনো API key লাগবে না। OCR সম্পূর্ণ তোমার ব্রাউজারেই চলে।</span>
   </div>
 
   <div class="card">
@@ -119,8 +113,20 @@
     </div>
     <div class="progress-bar" id="progressBar"><div id="progressFill"></div></div>
     <div class="status" id="status"></div>
-    <div class="debug-box" id="debugBox"></div>
-    <img id="previewImg" class="preview-img" style="display:none;" />
+
+    <img id="originalImg" class="preview-img" style="display:none;" />
+    <div id="originalLabel" class="preview-label" style="display:none;">📷 Original</div>
+
+    <img id="processedImg" class="preview-img" style="display:none;" />
+    <div id="processedLabel" class="preview-label" style="display:none;">🔧 Preprocessed (OCR-এ এইটা যাচ্ছে)</div>
+
+    <div class="tip-box">
+      <strong>ভালো ফলাফলের টিপস:</strong><br>
+      • সাদা কাগজে কালো ছাপা টেক্সট হলে ৯৫%+ সঠিক আসবে<br>
+      • ছবি সোজা করে তুলো (কাত না)<br>
+      • ভালো আলোতে, শ্যাডো ছাড়া<br>
+      • হাতের লেখা হলে accuracy কম হবে
+    </div>
   </div>
 
   <div class="card" id="resultCard" style="display:none;">
@@ -129,7 +135,7 @@
       <span class="count-text" id="countBadge">মোট: 0 জন</span>
     </div>
     <p style="color:#666; font-size:13px; margin-bottom:10px;">
-      AI যা বের করেছে — চেক কর, ভুল থাকলে edit কর।
+      OCR যা বের করেছে — চেক কর, ভুল থাকলে edit কর বা row যোগ/মুছে ফেল।
     </p>
     <div style="margin-bottom:10px;">
       <button class="btn-secondary" onclick="addEmptyRow()">+ নতুন Row</button>
@@ -154,12 +160,13 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Tesseract.js + PDF.js -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <script type="module">
 import { db, collection, addDoc, getDocs, query, where, serverTimestamp }
   from './js/firebase-init.js';
-import { GEMINI_API_KEY } from './firebase-config.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -170,12 +177,11 @@ const fileInput = document.getElementById('fileInput');
 const progressBar = document.getElementById('progressBar');
 const progressFill = document.getElementById('progressFill');
 const statusEl = document.getElementById('status');
-const previewImg = document.getElementById('previewImg');
+const originalImg = document.getElementById('originalImg');
+const processedImg = document.getElementById('processedImg');
+const originalLabel = document.getElementById('originalLabel');
+const processedLabel = document.getElementById('processedLabel');
 const resultCard = document.getElementById('resultCard');
-const apiStatus = document.getElementById('apiStatus');
-const apiStatusText = document.getElementById('apiStatusText');
-const testBtn = document.getElementById('testBtn');
-const debugBox = document.getElementById('debugBox');
 
 // ---------- Helpers ----------
 function escapeHtml(str) {
@@ -191,15 +197,6 @@ function setProgress(pct) {
   progressFill.style.width = pct + '%';
 }
 function hideProgress() { progressBar.style.display = 'none'; }
-function showDebug(msg) {
-  debugBox.className = 'debug-box show';
-  debugBox.textContent += msg + '\n';
-  debugBox.scrollTop = debugBox.scrollHeight;
-}
-function clearDebug() {
-  debugBox.textContent = '';
-  debugBox.className = 'debug-box';
-}
 
 let toastTimer;
 function showToast(msg, type) {
@@ -211,141 +208,145 @@ function showToast(msg, type) {
 }
 
 // ==========================================================
-// 🔍 Key Debug — key-টা ঠিকভাবে লোড হয়েছে কিনা দেখার জন্য
+// 🖼️ Image Preprocessing — OCR-এর accuracy বাড়ানোর মূল চাবিকাঠি
 // ==========================================================
-function checkKeyIntegrity() {
-  if (!GEMINI_API_KEY) {
-    showDebug('❌ GEMINI_API_KEY: undefined বা empty');
-    return false;
-  }
-  const len = GEMINI_API_KEY.length;
-  const prefix = GEMINI_API_KEY.substring(0, 8);
-  const suffix = GEMINI_API_KEY.substring(len - 6);
-  showDebug(`🔑 Key length: ${len} chars`);
-  showDebug(`🔑 Prefix: ${prefix}...`);
-  showDebug(`🔑 Suffix: ...${suffix}`);
-  showDebug(`🔑 Has dots: ${GEMINI_API_KEY.includes('.') ? 'yes (AQ. format)' : 'no (AIza format)'}`);
+function preprocessImage(sourceCanvas) {
+  const canvas = document.createElement('canvas');
+  canvas.width = sourceCanvas.width;
+  canvas.height = sourceCanvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(sourceCanvas, 0, 0);
 
-  if (len < 30) {
-    showDebug('⚠️ Key খুব ছোট — সম্ভবত কপি হয়নি');
-    return false;
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+
+  // Step 1: Grayscale + Contrast boost + Threshold
+  for (let i = 0; i < data.length; i += 4) {
+    // Grayscale (luminance formula)
+    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+
+    // Contrast boost: push dark pixels darker, light pixels lighter
+    let val = (gray - 128) * 1.8 + 128;
+
+    // Threshold: anything below 140 → black, above → white
+    // এতে ছবি প্রায় pure black & white হয়ে যায়, Tesseract ভালো পড়ে
+    val = val < 140 ? 0 : 255;
+
+    data[i] = val;
+    data[i + 1] = val;
+    data[i + 2] = val;
   }
-  return true;
+
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
 }
 
 // ==========================================================
-// 🧪 API TEST — দুই পদ্ধতিতে try করবে
+// 📄 File → Canvas Conversion
 // ==========================================================
-window.testAPI = async function() {
-  testBtn.disabled = true;
-  testBtn.innerHTML = '<span class="loading-spinner dark" style="width:12px;height:12px;"></span>Testing...';
-  clearDebug();
-
-  apiStatus.className = 'api-status';
-  apiStatusText.textContent = '⏳ API যাচাই করা হচ্ছে...';
-
-  try {
-    if (!checkKeyIntegrity()) {
-      throw new Error('API key লোড হয়নি বা ভুল');
-    }
-
-    // -------- Method 1: ?key= param --------
-    showDebug('\n--- Method 1: URL ?key= param ---');
-    let res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: "Reply with: OK" }] }]
-        })
-      }
-    );
-    showDebug(`Status: ${res.status} ${res.statusText}`);
-    let data = await res.json();
-    showDebug(`Response: ${JSON.stringify(data).slice(0, 250)}`);
-
-    if (res.ok) {
-      showDebug('✅ Method 1 সফল!');
-      apiStatus.className = 'api-status ok';
-      apiStatusText.textContent = '✅ API কাজ করছে (?key= param)';
-      testBtn.style.display = 'none';
-      showToast('✅ API সফলভাবে যাচাই হয়েছে', 'success');
-      return;
-    }
-
-    // -------- Method 2: x-goog-api-key header --------
-    showDebug('\n--- Method 2: x-goog-api-key header ---');
-    res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': GEMINI_API_KEY
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: "Reply with: OK" }] }]
-        })
-      }
-    );
-    showDebug(`Status: ${res.status} ${res.statusText}`);
-    data = await res.json();
-    showDebug(`Response: ${JSON.stringify(data).slice(0, 250)}`);
-
-    if (res.ok) {
-      showDebug('✅ Method 2 সফল!');
-      apiStatus.className = 'api-status ok';
-      apiStatusText.textContent = '✅ API কাজ করছে (x-goog-api-key header)';
-      testBtn.style.display = 'none';
-      showToast('✅ API সফলভাবে যাচাই হয়েছে', 'success');
-      return;
-    }
-
-    // -------- Method 3: Authorization Bearer --------
-    showDebug('\n--- Method 3: Authorization Bearer ---');
-    res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GEMINI_API_KEY}`
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: "Reply with: OK" }] }]
-        })
-      }
-    );
-    showDebug(`Status: ${res.status} ${res.statusText}`);
-    data = await res.json();
-    showDebug(`Response: ${JSON.stringify(data).slice(0, 250)}`);
-
-    if (res.ok) {
-      showDebug('✅ Method 3 সফল!');
-      apiStatus.className = 'api-status ok';
-      apiStatusText.textContent = '✅ API কাজ করছে (Bearer)';
-      testBtn.style.display = 'none';
-      showToast('✅ API সফলভাবে যাচাই হয়েছে', 'success');
-      return;
-    }
-
-    // সব fail
-    const errMsg = data.error?.message || `HTTP ${res.status}`;
-    throw new Error(errMsg);
-
-  } catch (e) {
-    apiStatus.className = 'api-status error';
-    apiStatusText.textContent = '❌ ' + e.message;
-    showDebug(`\n❌ সব method fail: ${e.message}`);
-    showToast('❌ API Test ব্যর্থ — Debug box দেখ', 'error');
-    testBtn.disabled = false;
-    testBtn.textContent = '🔄 আবার Test কর';
+async function fileToCanvas(file) {
+  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 3.0 }); // Higher scale = better OCR
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({
+      canvasContext: canvas.getContext('2d'),
+      viewport
+    }).promise;
+    return canvas;
   }
-};
+
+  // Image → Canvas
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        // Scale up for better OCR
+        const scale = Math.max(1, 2000 / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 // ==========================================================
-// Upload handling
+// 🔍 Tesseract OCR
+// ==========================================================
+async function runOCR(canvas) {
+  setStatus('OCR চলছে... (প্রথমবার ১০-২০ সেকেন্ড লাগবে)', '');
+
+  const result = await Tesseract.recognize(canvas, 'eng', {
+    logger: m => {
+      if (m.status === 'recognizing text') {
+        const pct = Math.round(m.progress * 100);
+        setProgress(pct);
+        setStatus(`OCR: ${pct}%`, '');
+      }
+    },
+    // Tesseract tuning: single column of text (student list)
+    tessedit_pageseg_mode: '6',
+    preserve_interword_spaces: '1'
+  });
+
+  return result.data.text;
+}
+
+// ==========================================================
+// 📝 Text Parsing — Roll + Name আলাদা করা
+// ==========================================================
+function parseStudents(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const students = [];
+  const seen = new Set();
+
+  for (let line of lines) {
+    // Skip header lines
+    if (/^(roll|name|sl|no|student|list|page|batch)/i.test(line)) continue;
+    if (line.length < 3) continue;
+
+    // Pattern 1: "101 Rahim Uddin" or "101. Rahim Uddin" or "101 - Rahim"
+    let match = line.match(/^(\d{1,6})[\s.\-:)\]]+(.+)$/);
+    if (match) {
+      const roll = match[1];
+      const name = match[2].replace(/[^a-zA-Z\s.'-]/g, '').trim();
+      if (roll && name.length >= 2 && !seen.has(roll)) {
+        seen.add(roll);
+        students.push({ roll, name });
+      }
+      continue;
+    }
+
+    // Pattern 2: "Rahim Uddin 101" (name first)
+    match = line.match(/^([a-zA-Z\s.'-]{3,})\s+(\d{1,6})$/);
+    if (match) {
+      const name = match[1].trim();
+      const roll = match[2];
+      if (!seen.has(roll)) {
+        seen.add(roll);
+        students.push({ roll, name });
+      }
+    }
+  }
+
+  return students;
+}
+
+// ==========================================================
+// 🎬 Main Flow
 // ==========================================================
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
@@ -358,186 +359,60 @@ fileInput.addEventListener('change', e => {
   if (e.target.files.length) handleFile(e.target.files[0]);
 });
 
-// ==========================================================
-// Main flow
-// ==========================================================
 async function handleFile(file) {
   resultCard.style.display = 'none';
   hideProgress();
-  previewImg.style.display = 'none';
-  clearDebug();
+  originalImg.style.display = 'none';
+  processedImg.style.display = 'none';
+  originalLabel.style.display = 'none';
+  processedLabel.style.display = 'none';
 
   try {
-    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-      await processPDF(file);
-    } else if (file.type.startsWith('image/')) {
-      await processImage(file);
-    } else {
-      throw new Error('শুধু ছবি বা PDF দেওয়া যাবে');
+    setStatus('ফাইল পড়া হচ্ছে...', '');
+
+    // Step 1: File → Canvas
+    const originalCanvas = await fileToCanvas(file);
+    originalImg.src = originalCanvas.toDataURL('image/png');
+    originalImg.style.display = 'block';
+    originalLabel.style.display = 'block';
+    setProgress(20);
+
+    // Step 2: Preprocess
+    setStatus('ছবি প্রস্তুত করা হচ্ছে (preprocessing)...', '');
+    const processedCanvas = preprocessImage(originalCanvas);
+    processedImg.src = processedCanvas.toDataURL('image/png');
+    processedImg.style.display = 'block';
+    processedLabel.style.display = 'block';
+    setProgress(35);
+
+    // Step 3: OCR
+    const text = await runOCR(processedCanvas);
+    setProgress(90);
+
+    // Step 4: Parse
+    setStatus('টেক্সট বিশ্লেষণ করা হচ্ছে...', '');
+    const students = parseStudents(text);
+
+    if (students.length === 0) {
+      setStatus('⚠️ কোনো স্টুডেন্ট পাওয়া যায়নি — ছবি পরিষ্কার কিনা দেখ বা হাতে এন্ট্রি কর', 'error');
+      showToast('⚠️ কোনো ডেটা পাওয়া যায়নি', 'error');
+      // Still show table for manual entry
+      renderTable([]);
+      resultCard.style.display = 'block';
+      return;
     }
+
+    setProgress(100);
+    setStatus(`✅ ${students.length} জন পাওয়া গেছে!`, 'ok');
+    renderTable(students);
+    resultCard.style.display = 'block';
+    showToast(`✅ ${students.length} জন স্টুডেন্ট পাওয়া গেছে`, 'success');
+
   } catch (e) {
     console.error(e);
     setStatus('❌ ' + e.message, 'error');
     showToast('❌ ' + e.message, 'error');
-    showDebug('❌ ' + e.message);
   }
-}
-
-async function processImage(file) {
-  setStatus('ছবি প্রস্তুত হচ্ছে...', '');
-  previewImg.src = URL.createObjectURL(file);
-  previewImg.style.display = 'block';
-
-  const base64 = await fileToBase64(file);
-  setProgress(20);
-
-  const students = await callGemini(base64, file.type);
-  setProgress(100);
-  setStatus(`✅ ${students.length} জন পাওয়া গেছে!`, 'ok');
-  renderTable(students);
-  resultCard.style.display = 'block';
-  showToast(`✅ ${students.length} জন স্টুডেন্ট পাওয়া গেছে`, 'success');
-}
-
-async function processPDF(file) {
-  setStatus('PDF লোড হচ্ছে...', '');
-  const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-
-  let allStudents = [];
-
-  for (let p = 1; p <= pdf.numPages; p++) {
-    setStatus(`Page ${p}/${pdf.numPages} — AI পড়ছে...`, '');
-    setProgress(Math.round((p - 1) / pdf.numPages * 100));
-
-    const page = await pdf.getPage(p);
-    const viewport = page.getViewport({ scale: 2.0 });
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const ctx = canvas.getContext('2d');
-    await page.render({ canvasContext: ctx, viewport }).promise;
-
-    if (p === 1) {
-      previewImg.src = canvas.toDataURL('image/png');
-      previewImg.style.display = 'block';
-    }
-
-    const base64 = canvas.toDataURL('image/png').split(',')[1];
-    const students = await callGemini(base64, 'image/png');
-    allStudents = allStudents.concat(students);
-  }
-
-  const seen = new Set();
-  allStudents = allStudents.filter(s => {
-    if (seen.has(s.roll)) return false;
-    seen.add(s.roll);
-    return true;
-  });
-
-  setProgress(100);
-  setStatus(`✅ ${allStudents.length} জন পাওয়া গেছে!`, 'ok');
-  renderTable(allStudents);
-  resultCard.style.display = 'block';
-  showToast(`✅ ${allStudents.length} জন স্টুডেন্ট পাওয়া গেছে`, 'success');
-}
-
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => resolve(e.target.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-// ==========================================================
-// Gemini API — Dual auth fallback
-// ==========================================================
-async function callGemini(base64Data, mimeType) {
-  const prompt = `You are an expert OCR assistant. Analyze the attached image of a student list.
-Extract ALL student records visible.
-For each student, identify their Roll number and full Name.
-Return ONLY a valid JSON array of objects, nothing else.
-Each object must have exactly two keys: "roll" (string) and "name" (string).
-Example: [{"roll":"101","name":"Rahim Uddin"},{"roll":"102","name":"Karim Ahmed"}]
-Rules:
-- If roll or name cannot be read clearly, skip that record.
-- Keep names exactly as they appear.
-- Preserve leading zeros in roll numbers.`;
-
-  const model = 'gemini-3.6-flash';
-  const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-  const body = JSON.stringify({
-    contents: [{
-      parts: [
-        { text: prompt },
-        { inline_data: { mime_type: mimeType, data: base64Data } }
-      ]
-    }],
-    generationConfig: {
-      temperature: 0.1,
-      responseMimeType: "application/json"
-    }
-  });
-
-  // --- Try Method 1: x-goog-api-key header ---
-  showDebug('🤖 Method 1: header');
-  let res = await fetch(baseUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': GEMINI_API_KEY
-    },
-    body: body
-  });
-
-  // --- Try Method 2: ?key= param ---
-  if (!res.ok) {
-    showDebug(`   Method 1 failed: ${res.status}, trying Method 2...`);
-    res = await fetch(`${baseUrl}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: body
-    });
-  }
-
-  // --- Try Method 3: Authorization Bearer ---
-  if (!res.ok) {
-    showDebug(`   Method 2 failed: ${res.status}, trying Method 3...`);
-    res = await fetch(baseUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GEMINI_API_KEY}`
-      },
-      body: body
-    });
-  }
-
-  if (!res.ok) {
-    const errData = await res.json().catch(() => ({}));
-    const msg = errData.error?.message || `HTTP ${res.status}`;
-    showDebug(`❌ সব method fail: ${msg}`);
-    throw new Error(msg);
-  }
-
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  showDebug(`✅ Response: ${text.length} chars`);
-
-  const cleaned = text.trim()
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/, '')
-    .replace(/\s*```$/, '');
-
-  const parsed = JSON.parse(cleaned);
-  if (!Array.isArray(parsed)) throw new Error('AI response ভুল ফরম্যাটে');
-
-  return parsed.map(s => ({
-    roll: String(s.roll || '').trim(),
-    name: String(s.name || '').trim()
-  })).filter(s => s.roll && s.name);
 }
 
 // ==========================================================
