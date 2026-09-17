@@ -8,4 +8,4 @@ export const firebaseConfig = {
 };
 
 export const OCR_API_KEY = "K83602790288957";
-export const GEMINI_API_KEY = "";  // খালি রাখ, Gemini বাদ দিচ্ছি
+export const GEMINI_API_KEY = "AQ.Ab8RN6L7WiBRd63thFnDBOoZPz1qSKi4nhyMRwhGO71n93xWjg";  // খালি রাখ, Gemini বাদ দিচ্ছি
