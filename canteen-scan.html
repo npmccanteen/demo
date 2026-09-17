@@ -164,9 +164,11 @@ import {
   addDoc, updateDoc, serverTimestamp
 } from './js/firebase-init.js';
 import { GEMINI_API_KEY } from './firebase-config.js';
+import { GoogleGenAI } from 'https://esm.sh/@google/genai';
 
 // ---------- Config ----------
 const GEMINI_MODEL = 'gemini-3.5-flash'; // GA stable as of Sep 2026. Fallback if needed: 'gemini-2.5-flash'
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 // ---------- State ----------
 let students = [];
@@ -341,58 +343,35 @@ Only include a roll in the output if it has at least one filled bubble. Skip rol
     )
   };
 
-  // NOTE: using the Interactions API (not the old generateContent endpoint).
-  // New-format "AQ." auth keys (issued by AI Studio since May 2026) reliably
-  // return 401 ACCESS_TOKEN_TYPE_UNSUPPORTED on generateContent — this is a
-  // known, widely-reported issue. The Interactions API endpoint is the one
-  // Google's own docs use with these keys, and it works.
-  const interactionBody = {
-    model: GEMINI_MODEL,
-    input: [
-      { type: 'text', text: prompt },
-      { type: 'image', data: base64, mime_type: file.type || 'image/jpeg' }
-    ],
-    response_format: {
-      type: 'text',
-      mime_type: 'application/json',
-      schema: schema
-    }
-  };
+  dbg(`→ Calling ${GEMINI_MODEL} via official SDK...`);
 
-  dbg(`→ Calling ${GEMINI_MODEL} via Interactions API...`);
-
-  const response = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/interactions',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': GEMINI_API_KEY
-      },
-      body: JSON.stringify(interactionBody)
-    }
-  );
-
-  dbg(`  Status: ${response.status}`);
-  const data = await response.json();
-
-  if (!response.ok) {
-    dbg(`  ❌ Raw error body: ${JSON.stringify(data)}`);
-    const msg = data.error?.message || data.message || JSON.stringify(data.error || data) || `HTTP ${response.status}`;
-    throw new Error(msg);
+  let response;
+  try {
+    response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: file.type || 'image/jpeg', data: base64 } }
+          ]
+        }
+      ],
+      config: {
+        temperature: 0,
+        responseMimeType: 'application/json',
+        responseSchema: schema
+      }
+    });
+  } catch (e) {
+    dbg(`  ❌ SDK error: ${e.message}`);
+    throw new Error(e.message || 'Gemini call failed');
   }
 
-  if (data.status === 'failed') {
-    const msg = data.errors?.[0]?.message || 'Interaction failed';
-    dbg(`  ❌ ${msg}`);
-    throw new Error(msg);
-  }
-
-  const modelStep = (data.steps || []).find(s => s.type === 'model_output');
-  const textBlock = modelStep?.content?.find(c => c.type === 'text');
-  const text = textBlock?.text;
+  const text = response.text;
   if (!text) {
-    dbg(`  ❌ No text in response — raw: ${JSON.stringify(data).slice(0, 300)}`);
+    dbg(`  ❌ No text in response — raw: ${JSON.stringify(response).slice(0, 300)}`);
     throw new Error('Gemini থেকে কোনো text পাওয়া যায়নি');
   }
 
