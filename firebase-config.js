@@ -9,3 +9,4 @@ export const firebaseConfig = {
 
 // ✅ OCR.space API key (email-এ পাবি)
 export const OCR_API_KEY = "K83602790288957";  // ← এখানে বসা
+export const GEMINI_API_KEY = "AQ.Ab8RN6JVuf342wdBXa0osp7y6HeOh2qB1yUX3Xn9vGQUmxlZ7Q";
