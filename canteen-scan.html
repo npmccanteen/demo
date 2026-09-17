@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Canteen Scan — Gemini Vision</title>
+<title>Canteen Scan — AI Vision</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 15px; color: #222; }
@@ -73,8 +73,8 @@
 <body>
 
 <div class="container">
-  <h1>📷 Canteen Scan <span class="ai-badge">✨ Gemini AI</span></h1>
-  <p class="sub">ছবি upload কর → Gemini auto detect করবে → যাচাই → Save</p>
+  <h1>📷 Canteen Scan <span class="ai-badge">✨ AI Vision</span></h1>
+  <p class="sub">ছবি upload কর → AI auto detect করবে → যাচাই → Save</p>
 
   <div class="card">
     <div class="row">
@@ -99,7 +99,7 @@
 
   <div class="card" id="uploadCard">
     <div class="info-banner">
-      🤖 <strong>Gemini Vision:</strong> ছবি থেকে Gemini নিজে বুঝবে কোন ছাত্রের কোন meal-এর bubble ভরা হয়েছে।
+      🤖 <strong>AI Vision:</strong> ছবি থেকে AI নিজে বুঝবে কোন ছাত্রের কোন meal-এর bubble ভরা হয়েছে।
     </div>
     <div class="dropzone" id="dropzone">
       <div class="icon">📷</div>
@@ -112,12 +112,12 @@
 
   <div class="progress-box" id="progressBox">
     <div class="big-spinner"></div>
-    <div id="progressText" style="margin-top:15px; font-weight:600; color:#2c5aa0; font-size:15px;">Gemini ছবি দেখছে...</div>
+    <div id="progressText" style="margin-top:15px; font-weight:600; color:#2c5aa0; font-size:15px;">AI ছবি দেখছে...</div>
   </div>
 
   <div class="card" id="resultCard" style="display:none;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
-      <h3 style="color:#2c5aa0; font-size:16px;">✏️ Gemini-র Result</h3>
+      <h3 style="color:#2c5aa0; font-size:16px;">✏️ AI-র Result</h3>
       <button class="btn-secondary" onclick="rerun()" style="font-size:12px; padding:6px 12px; margin:0;">🔄 আবার Detect</button>
     </div>
 
@@ -163,12 +163,10 @@ import {
   db, collection, getDocs, query, where, doc, getDoc,
   addDoc, updateDoc, serverTimestamp
 } from './js/firebase-init.js';
-import { GEMINI_API_KEY } from './firebase-config.js';
-import { GoogleGenAI } from 'https://esm.sh/@google/genai';
+import { OPENROUTER_API_KEY } from './firebase-config.js';
 
 // ---------- Config ----------
-const GEMINI_MODEL = 'gemini-3.5-flash'; // GA stable as of Sep 2026. Fallback if needed: 'gemini-2.5-flash'
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const OPENROUTER_MODEL = 'openrouter/free'; // auto-picks a free model that supports image input + structured output
 
 // ---------- State ----------
 let students = [];
@@ -250,7 +248,7 @@ fileInput.addEventListener('change', e => {
 
 async function handleFile(file) {
   if (!batchSelect.value) return showToast('⚠️ আগে Batch select কর', 'error');
-  if (!GEMINI_API_KEY || GEMINI_API_KEY.length < 20) return showToast('❌ Gemini API key নেই', 'error');
+  if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY.length < 10) return showToast('❌ OpenRouter API key নেই', 'error');
 
   lastFile = file;
   document.getElementById('debugPre').textContent = '';
@@ -270,8 +268,8 @@ async function handleFile(file) {
 
     if (students.length === 0) throw new Error('এই batch-এ কোনো student নেই');
 
-    progressText.textContent = 'Gemini ছবি দেখছে...';
-    dbg(`🤖 Model: ${GEMINI_MODEL}`);
+    progressText.textContent = 'AI ছবি দেখছে...';
+    dbg(`🤖 Model: ${OPENROUTER_MODEL}`);
     dbg(`📊 Students: ${students.length}\n`);
 
     const detected = await callGeminiVision(file);
@@ -294,20 +292,20 @@ async function handleFile(file) {
 
     const totalDetected = Object.keys(detected).length;
     document.getElementById('resultBanner').className = 'info-banner ok';
-    document.getElementById('resultBanner').innerHTML = `✅ Gemini <strong>${totalDetected}</strong> জনের meal detect করেছে। নিচে চেক করে ভুল থাকলে click করে ঠিক কর।`;
+    document.getElementById('resultBanner').innerHTML = `✅ AI <strong>${totalDetected}</strong> জনের meal detect করেছে। নিচে চেক করে ভুল থাকলে click করে ঠিক কর।`;
 
   } catch (e) {
     console.error(e);
     progressBox.classList.remove('show');
     document.getElementById('resultCard').style.display = 'block';
     document.getElementById('resultBanner').className = 'info-banner err';
-    document.getElementById('resultBanner').innerHTML = `❌ <strong>Gemini fail:</strong> ${escapeHtml(e.message)}<br><br>Debug log দেখ নিচে।`;
+    document.getElementById('resultBanner').innerHTML = `❌ <strong>AI fail:</strong> ${escapeHtml(e.message)}<br><br>Debug log দেখ নিচে।`;
     document.getElementById('debugPre').parentElement.open = true;
   }
 }
 
 // ==========================================================
-//  🎯 Gemini Vision call — single reliable call, structured output
+//  🎯 Vision call via OpenRouter (free tier) — structured output
 // ==========================================================
 async function callGeminiVision(file) {
   const base64 = await new Promise((resolve, reject) => {
@@ -324,55 +322,73 @@ The table has columns: Roll, Name, Lunch Full, Lunch Half, Dinner Full, Dinner H
 Go row by row, roll number by roll number, and check each of the 4 bubbles in that row individually.
 A bubble counts as "filled" only if it is clearly and solidly shaded dark — not just a faint mark, smudge, or the printed circle outline.
 Valid roll numbers to match against: ${rollList}
-Only include a roll in the output if it has at least one filled bubble. Skip rolls with no filled bubbles entirely.`;
+Only include a roll in the output if it has at least one filled bubble. Skip rolls with no filled bubbles entirely.
+Respond with ONLY a JSON object, no markdown, no explanation — keys are roll numbers as strings, values are objects with boolean keys lunchFull, lunchHalf, dinnerFull, dinnerHalf.
+Example: {"101": {"lunchFull": true, "lunchHalf": false, "dinnerFull": true, "dinnerHalf": false}}`;
 
-  // Structured output schema — forces Gemini to return exactly this shape,
-  // far more reliable than asking for free-form JSON and hoping it parses.
+  // Structured output schema — forces the model to return exactly this shape.
   const schema = {
-    type: "OBJECT",
+    type: "object",
     properties: Object.fromEntries(
       students.map(s => [String(s.roll), {
-        type: "OBJECT",
+        type: "object",
         properties: {
-          lunchFull: { type: "BOOLEAN" },
-          lunchHalf: { type: "BOOLEAN" },
-          dinnerFull: { type: "BOOLEAN" },
-          dinnerHalf: { type: "BOOLEAN" }
-        }
+          lunchFull: { type: "boolean" },
+          lunchHalf: { type: "boolean" },
+          dinnerFull: { type: "boolean" },
+          dinnerHalf: { type: "boolean" }
+        },
+        required: ["lunchFull", "lunchHalf", "dinnerFull", "dinnerHalf"],
+        additionalProperties: false
       }])
-    )
+    ),
+    additionalProperties: false
   };
 
-  dbg(`→ Calling ${GEMINI_MODEL} via official SDK...`);
+  dbg(`→ Calling ${OPENROUTER_MODEL} via OpenRouter...`);
 
-  let response;
-  try {
-    response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENROUTER_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: OPENROUTER_MODEL,
+      temperature: 0,
+      messages: [
         {
           role: 'user',
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType: file.type || 'image/jpeg', data: base64 } }
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: `data:${file.type || 'image/jpeg'};base64,${base64}` } }
           ]
         }
       ],
-      config: {
-        temperature: 0,
-        responseMimeType: 'application/json',
-        responseSchema: schema
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'meal_marks',
+          strict: true,
+          schema: schema
+        }
       }
-    });
-  } catch (e) {
-    dbg(`  ❌ SDK error: ${e.message}`);
-    throw new Error(e.message || 'Gemini call failed');
+    })
+  });
+
+  dbg(`  Status: ${response.status}`);
+  const data = await response.json();
+
+  if (!response.ok) {
+    dbg(`  ❌ Raw error body: ${JSON.stringify(data)}`);
+    const msg = data.error?.message || `HTTP ${response.status}`;
+    throw new Error(msg);
   }
 
-  const text = response.text;
+  const text = data.choices?.[0]?.message?.content;
   if (!text) {
-    dbg(`  ❌ No text in response — raw: ${JSON.stringify(response).slice(0, 300)}`);
-    throw new Error('Gemini থেকে কোনো text পাওয়া যায়নি');
+    dbg(`  ❌ No text in response — raw: ${JSON.stringify(data).slice(0, 300)}`);
+    throw new Error('Model থেকে কোনো text পাওয়া যায়নি');
   }
 
   dbg(`  ✅ Response received, parsing...`);
@@ -382,7 +398,7 @@ Only include a roll in the output if it has at least one filled bubble. Skip rol
     parsed = JSON.parse(text);
   } catch (e) {
     dbg(`  ❌ JSON parse failed: ${e.message}`);
-    throw new Error('Gemini-র response valid JSON না — আবার try কর');
+    throw new Error('Model-এর response valid JSON না — আবার try কর');
   }
 
   const validRolls = new Set(students.map(s => String(s.roll)));
