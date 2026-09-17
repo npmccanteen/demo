@@ -1,4 +1,5 @@
 // firebase-config.js
+// ⚠️ এটা client-side config — public-safe (GitHub-এ push করা ঠিক আছে)
 
 export const firebaseConfig = {
   apiKey: "AIzaSyCmMJ1oQSaespqPdo4Lr8B0d0bXRalPjQA",
@@ -9,5 +10,5 @@ export const firebaseConfig = {
   appId: "1:177224931219:web:328101a5af09a197adfa66"
 };
 
-// 🔑 এখানে তোর Gemini API Key বসা (Google AI Studio থেকে নেওয়া)
-export const GEMINI_API_KEY = "AQ.Ab8RN6JVuf342wdBXa0osp7y6HeOh2qB1yUX3Xn9vGQUmxlZ7Q";
+// 🔑 Gemini API Key (নতুন ফরম্যাট: AQ. দিয়ে শুরু)
+export const GEMINI_API_KEY = "AQ.Ab8RN6JF_2uVuOdBIaXleMjZtKOfU8dYdzRuBukGM9-kcUme0g";
