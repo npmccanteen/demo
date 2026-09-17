@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Canteen Scan — Auto Detection</title>
+<title>Canteen Scan — Gemini Vision</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 15px; color: #222; }
@@ -41,8 +41,14 @@
   .info-banner.ok { background: #d4edda; border-left-color: #28a745; color: #155724; }
   .info-banner.err { background: #f8d7da; border-left-color: #dc3545; color: #721c24; }
 
-  #markWrap { position: relative; display: inline-block; line-height: 0; max-width: 100%; background: #222; border-radius: 8px; overflow: hidden; user-select: none; }
-  #markCanvas { display: block; max-width: 100%; height: auto; cursor: crosshair; }
+  #previewImg { max-width: 100%; border-radius: 8px; margin-top: 15px; max-height: 400px; display: block; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 15px; }
+  th, td { border: 1px solid #e0e0e0; padding: 8px; text-align: left; }
+  th { background: #f0f4fa; font-weight: 600; color: #2c5aa0; font-size: 12px; }
+  td.center { text-align: center; }
+  .tick { color: #28a745; font-weight: 700; font-size: 16px; }
+  .empty { color: #ccc; }
 
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 14px 24px; border-radius: 8px; font-size: 14px; display: none; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); max-width: 90%; }
   .toast.show { display: block; }
@@ -52,11 +58,6 @@
   .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 6px; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .legend { display: flex; gap: 15px; flex-wrap: wrap; font-size: 12px; margin-top: 10px; color: #666; }
-  .legend-item { display: flex; align-items: center; gap: 6px; }
-  .legend-dot { width: 14px; height: 14px; border-radius: 50%; background: rgba(255, 235, 59, 0.55); border: 2px solid rgba(255, 152, 0, 0.95); }
-  .legend-dot.filled { background: rgba(40, 167, 69, 0.75); border-color: #1e7e34; }
-
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 12px; }
   .stat-box { background: #f8f9fa; padding: 10px; border-radius: 8px; text-align: center; border-left: 3px solid #2c5aa0; }
   .stat-box .num { font-size: 20px; font-weight: 700; color: #2c5aa0; }
@@ -64,19 +65,25 @@
 
   .progress-box { display: none; text-align: center; padding: 30px; background: #f0f7ff; border-radius: 8px; margin-top: 10px; }
   .progress-box.show { display: block; }
-  .progress-box .bar { height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; margin-top: 15px; }
-  .progress-box .bar > div { height: 100%; background: #2c5aa0; width: 0%; transition: 0.3s; }
+  .progress-box .big-spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid #cce0ff; border-top-color: #2c5aa0; border-radius: 50%; animation: spin 1s linear infinite; }
 
   details.debug { margin-top: 15px; background: #f8f9fa; border-radius: 8px; padding: 10px 15px; font-size: 12px; }
   details.debug summary { cursor: pointer; font-weight: 600; color: #2c5aa0; }
-  details.debug pre { font-family: monospace; font-size: 11px; margin-top: 8px; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow: auto; }
+  details.debug pre { font-family: monospace; font-size: 11px; margin-top: 8px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow: auto; }
+
+  .ai-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white; padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+  }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>📷 Canteen Scan — Auto Detection</h1>
-  <p class="sub">ছবি upload কর → Auto bubble detection → যাচাই → Save</p>
+  <h1>📷 Canteen Scan <span class="ai-badge">✨ Gemini AI</span></h1>
+  <p class="sub">ছবি upload কর → Gemini auto detect করবে → যাচাই → Save</p>
 
   <div class="card">
     <div class="row">
@@ -101,46 +108,59 @@
 
   <div class="card" id="uploadCard">
     <div class="info-banner">
-      🤖 <strong>Auto-Detect:</strong> Sheet-এর ৪টা কালো marker auto খুঁজে নেবে, তারপর bubble auto detect করবে। ভালো আলো + সোজা angle হলে accuracy বাড়ে।
+      🤖 <strong>Gemini Vision:</strong> ছবি থেকে Gemini নিজে বুঝবে কোন ছাত্রের কোন meal-এর bubble ভরা হয়েছে।
+      ভালো আলোতে, সোজা angle-এ ছবি তুললে accuracy সবচেয়ে ভালো।
     </div>
     <div class="dropzone" id="dropzone">
       <div class="icon">📷</div>
       <p>ছবি drag-drop কর বা ক্লিক কর</p>
-      <small>JPG, PNG</small>
+      <small>JPG, PNG — মোবাইল ক্যামেরার ছবি</small>
       <input type="file" id="fileInput" accept="image/*" style="display:none;" />
     </div>
+    <img id="previewImg" style="display:none;" />
   </div>
 
   <div class="progress-box" id="progressBox">
-    <div class="spinner" style="width:24px;height:24px;border-width:3px;"></div>
-    <div id="progressText" style="margin-top:10px; font-weight:600; color:#2c5aa0;">প্রসেস হচ্ছে...</div>
-    <div class="bar"><div id="progressBar"></div></div>
+    <div class="big-spinner"></div>
+    <div id="progressText" style="margin-top:15px; font-weight:600; color:#2c5aa0; font-size:15px;">Gemini ছবি দেখছে...</div>
+    <div style="font-size:12px; color:#888; margin-top:8px;">১০-৩০ সেকেন্ড লাগতে পারে</div>
   </div>
 
-  <div class="card" id="markingCard" style="display:none;">
-    <h3 style="color:#2c5aa0; margin-bottom:8px;">✏️ Auto-Detected Result</h3>
+  <div class="card" id="resultCard" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
+      <h3 style="color:#2c5aa0; font-size:16px;">✏️ Gemini-র Result</h3>
+      <button class="btn-secondary" onclick="rerun()" style="font-size:12px; padding:6px 12px; margin:0;">🔄 আবার Detect</button>
+    </div>
 
     <div class="info-banner" id="resultBanner"></div>
 
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot"></div>Empty</div>
-      <div class="legend-item"><div class="legend-dot filled"></div>Filled (খেয়েছে)</div>
-    </div>
-
-    <div id="markWrap" style="margin-top:12px;">
-      <canvas id="markCanvas"></canvas>
-    </div>
-
     <div class="stats-grid" id="statsGrid"></div>
+
+    <div style="overflow-x:auto; max-height: 500px; overflow-y: auto;">
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th style="width:50px;">#</th>
+            <th style="width:80px;">Roll</th>
+            <th>Name</th>
+            <th style="width:70px;">🍛 L.Full</th>
+            <th style="width:70px;">🍚 L.Half</th>
+            <th style="width:70px;">🍽️ D.Full</th>
+            <th style="width:70px;">🥘 D.Half</th>
+            <th style="width:70px;">Bill</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
     <div style="margin-top:15px;">
       <button class="btn-success" onclick="saveResults()" id="saveBtn">💾 Save কর — Bill কাটো</button>
-      <button class="btn-warning" onclick="rerunDetection()">🔄 আবার Detect কর</button>
       <button class="btn-secondary" onclick="clearAll()">🗑️ নতুন ছবি</button>
     </div>
 
     <details class="debug">
-      <summary>🔍 Detection Details (debug)</summary>
+      <summary>🔍 Gemini Response (debug)</summary>
       <pre id="debugPre"></pre>
     </details>
   </div>
@@ -150,42 +170,18 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- OpenCV.js -->
-<script async src="https://docs.opencv.org/4.8.0/opencv.js" id="opencvScript"></script>
-
 <script type="module">
 import {
   db, collection, getDocs, query, where, doc, getDoc,
   addDoc, updateDoc, serverTimestamp
 } from './js/firebase-init.js';
+import { GEMINI_API_KEY } from './firebase-config.js';
 
 // ---------- State ----------
 let students = [];
 let pricing = { lunchFull: 80, lunchHalf: 60, dinnerFull: 80, dinnerHalf: 60 };
-let sourceImage = null;
-let sourceCanvas = null;
 let marking = {};
-let bubblePositions = {};   // {rowIdx: {col: {x, y, fillRatio}}}
-let warpData = null;
-let cvReady = false;
-
-// ---------- OpenCV Load ----------
-function waitForOpenCV() {
-  return new Promise(resolve => {
-    if (window.cv && window.cv.Mat) { cvReady = true; return resolve(true); }
-    const script = document.getElementById('opencvScript');
-    script.addEventListener('load', () => {
-      // OpenCV.js sets window.cv, but Mat may not be ready yet (it uses Module)
-      const check = () => {
-        if (window.cv && window.cv.Mat) { cvReady = true; resolve(true); }
-        else setTimeout(check, 100);
-      };
-      check();
-    });
-    // Timeout after 15s
-    setTimeout(() => resolve(false), 15000);
-  });
-}
+let lastFile = null;
 
 // ---------- Elements ----------
 const batchSelect = document.getElementById('batchSelect');
@@ -193,10 +189,8 @@ const scanDate = document.getElementById('scanDate');
 const perPageSel = document.getElementById('perPage');
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
-const markCanvas = document.getElementById('markCanvas');
-const markWrap = document.getElementById('markWrap');
+const previewImg = document.getElementById('previewImg');
 const progressBox = document.getElementById('progressBox');
-const progressBar = document.getElementById('progressBar');
 const progressText = document.getElementById('progressText');
 
 function showToast(msg, type) {
@@ -204,34 +198,19 @@ function showToast(msg, type) {
   t.textContent = msg;
   t.className = 'toast show ' + (type || '');
   clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 3500);
+  t._timer = setTimeout(() => t.classList.remove('show'), 4000);
 }
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
-function setProgress(pct, text) {
-  progressBox.classList.add('show');
-  progressBar.style.width = pct + '%';
-  if (text) progressText.textContent = text;
-}
-function hideProgress() { progressBox.classList.remove('show'); }
 function dbg(msg) { document.getElementById('debugPre').textContent += msg + '\n'; }
 
-// ---------- Init ----------
 init();
 
 async function init() {
   const today = new Date();
   scanDate.value = today.toISOString().split('T')[0];
-
-  setProgress(5, 'OpenCV লোড হচ্ছে...');
-  const ok = await waitForOpenCV();
-  hideProgress();
-  if (!ok) {
-    showToast('⚠️ OpenCV load হয়নি — Manual mode-এ যাবে', 'error');
-  }
-
   await loadBatches();
   await loadPricing();
 }
@@ -274,428 +253,243 @@ fileInput.addEventListener('change', e => {
 
 async function handleFile(file) {
   if (!batchSelect.value) return showToast('⚠️ আগে Batch select কর', 'error');
+  if (!GEMINI_API_KEY || GEMINI_API_KEY.length < 20) return showToast('❌ Gemini API key নেই', 'error');
+
+  lastFile = file;
   document.getElementById('debugPre').textContent = '';
+  document.getElementById('resultCard').style.display = 'none';
 
-  setProgress(10, 'ছবি লোড হচ্ছে...');
-  const img = await loadImage(file);
-  sourceImage = img;
+  // Preview
+  previewImg.src = URL.createObjectURL(file);
+  previewImg.style.display = 'block';
 
-  // Draw to canvas at max 1600px width for processing
-  const maxW = 1600;
-  const scale = Math.min(1, maxW / img.width);
-  const c = document.createElement('canvas');
-  c.width = img.width * scale;
-  c.height = img.height * scale;
-  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-  sourceCanvas = c;
-
-  setProgress(20, 'Student list লোড হচ্ছে...');
-  const q = query(collection(db, 'students'), where('batchName', '==', batchSelect.value));
-  const snap = await getDocs(q);
-  students = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => String(a.roll).localeCompare(String(b.roll), undefined, { numeric: true }));
-
-  if (students.length === 0) { hideProgress(); return showToast('❌ Batch-এ student নেই', 'error'); }
-
-  marking = {};
-  students.forEach(s => marking[s.roll] = { lunchFull: false, lunchHalf: false, dinnerFull: false, dinnerHalf: false });
-
-  if (!cvReady) {
-    hideProgress();
-    return showToast('❌ OpenCV load হয়নি — page reload কর', 'error');
-  }
+  // Load students
+  progressBox.classList.add('show');
+  progressText.textContent = 'Student list লোড হচ্ছে...';
 
   try {
-    setProgress(30, 'Corner marker খোঁজা হচ্ছে...');
-    const corners = detectCorners(c);
+    const q = query(collection(db, 'students'), where('batchName', '==', batchSelect.value));
+    const snap = await getDocs(q);
+    students = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => String(a.roll).localeCompare(String(b.roll), undefined, { numeric: true }));
 
-    if (!corners) {
-      hideProgress();
-      document.getElementById('markingCard').style.display = 'block';
-      document.getElementById('resultBanner').className = 'info-banner err';
-      document.getElementById('resultBanner').innerHTML = '❌ ৪টা corner marker খুঁজে পাওয়া যায়নি। ছবি পরিষ্কার হয়নি বা marker ঢাকা পড়েছে। <br><br>👉 <strong>আবার চেষ্টা কর</strong>: ভালো আলোতে, সোজা angle-এ ছবি তুলে upload কর।';
-      return;
-    }
+    if (students.length === 0) throw new Error('এই batch-এ কোনো student নেই');
 
-    dbg(`Corners: TL(${corners.tl.x.toFixed(0)},${corners.tl.y.toFixed(0)}) TR(${corners.tr.x.toFixed(0)},${corners.tr.y.toFixed(0)}) BL(${corners.bl.x.toFixed(0)},${corners.bl.y.toFixed(0)}) BR(${corners.br.x.toFixed(0)},${corners.br.y.toFixed(0)})`);
+    progressText.textContent = 'Gemini ছবি দেখছে...';
+    const detected = await callGeminiVision(file);
 
-    setProgress(60, 'Perspective ঠিক করা হচ্ছে...');
-    const warped = warpToCanonical(c, corners);
-    if (!warped) throw new Error('Warp fail');
+    // Map detection result to marking
+    marking = {};
+    students.forEach(s => {
+      const m = detected[s.roll] || {};
+      marking[s.roll] = {
+        lunchFull: !!m.lunchFull,
+        lunchHalf: !!m.lunchHalf,
+        dinnerFull: !!m.dinnerFull,
+        dinnerHalf: !!m.dinnerHalf
+      };
+    });
 
-    setProgress(80, 'Bubble detect করা হচ্ছে...');
-    const result = detectBubbles(warped);
+    renderResult();
+    progressBox.classList.remove('show');
+    document.getElementById('resultCard').style.display = 'block';
+    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
 
-    setProgress(100, 'শেষ হয়েছে!');
-    setTimeout(hideProgress, 500);
-
-    // Set canvas to show warped image with bubbles
-    markCanvas.width = warped.width;
-    markCanvas.height = warped.height;
-    const ctx = markCanvas.getContext('2d');
-    ctx.drawImage(warped, 0, 0);
-
-    bubblePositions = result.positions;
-    applyAutoDetection(result.fillRatios);
-    drawMarking();
-    updateStats();
-
-    document.getElementById('markingCard').style.display = 'block';
+    const totalDetected = Object.keys(detected).length;
     document.getElementById('resultBanner').className = 'info-banner ok';
-    document.getElementById('resultBanner').innerHTML = `✅ Auto-detect সফল! <strong>${result.filledCount}</strong> টা meal পাওয়া গেছে। যাচাই করে ভুল থাকলে tap করে ঠিক কর।`;
-
-    markCanvas.onclick = handleCanvasClick;
-    document.getElementById('markingCard').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('resultBanner').innerHTML = `✅ Gemini <strong>${totalDetected}</strong> জনের meal detect করেছে। নিচের টেবিলে যাচাই কর — ভুল থাকলে bubble-এ tap কর।`;
 
   } catch (e) {
     console.error(e);
-    hideProgress();
-    showToast('❌ ' + e.message, 'error');
+    progressBox.classList.remove('show');
+    document.getElementById('resultCard').style.display = 'block';
+    document.getElementById('resultBanner').className = 'info-banner err';
+    document.getElementById('resultBanner').innerHTML = `❌ <strong>Gemini fail:</strong> ${escapeHtml(e.message)}<br><br>ছবি ভালো না হলে আবার try কর, নাহলে হাতে mark কর।`;
   }
 }
 
-function loadImage(file) {
-  return new Promise((resolve, reject) => {
+// ==========================================================
+//  🎯 Gemini Vision API Call
+// ==========================================================
+async function callGeminiVision(file) {
+  // Convert to base64
+  const base64 = await new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
+    reader.onload = e => resolve(e.target.result.split(',')[1]);
+    reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+
+  // Build student roll list (which students to look for)
+  const rollList = students.map(s => s.roll).join(', ');
+  const perPage = Number(perPageSel.value);
+
+  const prompt = `You are an expert OMR sheet reader. Analyze the attached image of a meal attendance sheet from a hostel canteen.
+
+The sheet contains a table with these columns:
+- Roll (student roll number)
+- Name (student name)
+- Lunch Full (a circle/bubble - filled if student ate full lunch)
+- Lunch Half (circle - filled if student ate half lunch)
+- Dinner Full (circle - filled if student ate full dinner)
+- Dinner Half (circle - filled if student ate half dinner)
+
+The sheet is designed for exactly ${perPage} student rows.
+Students to look for (roll numbers): ${rollList}
+
+Your task:
+1. Identify which students from the list have FILLED bubbles (bubble with dark mark/pen filled inside).
+2. Ignore empty bubbles (white/empty circles).
+3. A student may have filled multiple bubbles (e.g., lunch full + dinner half).
+4. If a bubble is partially filled or unclear, treat it as NOT filled.
+
+Return ONLY a valid JSON object where keys are roll numbers (as strings) and values are objects indicating which meals are filled. Include ONLY students with at least one filled bubble.
+
+Example output:
+{
+  "101": { "lunchFull": true, "lunchHalf": false, "dinnerFull": true, "dinnerHalf": false },
+  "102": { "lunchFull": false, "lunchHalf": true, "dinnerFull": false, "dinnerHalf": true }
 }
 
-// ==========================================================
-//  🎯 AUTO DETECT: Corner markers
-// ==========================================================
-function detectCorners(canvas) {
-  const src = cv.imread(canvas);
-  const gray = new cv.Mat();
-  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+Rules:
+- Return pure JSON only, no markdown, no explanation.
+- Every student object must have all 4 keys: lunchFull, lunchHalf, dinnerFull, dinnerHalf.
+- Only include students who have AT LEAST ONE filled bubble.
+- If you cannot read the sheet clearly, return an empty object {}.`;
 
-  // Adaptive threshold to handle uneven lighting
-  const thresh = new cv.Mat();
-  cv.adaptiveThreshold(gray, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C,
-                       cv.THRESH_BINARY_INV, 51, 10);
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent';
 
-  // Morphological close to fill marker interior (they have white centers)
-  const kernel = cv.Mat.ones(25, 25, cv.CV_8U);
-  const closed = new cv.Mat();
-  cv.morphologyEx(thresh, closed, cv.MORPH_CLOSE, kernel);
-
-  const contours = new cv.MatVector();
-  const hierarchy = new cv.Mat();
-  cv.findContours(closed, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-  dbg(`Found ${contours.size()} contours`);
-
-  const W = src.cols, H = src.rows;
-  const imgCorners = [
-    { key: 'tl', x: 0, y: 0 },
-    { key: 'tr', x: W, y: 0 },
-    { key: 'bl', x: 0, y: H },
-    { key: 'br', x: W, y: H }
-  ];
-
-  const candidates = [];
-  for (let i = 0; i < contours.size(); i++) {
-    const cnt = contours.get(i);
-    const area = cv.contourArea(cnt);
-
-    // Marker area in image: rough estimate
-    // Sheet is ~90% of image. Marker is 8mm on ~297mm sheet → ~2.7% of sheet width
-    // So marker area ≈ (0.027 × 0.9 × W)²
-    const expectedSize = 0.024 * Math.min(W, H);
-    const expectedArea = expectedSize * expectedSize;
-    if (area < expectedArea * 0.2 || area > expectedArea * 10) { cnt.delete(); continue; }
-
-    const rect = cv.boundingRect(cnt);
-    const aspect = rect.width / rect.height;
-    if (aspect < 0.5 || aspect > 2.0) { cnt.delete(); continue; }
-
-    const M = cv.moments(cnt);
-    if (M.m00 === 0) { cnt.delete(); continue; }
-    const cx = M.m10 / M.m00;
-    const cy = M.m01 / M.m00;
-
-    candidates.push({ x: cx, y: cy, area });
-    cnt.delete();
-  }
-
-  dbg(`Filtered ${candidates.length} marker candidates`);
-
-  // Pick 4 nearest to image corners
-  const corners = {};
-  for (const ic of imgCorners) {
-    let best = null, bestDist = Infinity;
-    for (const c of candidates) {
-      const d = Math.hypot(c.x - ic.x, c.y - ic.y);
-      if (d < bestDist) { bestDist = d; best = c; }
+  const body = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: file.type || 'image/jpeg', data: base64 } }
+      ]
+    }],
+    generationConfig: {
+      temperature: 0.1,
+      responseMimeType: 'application/json'
     }
-    if (best && bestDist < Math.min(W, H) * 0.5) {
-      corners[ic.key] = { x: best.x, y: best.y };
+  };
+
+  dbg('→ Gemini API কল করা হচ্ছে...');
+  dbg(`Key prefix: ${GEMINI_API_KEY.substring(0, 12)}...`);
+  dbg(`Students count: ${students.length}, perPage: ${perPage}`);
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': GEMINI_API_KEY
+    },
+    body: JSON.stringify(body)
+  });
+
+  dbg(`← Status: ${res.status}`);
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    const msg = errData.error?.message || `HTTP ${res.status}`;
+    dbg(`Error: ${msg}`);
+    throw new Error(msg);
+  }
+
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  dbg(`Response: ${text.slice(0, 500)}`);
+
+  // Parse JSON
+  let cleaned = text.trim()
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/, '')
+    .replace(/\s*```$/, '');
+
+  let parsed;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (e) {
+    throw new Error('Gemini response parse করা যায়নি');
+  }
+
+  if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Gemini ভুল ফরম্যাটে response দিয়েছে');
+  }
+
+  // Validate — only keep rolls that exist in student list
+  const validRolls = new Set(students.map(s => String(s.roll)));
+  const result = {};
+  Object.keys(parsed).forEach(roll => {
+    if (validRolls.has(String(roll))) {
+      const m = parsed[roll] || {};
+      result[String(roll)] = {
+        lunchFull: !!m.lunchFull,
+        lunchHalf: !!m.lunchHalf,
+        dinnerFull: !!m.dinnerFull,
+        dinnerHalf: !!m.dinnerHalf
+      };
     }
-  }
+  });
 
-  // Cleanup
-  src.delete(); gray.delete(); thresh.delete(); closed.delete();
-  kernel.delete(); contours.delete(); hierarchy.delete();
-
-  if (!corners.tl || !corners.tr || !corners.bl || !corners.br) return null;
-  return corners;
+  return result;
 }
 
 // ==========================================================
-//  Perspective transform to canonical size
+//  Render Result Table
 // ==========================================================
-function warpToCanonical(canvas, corners) {
-  // Canonical: 1000 × 1414 (A4 ratio)
-  const CW = 1000, CH = 1414;
-
-  // Marker rect in source image
-  const srcPts = cv.matFromArray(4, 1, cv.CV_32FC2, [
-    corners.tl.x, corners.tl.y,
-    corners.tr.x, corners.tr.y,
-    corners.br.x, corners.br.y,
-    corners.bl.x, corners.bl.y
-  ]);
-
-  // Marker centers in canonical space
-  // Markers are at 9mm from each edge of the sheet in original
-  // Sheet is 210×297mm. Marker rect = 192×279mm.
-  // In canonical 1000×1414: marker rect = (1000×(192/210), 1414×(279/297)) = (914, 1328)
-  // Marker TL center at (43, 43), TR at (957, 43), BR at (957, 1371), BL at (43, 1371)
-  const dstPts = cv.matFromArray(4, 1, cv.CV_32FC2, [
-    43, 43,
-    957, 43,
-    957, 1371,
-    43, 1371
-  ]);
-
-  const M = cv.getPerspectiveTransform(srcPts, dstPts);
-  const src = cv.imread(canvas);
-  const dst = new cv.Mat();
-  const dsize = new cv.Size(CW, CH);
-  cv.warpPerspective(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(255, 255, 255, 255));
-
-  // Draw to output canvas
-  const outCanvas = document.createElement('canvas');
-  outCanvas.width = CW;
-  outCanvas.height = CH;
-  cv.imshow(outCanvas, dst);
-
-  src.delete(); dst.delete(); M.delete(); srcPts.delete(); dstPts.delete();
-  return outCanvas;
-}
-
-// ==========================================================
-//  Detect bubbles in warped canonical image
-// ==========================================================
-function detectBubbles(canvas) {
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-
-  // Sheet is 210mm × 297mm. Canonical is 1000×1414. So 1mm = 4.762 px.
-  const PX_PER_MM = W / 210;   // = 4.762
-
-  // Marker centers: (9mm, 9mm) to (201mm, 288mm)
-  const mx1 = 9 * PX_PER_MM, my1 = 9 * PX_PER_MM;
-  const mx2 = 201 * PX_PER_MM, my2 = 288 * PX_PER_MM;
-  const markerW = mx2 - mx1;   // 192mm
-  const markerH = my2 - my1;   // 279mm
-
-  // Table starts after header. From sheet CSS:
-  //   sheet padding 10mm + header ~17mm + meta ~7mm + id ~5mm = ~39mm from top
-  // Row height 6.5mm
-  // Relative to marker top (9mm): (39 - 9) / 279 = 0.1075
-  // First row center relative to marker: (39 - 9 + 3.25) / 279 = 0.1192
-  const tableTopFrac = 0.1192;
-  const tableBottomFrac = 0.960;   // adjusted — tune if needed
-  const rows = Number(perPageSel.value);
-
-  // Column centers in marker-rect coords
-  // Table columns: Roll(14mm) + Name(116mm) + 4×Lunch/Dinner(15mm each) = 190mm total
-  // Marker rect is 192mm wide → 1mm padding each side
-  // Table left = 1mm from marker left. Column centers from marker left:
-  //   col 1 (Lunch Full): 1 + 14 + 116 + 7.5 = 138.5mm → /192 = 0.7214
-  //   col 2 (Lunch Half): 1 + 14 + 116 + 15 + 7.5 = 153.5mm → 0.7995
-  //   col 3 (Dinner Full): 1 + 14 + 116 + 30 + 7.5 = 168.5mm → 0.8776
-  //   col 4 (Dinner Half): 1 + 14 + 116 + 45 + 7.5 = 183.5mm → 0.9557
-  const colFracs = [0.7214, 0.7995, 0.8776, 0.9557];
-  const cols = ['lunchFull', 'lunchHalf', 'dinnerFull', 'dinnerHalf'];
-
-  // Bubble radius in canonical px: bubble is 4.5mm diameter → 2.25mm radius
-  const bubbleRadPx = 2.25 * PX_PER_MM;      // ≈ 10.7 px
-  const sampleRadPx = bubbleRadPx * 0.55;    // sample inner region only
-
-  const positions = {};
-  const fillRatios = {};
-
-  for (let r = 0; r < rows; r++) {
-    positions[r] = {};
-    fillRatios[r] = {};
-    const vFrac = tableTopFrac + (tableBottomFrac - tableTopFrac) * r / (rows - 1);
-
-    const y = my1 + vFrac * markerH;
-
-    for (let ci = 0; ci < cols.length; ci++) {
-      const uFrac = colFracs[ci];
-      const x = mx1 + uFrac * markerW;
-
-      positions[r][cols[ci]] = { x, y };
-
-      // Sample interior of bubble
-      const ratio = sampleBubbleFill(ctx, x, y, sampleRadPx);
-      fillRatios[r][cols[ci]] = ratio;
-    }
-  }
-
-  // Count filled (threshold 0.25 = 25% dark pixels)
-  let filledCount = 0;
-  for (let r = 0; r < rows; r++) {
-    for (const col of cols) {
-      if (fillRatios[r][col] > 0.25) filledCount++;
-    }
-  }
-
-  dbg(`Sampled ${rows}×${cols.length} bubbles. Filled (raw): ${filledCount}`);
-  return { positions, fillRatios, filledCount };
-}
-
-function sampleBubbleFill(ctx, cx, cy, rad) {
-  const size = Math.ceil(rad * 2);
-  const x0 = Math.max(0, Math.floor(cx - rad));
-  const y0 = Math.max(0, Math.floor(cy - rad));
-  const w = Math.min(size, ctx.canvas.width - x0);
-  const h = Math.min(size, ctx.canvas.height - y0);
-  if (w <= 0 || h <= 0) return 0;
-
-  const imgData = ctx.getImageData(x0, y0, w, h);
-  const data = imgData.data;
-  let dark = 0, total = 0;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-    // Only count pixels inside circle
-    const px = (i / 4) % w;
-    const py = Math.floor((i / 4) / w);
-    const dx = px - (cx - x0);
-    const dy = py - (cy - y0);
-    if (dx * dx + dy * dy > rad * rad) continue;
-    total++;
-    if (gray < 128) dark++;
-  }
-
-  return total > 0 ? dark / total : 0;
-}
-
-// ==========================================================
-//  Apply auto-detection to marking state
-// ==========================================================
-function applyAutoDetection(fillRatios) {
-  const cols = ['lunchFull', 'lunchHalf', 'dinnerFull', 'dinnerHalf'];
-  const threshold = 0.25;
+function renderResult() {
+  const tbody = document.querySelector('#resultTable tbody');
+  tbody.innerHTML = '';
+  const perPage = Number(perPageSel.value);
 
   students.forEach((s, idx) => {
-    if (idx >= Number(perPageSel.value)) return;
-    const row = fillRatios[idx];
-    if (!row) return;
-    cols.forEach(col => {
-      if (row[col] > threshold) {
-        marking[s.roll][col] = true;
-      }
-    });
-  });
-}
+    if (idx >= perPage) return;
+    const m = marking[s.roll];
+    const bill =
+      (m.lunchFull ? pricing.lunchFull : 0) +
+      (m.lunchHalf ? pricing.lunchHalf : 0) +
+      (m.dinnerFull ? pricing.dinnerFull : 0) +
+      (m.dinnerHalf ? pricing.dinnerHalf : 0);
 
-// ==========================================================
-//  Canvas click toggle
-// ==========================================================
-function handleCanvasClick(e) {
-  const rect = markCanvas.getBoundingClientRect();
-  const sx = markCanvas.width / rect.width;
-  const sy = markCanvas.height / rect.height;
-  const x = (e.clientX - rect.left) * sx;
-  const y = (e.clientY - rect.top) * sy;
-
-  let best = null, bestDist = Infinity;
-  const cols = ['lunchFull', 'lunchHalf', 'dinnerFull', 'dinnerHalf'];
-
-  Object.keys(bubblePositions).forEach(rStr => {
-    const r = Number(rStr);
-    const s = students[r];
-    if (!s) return;
-    cols.forEach(col => {
-      const p = bubblePositions[r][col];
-      const d = Math.hypot(p.x - x, p.y - y);
-      if (d < bestDist) { bestDist = d; best = { roll: s.roll, col }; }
-    });
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="center" style="color:#888;">${idx + 1}</td>
+      <td class="center" style="font-family:monospace; font-weight:600;">${escapeHtml(s.roll)}</td>
+      <td>${escapeHtml(s.name)}</td>
+      ${cell(m.lunchFull, s.roll, 'lunchFull')}
+      ${cell(m.lunchHalf, s.roll, 'lunchHalf')}
+      ${cell(m.dinnerFull, s.roll, 'dinnerFull')}
+      ${cell(m.dinnerHalf, s.roll, 'dinnerHalf')}
+      <td class="center" style="font-weight:600; color:${bill > 0 ? '#2c5aa0' : '#999'};">${bill > 0 ? '৳' + bill : '—'}</td>
+    `;
+    tbody.appendChild(tr);
   });
 
-  if (best && bestDist < 30) {
-    marking[best.roll][best.col] = !marking[best.roll][best.col];
-    drawMarking();
-    updateStats();
-  }
-}
-
-// ==========================================================
-//  Draw marking canvas
-// ==========================================================
-function drawMarking() {
-  // Redraw base warped image
-  const baseCanvas = sourceCanvas;  // not used here — we draw over current canvas
-  // Instead, re-draw the warped image
-  if (window._warpedCanvas) {
-    const ctx = markCanvas.getContext('2d');
-    ctx.drawImage(window._warpedCanvas, 0, 0);
-  }
-
-  const ctx = markCanvas.getContext('2d');
-  const radius = 8;
-  const cols = ['lunchFull', 'lunchHalf', 'dinnerFull', 'dinnerHalf'];
-
-  Object.keys(bubblePositions).forEach(rStr => {
-    const r = Number(rStr);
-    const s = students[r];
-    if (!s) return;
-    const positions = bubblePositions[r];
-    cols.forEach(col => {
-      const p = positions[col];
-      const filled = marking[s.roll][col];
-
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
-      ctx.fillStyle = filled ? 'rgba(40, 167, 69, 0.7)' : 'rgba(255, 235, 59, 0.5)';
-      ctx.fill();
-      ctx.strokeStyle = filled ? '#1e7e34' : 'rgba(255, 152, 0, 1)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      if (filled) {
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 11px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('✓', p.x, p.y);
-      }
-    });
+  // Attach click handlers
+  tbody.querySelectorAll('td[data-roll]').forEach(td => {
+    td.style.cursor = 'pointer';
+    td.onclick = () => {
+      const roll = td.dataset.roll;
+      const col = td.dataset.col;
+      marking[roll][col] = !marking[roll][col];
+      renderResult();
+      updateStats();
+    };
   });
+
+  updateStats();
 }
 
-// Store warped canvas globally for redraws
-const _origHandleFile = handleFile;
-// override to also store warped canvas
-// (handled inline in handleFile via window._warpedCanvas)
+function cell(filled, roll, col) {
+  return `<td class="center" data-roll="${escapeHtml(roll)}" data-col="${col}">
+    ${filled ? '<span class="tick">✓</span>' : '<span class="empty">○</span>'}
+  </td>`;
+}
 
-// ==========================================================
-//  Stats
-// ==========================================================
 function updateStats() {
   let lf=0, lh=0, df=0, dh=0, ate=0;
-  students.forEach(s => {
+  const perPage = Number(perPageSel.value);
+  students.forEach((s, idx) => {
+    if (idx >= perPage) return;
     const m = marking[s.roll]; if (!m) return;
     if (m.lunchFull) lf++; if (m.lunchHalf) lh++;
     if (m.dinnerFull) df++; if (m.dinnerHalf) dh++;
@@ -713,31 +507,23 @@ function updateStats() {
 }
 
 // ==========================================================
-//  Re-run, Clear
+//  Actions
 // ==========================================================
-window.rerunDetection = function() {
-  if (!sourceImage) return showToast('⚠️ আগে ছবি upload কর', 'error');
-  // Reset marking
-  marking = {};
-  students.forEach(s => marking[s.roll] = { lunchFull: false, lunchHalf: false, dinnerFull: false, dinnerHalf: false });
-  // Re-process
-  const file = fileInput.files[0];
-  if (file) handleFile(file);
+window.rerun = function() {
+  if (lastFile) handleFile(lastFile);
 };
 
 window.clearAll = function() {
-  sourceImage = null; sourceCanvas = null;
-  marking = {}; bubblePositions = {}; window._warpedCanvas = null;
-  document.getElementById('markingCard').style.display = 'none';
-  document.getElementById('uploadCard').style.display = 'block';
-  document.getElementById('statusMsg').innerHTML = '';
+  document.getElementById('resultCard').style.display = 'none';
+  previewImg.style.display = 'none';
+  previewImg.src = '';
   document.getElementById('debugPre').textContent = '';
+  document.getElementById('statusMsg').innerHTML = '';
   fileInput.value = '';
+  lastFile = null;
+  marking = {};
 };
 
-// ==========================================================
-//  Save
-// ==========================================================
 window.saveResults = async function() {
   if (!batchSelect.value) return showToast('⚠️ Batch select কর', 'error');
   if (!scanDate.value) return showToast('⚠️ Date দে', 'error');
@@ -761,7 +547,7 @@ window.saveResults = async function() {
   });
 
   if (records.length === 0) return showToast('⚠️ কোনো meal mark করা হয়নি', 'error');
-  if (!confirm(`${records.length} জনের meal save করব?\n\nমোট Bill: ৳${totalBill}`)) return;
+  if (!confirm(`${records.length} জনের meal save করব?\n\nমোট Bill: ৳${totalBill}\n\nপ্রতিটা student-এর balance থেকে কাটা হবে।`)) return;
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
@@ -779,7 +565,8 @@ window.saveResults = async function() {
 
     const recordRef = await addDoc(collection(db, 'mealRecords'), {
       batchName: batchSelect.value, date: dateStr, perPage, totalBill,
-      studentCount: records.length, createdAt: serverTimestamp()
+      studentCount: records.length, source: 'gemini-vision',
+      createdAt: serverTimestamp()
     });
 
     for (const r of records) {
@@ -794,13 +581,16 @@ window.saveResults = async function() {
         studentId: r.studentId, roll: r.roll, name: r.name,
         batchName: batchSelect.value, date: dateStr,
         type: 'meal', amount: -r.bill,
-        details: { lunchFull: r.lunchFull, lunchHalf: r.lunchHalf, dinnerFull: r.dinnerFull, dinnerHalf: r.dinnerHalf },
+        details: { lunchFull: r.lunchFull, lunchHalf: r.lunchHalf,
+                   dinnerFull: r.dinnerFull, dinnerHalf: r.dinnerHalf },
         recordId: recordRef.id, createdAt: serverTimestamp()
       });
     }
 
-    showToast(`✅ ${records.length} জন — ৳${totalBill}`, 'success');
-    document.getElementById('statusMsg').innerHTML = `<div class="info-banner ok">✅ Save সফল! ${records.length} জন, মোট ৳${totalBill}</div>`;
+    showToast(`✅ ${records.length} জন — ৳${totalBill} bill হয়েছে`, 'success');
+    document.getElementById('statusMsg').innerHTML = `<div class="info-banner ok">✅ Save সফল! ${records.length} জন student, মোট ৳${totalBill}</div>`;
+
+    setTimeout(() => { if (confirm('আরেকটা scan করব?')) clearAll(); }, 800);
   } catch (e) {
     console.error(e);
     showToast('❌ ' + e.message, 'error');
