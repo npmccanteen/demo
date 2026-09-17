@@ -42,19 +42,14 @@
   .badge-warn { background: #fff3cd; color: #856404; }
   .badge-ai { background: #e0e7ff; color: #3730a3; padding: 4px 10px; font-size: 12px; }
   .log { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; margin-top: 12px; display: none; white-space: pre-wrap; word-break: break-all; }
-  .log.error { color: #ff6b6b; }
-  .log.ok { color: #51cf66; }
-  .log.warn { color: #ffd43b; }
+  .log-error { color: #ff6b6b; }
+  .log-ok { color: #51cf66; }
+  .log-warn { color: #ffd43b; }
   .alert-box { padding: 15px; border-radius: 8px; margin-top: 15px; font-size: 13px; display: none; }
   .alert-error { background: #fee; border-left: 4px solid #dc3545; color: #721c24; }
   .alert-success { background: #efe; border-left: 4px solid #28a745; color: #155724; }
   .alert-info { background: #e7f3ff; border-left: 4px solid #2c5aa0; color: #004085; }
-  .loading-spinner {
-    display: inline-block; width: 16px; height: 16px;
-    border: 2px solid #fff; border-top-color: transparent;
-    border-radius: 50%; animation: spin 1s linear infinite;
-    margin-right: 6px; vertical-align: middle;
-  }
+  .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 6px; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
@@ -66,7 +61,7 @@
     ছবি বা PDF আপলোড কর — <span class="badge badge-ai">🤖 Gemini AI</span>
   </p>
 
-  <!-- API TEST SECTION -->
+  <!-- API TEST -->
   <div class="card" style="background: #fffbe6; border-left: 4px solid #ff9800;">
     <h3 style="color: #e68900; margin-bottom: 8px;">⚡ প্রথমে এটা কর — API Test</h3>
     <p style="font-size: 13px; color: #666; margin-bottom: 10px;">
@@ -118,7 +113,6 @@
     <div id="saveStatus" style="margin-top:12px; font-size:14px;"></div>
   </div>
 
-  <!-- RAW RESPONSE VIEWER -->
   <div class="card" id="rawCard" style="display:none;">
     <label>🔍 Raw Gemini Response (debugging)</label>
     <textarea id="rawResponse" rows="6" readonly></textarea>
@@ -176,7 +170,7 @@ function escapeHtml(str) {
 }
 
 // ==========================================================
-// 🧪 API TEST — এইটা first কাজ করতে হবে
+// 🧪 API TEST
 // ==========================================================
 window.testAPI = async function() {
   const btn = document.getElementById('testBtn');
@@ -190,29 +184,29 @@ window.testAPI = async function() {
     }
 
     log('=== API Test শুরু ===');
-    log(`Key prefix: ${GEMINI_API_KEY.substring(0, 10)}...`);
+    log(`Key prefix: ${GEMINI_API_KEY.substring(0, 12)}...`);
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
     const body = {
-      contents: [{
-        parts: [{ text: "Reply with exactly this text: OK" }]
-      }]
+      contents: [{ parts: [{ text: "Reply with exactly this text: OK" }] }]
     };
 
-    log(`URL: ${url.split('?')[0]}?key=***`);
     log('Request পাঠানো হচ্ছে...');
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': GEMINI_API_KEY
+      },
       body: JSON.stringify(body)
     });
 
     log(`Response status: ${res.status} ${res.statusText}`);
 
     const data = await res.json();
-    log(`Response data: ${JSON.stringify(data).slice(0, 300)}`);
+    log(`Response: ${JSON.stringify(data).slice(0, 300)}`);
 
     if (!res.ok) {
       const errMsg = data.error?.message || JSON.stringify(data);
@@ -366,7 +360,7 @@ function fileToBase64(file) {
 }
 
 // ==========================================================
-// Gemini API — Multiple model fallback
+// Gemini API — Multiple model fallback + x-goog-api-key header
 // ==========================================================
 const MODELS = [
   'gemini-2.5-flash',
@@ -392,7 +386,8 @@ Rules:
   for (const model of MODELS) {
     try {
       log(`🤖 Trying model: ${model}`);
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
       const body = {
         contents: [{
@@ -409,7 +404,10 @@ Rules:
 
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': GEMINI_API_KEY
+        },
         body: JSON.stringify(body)
       });
 
@@ -420,7 +418,7 @@ Rules:
         const msg = errData.error?.message || `HTTP ${res.status}`;
         log(`   ❌ ${msg}`, 'error');
         lastError = new Error(msg);
-        continue; // try next model
+        continue;
       }
 
       const data = await res.json();
@@ -430,7 +428,6 @@ Rules:
       rawResponse.value = text;
       rawCard.style.display = 'block';
 
-      // Parse JSON
       let cleaned = text.trim()
         .replace(/^```json\s*/i, '')
         .replace(/^```\s*/, '')
@@ -450,7 +447,6 @@ Rules:
     } catch (e) {
       log(`   ❌ Model ${model} failed: ${e.message}`, 'error');
       lastError = e;
-      // continue to next model
     }
   }
 
