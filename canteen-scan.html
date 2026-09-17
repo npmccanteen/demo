@@ -15,11 +15,10 @@
     background: white; padding: 20px; border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 15px;
   }
-
   .row { display: flex; gap: 12px; flex-wrap: wrap; }
   .col { flex: 1; min-width: 200px; }
   label { display: block; font-weight: 600; margin: 10px 0 5px; font-size: 13px; }
-  input[type="text"], select, input[type="date"] {
+  input[type="text"], select, input[type="date"], input[type="number"] {
     width: 100%; padding: 10px 12px; border: 1.5px solid #ddd;
     border-radius: 8px; font-size: 14px; font-family: inherit;
   }
@@ -39,7 +38,6 @@
   .btn-secondary { background: #6c757d; color: white; }
   .btn-secondary:hover { background: #5a6268; }
   .btn-warning { background: #ff9800; color: white; }
-  .btn-warning:hover { background: #e68900; }
 
   .dropzone {
     border: 2px dashed #2c5aa0; border-radius: 10px;
@@ -59,19 +57,27 @@
   .info-banner.warn { background: #fff3cd; border-left-color: #ff9800; color: #856404; }
   .info-banner.ok { background: #d4edda; border-left-color: #28a745; color: #155724; }
 
-  /* Canvas area — corner step */
+  /* Corner step canvas */
   #canvasWrap {
-    position: relative; background: #222;
-    border-radius: 8px; overflow: hidden;
-    max-height: 75vh; display: flex;
-    align-items: center; justify-content: center;
-    user-select: none; touch-action: none;
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+    max-width: 100%;
+    background: #222;
+    border-radius: 8px;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
   }
-  #canvas { display: block; max-width: 100%; max-height: 75vh; }
+  #canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
 
-  /* Corner handles */
   .handle {
-    position: absolute; width: 26px; height: 26px;
+    position: absolute;
+    width: 26px; height: 26px;
     background: #ff1744; border: 3px solid white;
     border-radius: 50%; cursor: grab;
     box-shadow: 0 2px 8px rgba(0,0,0,0.4);
@@ -80,7 +86,6 @@
     touch-action: none;
   }
   .handle:active { cursor: grabbing; background: #ffeb3b; }
-
   .handle-label {
     position: absolute; font-size: 10px; color: white;
     background: rgba(0,0,0,0.75); padding: 2px 5px;
@@ -88,42 +93,23 @@
     pointer-events: none; transform: translate(-50%, 22px);
   }
 
-  /* Marking step — wrap around canvas */
+  /* Marking step canvas */
   #markWrap {
     position: relative;
     display: inline-block;
     line-height: 0;
     max-width: 100%;
+    background: #222;
+    border-radius: 8px;
+    overflow: hidden;
+    touch-action: manipulation;
+    user-select: none;
   }
   #markCanvas {
     display: block;
     max-width: 100%;
     height: auto;
-  }
-
-  /* Clickable bubble overlays */
-  .bubble-hit {
-    position: absolute; width: 22px; height: 22px;
-    border-radius: 50%; cursor: pointer;
-    background: rgba(255, 235, 59, 0.55);
-    border: 2px solid rgba(255, 152, 0, 0.95);
-    pointer-events: auto;
-    transform: translate(-50%, -50%);
-    transition: 0.15s;
-    touch-action: manipulation;
-    z-index: 5;
-  }
-  .bubble-hit:hover { transform: translate(-50%, -50%) scale(1.2); }
-  .bubble-hit.filled {
-    background: rgba(40, 167, 69, 0.75);
-    border-color: #1e7e34;
-    box-shadow: 0 0 8px rgba(40, 167, 69, 0.9);
-  }
-  .bubble-hit.filled::after {
-    content: '✓'; position: absolute;
-    top: 50%; left: 50%; transform: translate(-50%, -50%);
-    color: white; font-weight: 700; font-size: 13px;
-    line-height: 1;
+    cursor: crosshair;
   }
 
   .toast {
@@ -169,6 +155,18 @@
   }
   .stat-box .num { font-size: 20px; font-weight: 700; color: #2c5aa0; }
   .stat-box .lbl { font-size: 10px; color: #666; margin-top: 3px; text-transform: uppercase; }
+
+  details.tuner {
+    margin-top: 15px; background: #f8f9fa; border-radius: 8px;
+    padding: 10px 15px; font-size: 13px;
+  }
+  details.tuner summary { cursor: pointer; font-weight: 600; color: #2c5aa0; }
+  details.tuner .ctrl-row {
+    display: flex; align-items: center; gap: 10px; margin-top: 8px;
+  }
+  details.tuner .ctrl-row label { margin: 0; min-width: 100px; font-size: 12px; }
+  details.tuner .ctrl-row input[type="range"] { flex: 1; }
+  details.tuner .ctrl-row span { min-width: 45px; text-align: right; font-family: monospace; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -177,7 +175,7 @@
   <h1>📷 Canteen Scan</h1>
   <p class="sub">ছবি upload কর → কোণা ঠিক কর → bubble mark কর → Save</p>
 
-  <!-- SETUP CARD -->
+  <!-- SETUP -->
   <div class="card">
     <div class="row">
       <div class="col">
@@ -199,42 +197,40 @@
     </div>
   </div>
 
-  <!-- UPLOAD CARD -->
+  <!-- UPLOAD -->
   <div class="card" id="uploadCard">
     <div class="info-banner">
-      📸 Sheet-এর ছবি তুলে upload কর। ভালো আলো, সোজা angle।
+      📸 Sheet-এর ছবি upload কর। ভালো আলো, সোজা angle।
     </div>
     <div class="dropzone" id="dropzone">
       <div class="icon">📷</div>
       <p>ছবি drag-drop কর বা ক্লিক কর</p>
-      <small>JPG, PNG — মোবাইল ক্যামেরার ছবি</small>
+      <small>JPG, PNG</small>
       <input type="file" id="fileInput" accept="image/*" style="display:none;" />
     </div>
   </div>
 
-  <!-- CORNER ADJUST CARD -->
+  <!-- CORNER -->
   <div class="card" id="cornerCard" style="display:none;">
     <h3 style="color:#2c5aa0; margin-bottom:8px;">🎯 কোণা ঠিক কর</h3>
     <div class="info-banner warn">
-      ⚠️ <strong>৪টা লাল বিন্দু</strong> sheet-এর <strong>৪টা কালো কোণা marker-এর center-এ</strong> drag করে বসাও।
+      ⚠️ <strong>৪টা লাল বিন্দু</strong> sheet-এর <strong>কালো corner marker-এর center-এ</strong> drag করে বসাও।
     </div>
-
     <div id="canvasWrap">
       <canvas id="canvas"></canvas>
     </div>
-
     <div style="margin-top:15px;">
       <button class="btn-primary" onclick="confirmCorners()">✅ কোণা Confirm কর</button>
-      <button class="btn-secondary" onclick="resetCorners()">↻ আবার ঠিক কর</button>
+      <button class="btn-secondary" onclick="resetCorners()">↻ Reset</button>
       <button class="btn-secondary" onclick="clearAll()">🗑️ নতুন ছবি</button>
     </div>
   </div>
 
-  <!-- MARKING CARD -->
+  <!-- MARKING -->
   <div class="card" id="markingCard" style="display:none;">
     <h3 style="color:#2c5aa0; margin-bottom:8px;">✏️ Bubble Mark কর</h3>
     <div class="info-banner ok">
-      ✅ <strong>সবুজ</strong> = meal খেয়েছে। ভুল হলে <strong>tap করে toggle</strong> কর।
+      ✅ যেই bubble-এ meal খেয়েছে সেটার উপর <strong>tap</strong> কর → সবুজ হয়ে যাবে।
     </div>
 
     <div class="legend">
@@ -245,6 +241,28 @@
     <div id="markWrap" style="margin-top:12px;">
       <canvas id="markCanvas"></canvas>
     </div>
+
+    <details class="tuner" id="tuner">
+      <summary>🔧 Alignment ঠিক কর (দরকার হলে)</summary>
+      <div class="ctrl-row">
+        <label>সব bubble ডানে/বামে</label>
+        <input type="range" id="offsetX" min="-100" max="100" value="0" />
+        <span id="offsetXVal">0</span>
+      </div>
+      <div class="ctrl-row">
+        <label>সব bubble উপরে/নিচে</label>
+        <input type="range" id="offsetY" min="-100" max="100" value="0" />
+        <span id="offsetYVal">0</span>
+      </div>
+      <div class="ctrl-row">
+        <label>Bubble size</label>
+        <input type="range" id="bubbleSize" min="6" max="30" value="14" />
+        <span id="bubbleSizeVal">14</span>
+      </div>
+      <div style="margin-top:8px;">
+        <button class="btn-secondary" onclick="resetTuner()" style="font-size:12px; padding:6px 12px;">Reset</button>
+      </div>
+    </details>
 
     <div class="stats-grid" id="statsGrid"></div>
 
@@ -273,8 +291,10 @@ let pricing = { lunchFull: 80, lunchHalf: 60, dinnerFull: 80, dinnerHalf: 60 };
 let sourceImage = null;
 let corners = { tl: {x:0,y:0}, tr: {x:0,y:0}, bl: {x:0,y:0}, br: {x:0,y:0} };
 let marking = {};
+let markingCorners = {}; // corners in markCanvas coords
+let bubblePositions = {}; // {roll: {lunchFull: {x,y}, ...}}
+let tuner = { offsetX: 0, offsetY: 0, bubbleSize: 14 };
 let cornerHandles = [];
-let bubbleHits = [];
 
 // ---------- Elements ----------
 const batchSelect = document.getElementById('batchSelect');
@@ -308,6 +328,7 @@ async function init() {
   scanDate.value = today.toISOString().split('T')[0];
   await loadBatches();
   await loadPricing();
+  setupTuner();
 }
 
 async function loadBatches() {
@@ -322,8 +343,7 @@ async function loadBatches() {
       batches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
     if (batches.length === 1) batchSelect.value = batches[0];
   } catch (e) {
-    console.error(e);
-    showToast('❌ Batch load fail', 'error');
+    console.error(e); showToast('❌ Batch load fail', 'error');
   }
 }
 
@@ -340,6 +360,40 @@ async function loadPricing() {
   } catch (e) { console.warn('Pricing not loaded', e); }
 }
 
+// ---------- Tuner sliders ----------
+function setupTuner() {
+  const ox = document.getElementById('offsetX');
+  const oy = document.getElementById('offsetY');
+  const bs = document.getElementById('bubbleSize');
+
+  ox.addEventListener('input', () => {
+    tuner.offsetX = Number(ox.value);
+    document.getElementById('offsetXVal').textContent = ox.value;
+    if (markingCorners.tl) { recomputeBubbles(); drawMarking(); }
+  });
+  oy.addEventListener('input', () => {
+    tuner.offsetY = Number(oy.value);
+    document.getElementById('offsetYVal').textContent = oy.value;
+    if (markingCorners.tl) { recomputeBubbles(); drawMarking(); }
+  });
+  bs.addEventListener('input', () => {
+    tuner.bubbleSize = Number(bs.value);
+    document.getElementById('bubbleSizeVal').textContent = bs.value;
+    if (markingCorners.tl) drawMarking();
+  });
+}
+
+window.resetTuner = function() {
+  document.getElementById('offsetX').value = 0;
+  document.getElementById('offsetY').value = 0;
+  document.getElementById('bubbleSize').value = 14;
+  tuner = { offsetX: 0, offsetY: 0, bubbleSize: 14 };
+  document.getElementById('offsetXVal').textContent = '0';
+  document.getElementById('offsetYVal').textContent = '0';
+  document.getElementById('bubbleSizeVal').textContent = '14';
+  if (markingCorners.tl) { recomputeBubbles(); drawMarking(); }
+};
+
 // ---------- Upload ----------
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
@@ -354,14 +408,10 @@ fileInput.addEventListener('change', e => {
 
 function handleFile(file) {
   if (!batchSelect.value) return showToast('⚠️ আগে Batch select কর', 'error');
-
   const reader = new FileReader();
   reader.onload = e => {
     const img = new Image();
-    img.onload = () => {
-      sourceImage = img;
-      loadStudentsAndStart();
-    };
+    img.onload = () => { sourceImage = img; loadStudentsAndStart(); };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
@@ -382,7 +432,7 @@ async function loadStudentsAndStart() {
       marking[s.roll] = { lunchFull: false, lunchHalf: false, dinnerFull: false, dinnerHalf: false };
     });
 
-    drawImageOnCanvas(sourceImage);
+    drawCornerCanvas(sourceImage);
     const w = canvas.width, h = canvas.height;
     const inset = 0.06;
     corners = {
@@ -400,7 +450,7 @@ async function loadStudentsAndStart() {
   }
 }
 
-function drawImageOnCanvas(img) {
+function drawCornerCanvas(img) {
   const maxW = 900;
   const scale = Math.min(1, maxW / img.width);
   canvas.width = img.width * scale;
@@ -414,7 +464,8 @@ function showCornerStep() {
   document.getElementById('uploadCard').style.display = 'none';
   document.getElementById('cornerCard').style.display = 'block';
   document.getElementById('markingCard').style.display = 'none';
-  drawHandles();
+  // Wait for layout then draw handles
+  requestAnimationFrame(() => drawHandles());
 }
 
 function drawHandles() {
@@ -449,18 +500,20 @@ function drawHandles() {
       if (!dragging) return;
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
-      const px = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-      const py = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const px = clientX - rect.left;
+      const py = clientY - rect.top;
       const imgX = px / (rect.width / canvas.width);
       const imgY = py / (rect.height / canvas.height);
       corners[key] = {
         x: Math.max(0, Math.min(canvas.width, imgX)),
         y: Math.max(0, Math.min(canvas.height, imgY))
       };
-      const dispX2 = offsetX + corners[key].x * scaleX;
-      const dispY2 = offsetY + corners[key].y * scaleY;
-      handle.style.left = dispX2 + 'px';
-      handle.style.top = dispY2 + 'px';
+      const dx = offsetX + corners[key].x * scaleX;
+      const dy = offsetY + corners[key].y * scaleY;
+      handle.style.left = dx + 'px';
+      handle.style.top = dy + 'px';
     };
     const endDrag = () => { dragging = false; handle.style.background = '#ff1744'; };
 
@@ -491,10 +544,10 @@ window.resetCorners = function() {
 window.clearAll = function() {
   sourceImage = null;
   corners = {};
+  markingCorners = {};
+  marking = {};
   cornerHandles.forEach(h => h.remove());
   cornerHandles = [];
-  bubbleHits.forEach(b => b.remove());
-  bubbleHits = [];
   document.getElementById('uploadCard').style.display = 'block';
   document.getElementById('cornerCard').style.display = 'none';
   document.getElementById('markingCard').style.display = 'none';
@@ -502,71 +555,46 @@ window.clearAll = function() {
   fileInput.value = '';
 };
 
-// ---------- Confirm Corners → Show Marking Grid ----------
+// ---------- Confirm Corners ----------
 window.confirmCorners = function() {
   document.getElementById('cornerCard').style.display = 'none';
   document.getElementById('markingCard').style.display = 'block';
-  drawMarkCanvas();
-  // Wait for layout
-  setTimeout(() => {
-    renderBubbleGrid();
-    updateStats();
-  }, 100);
-};
 
-function drawMarkCanvas() {
-  // Marking canvas at a reasonable size (max 1000px wide)
-  const maxW = 1000;
-  const scale = Math.min(1, maxW / sourceImage.width);
-  markCanvas.width = sourceImage.width * scale;
-  markCanvas.height = sourceImage.height * scale;
-
+  // Draw marking canvas at same scale as corner canvas so corners transfer 1:1
+  markCanvas.width = canvas.width;
+  markCanvas.height = canvas.height;
   const ctx = markCanvas.getContext('2d');
   ctx.drawImage(sourceImage, 0, 0, markCanvas.width, markCanvas.height);
 
-  // Corners → markCanvas coords
-  const ratioX = markCanvas.width / canvas.width;
-  const ratioY = markCanvas.height / canvas.height;
+  // Corners already in canvas coords == markCanvas coords (same size)
+  markingCorners = { ...corners };
 
-  marking._corners = {
-    tl: { x: corners.tl.x * ratioX, y: corners.tl.y * ratioY },
-    tr: { x: corners.tr.x * ratioX, y: corners.tr.y * ratioY },
-    bl: { x: corners.bl.x * ratioX, y: corners.bl.y * ratioY },
-    br: { x: corners.br.x * ratioX, y: corners.br.y * ratioY }
-  };
+  recomputeBubbles();
+  drawMarking();
+  updateStats();
 
-  // Draw outline
-  ctx.strokeStyle = '#28a745';
-  ctx.lineWidth = 3;
-  const c = marking._corners;
-  ctx.beginPath();
-  ctx.moveTo(c.tl.x, c.tl.y);
-  ctx.lineTo(c.tr.x, c.tr.y);
-  ctx.lineTo(c.br.x, c.br.y);
-  ctx.lineTo(c.bl.x, c.bl.y);
-  ctx.closePath();
-  ctx.stroke();
-}
+  // Attach click handler
+  markCanvas.onclick = handleMarkCanvasClick;
+};
 
-// ---------- Compute bubble positions ----------
+// ---------- Compute all bubble positions ----------
 function computeBubblePos(rowIdx, colIdx) {
-  const c = marking._corners;
+  const c = markingCorners;
   const perPage = Number(perPageSel.value);
   const totalRows = perPage;
 
-  // Fractions of marker-region (0..1)
-  const TABLE_TOP = 0.175;      // where first data row starts
-  const TABLE_BOTTOM = 0.960;   // where last data row ends
-  const dataHeight = TABLE_BOTTOM - TABLE_TOP;
-  const rowH = dataHeight / totalRows;
+  // Fractions of marker rectangle
+  // Tuned based on actual A4 sheet layout with 40 rows
+  const TABLE_TOP = 0.135;      // first row center as fraction of marker height
+  const TABLE_BOTTOM = 0.975;   // last row center as fraction of marker height
+  const rowStep = (TABLE_BOTTOM - TABLE_TOP) / (totalRows - 1);
+  const rowY = TABLE_TOP + rowStep * rowIdx;
 
-  const rowY = TABLE_TOP + rowH * (rowIdx + 0.5);
-
-  // Column centers (relative to marker region width)
-  const colCenters = [0.735, 0.813, 0.891, 0.969];
+  // Column centers as fraction of marker width
+  const colCenters = [0.740, 0.817, 0.894, 0.971];
   const colX = colCenters[colIdx];
 
-  // Bilinear interpolation
+  // Bilinear interpolation inside marker rectangle
   const u = colX;
   const v = rowY;
 
@@ -575,60 +603,110 @@ function computeBubblePos(rowIdx, colIdx) {
   const yLeft = c.tl.y + (c.bl.y - c.tl.y) * v;
   const yRight = c.tr.y + (c.br.y - c.tr.y) * v;
 
-  return {
-    x: xTop + (xBot - xTop) * v,
-    y: yLeft + (yRight - yLeft) * u
-  };
+  let px = xTop + (xBot - xTop) * v;
+  let py = yLeft + (yRight - yLeft) * u;
+
+  // Apply tuner offsets (in canvas pixels)
+  px += tuner.offsetX;
+  py += tuner.offsetY;
+
+  return { x: px, y: py };
 }
 
-// ---------- Render clickable bubbles ----------
-function renderBubbleGrid() {
-  bubbleHits.forEach(b => b.remove());
-  bubbleHits = [];
-
-  // Clear old absolutely-positioned children (keep canvas)
-  [...markWrap.children].forEach(ch => {
-    if (ch.tagName !== 'CANVAS') ch.remove();
-  });
-
-  // Get display size of the canvas
-  const canvasRect = markCanvas.getBoundingClientRect();
-  const scaleX = canvasRect.width / markCanvas.width;
-  const scaleY = canvasRect.height / markCanvas.height;
-
+function recomputeBubbles() {
+  bubblePositions = {};
   const perPage = Number(perPageSel.value);
   const cols = ['lunchFull', 'lunchHalf', 'dinnerFull', 'dinnerHalf'];
 
   students.forEach((s, rowIdx) => {
     if (rowIdx >= perPage) return;
+    bubblePositions[s.roll] = {};
     cols.forEach((col, colIdx) => {
-      const pos = computeBubblePos(rowIdx, colIdx);
-      // Position relative to markWrap. Since canvas is top-left of markWrap:
-      const dispX = pos.x * scaleX;
-      const dispY = pos.y * scaleY;
+      bubblePositions[s.roll][col] = computeBubblePos(rowIdx, colIdx);
+    });
+  });
+}
 
-      const hit = document.createElement('div');
-      hit.className = 'bubble-hit';
-      if (marking[s.roll][col]) hit.classList.add('filled');
-      hit.style.left = dispX + 'px';
-      hit.style.top = dispY + 'px';
-      hit.dataset.roll = s.roll;
-      hit.dataset.col = col;
-      hit.title = `${s.roll} ${s.name} — ${col}`;
+// ---------- Draw marking canvas ----------
+function drawMarking() {
+  const ctx = markCanvas.getContext('2d');
+  ctx.drawImage(sourceImage, 0, 0, markCanvas.width, markCanvas.height);
 
-      hit.addEventListener('click', (e) => {
-        e.preventDefault();
-        marking[s.roll][col] = !marking[s.roll][col];
-        hit.classList.toggle('filled');
-        updateStats();
-      });
+  // Draw green outline of marker rect
+  ctx.strokeStyle = 'rgba(40, 167, 69, 0.7)';
+  ctx.lineWidth = 2;
+  const c = markingCorners;
+  ctx.beginPath();
+  ctx.moveTo(c.tl.x, c.tl.y);
+  ctx.lineTo(c.tr.x, c.tr.y);
+  ctx.lineTo(c.br.x, c.br.y);
+  ctx.lineTo(c.bl.x, c.bl.y);
+  ctx.closePath();
+  ctx.stroke();
 
-      markWrap.appendChild(hit);
-      bubbleHits.push(hit);
+  // Draw each bubble
+  const radius = tuner.bubbleSize;
+  const cols = ['lunchFull', 'lunchHalf', 'dinnerFull', 'dinnerHalf'];
+
+  students.forEach((s) => {
+    const positions = bubblePositions[s.roll];
+    if (!positions) return;
+    cols.forEach(col => {
+      const pos = positions[col];
+      const filled = marking[s.roll][col];
+
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = filled ? 'rgba(40, 167, 69, 0.75)' : 'rgba(255, 235, 59, 0.55)';
+      ctx.fill();
+      ctx.strokeStyle = filled ? '#1e7e34' : 'rgba(255, 152, 0, 1)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      if (filled) {
+        ctx.fillStyle = 'white';
+        ctx.font = `bold ${Math.round(radius * 1.1)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('✓', pos.x, pos.y);
+      }
+    });
+  });
+}
+
+// ---------- Click to toggle ----------
+function handleMarkCanvasClick(e) {
+  const rect = markCanvas.getBoundingClientRect();
+  const scaleX = markCanvas.width / rect.width;
+  const scaleY = markCanvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+
+  const radius = tuner.bubbleSize;
+  const threshold = Math.max(radius * 1.6, 20);
+
+  let best = null;
+  let bestDist = threshold;
+  const cols = ['lunchFull', 'lunchHalf', 'dinnerFull', 'dinnerHalf'];
+
+  students.forEach(s => {
+    const positions = bubblePositions[s.roll];
+    if (!positions) return;
+    cols.forEach(col => {
+      const pos = positions[col];
+      const d = Math.hypot(pos.x - x, pos.y - y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = { roll: s.roll, col };
+      }
     });
   });
 
-  console.log(`Rendered ${bubbleHits.length} bubbles. Canvas: ${canvasRect.width}×${canvasRect.height}px, scale: ${scaleX.toFixed(3)}/${scaleY.toFixed(3)}`);
+  if (best) {
+    marking[best.roll][best.col] = !marking[best.roll][best.col];
+    drawMarking();
+    updateStats();
+  }
 }
 
 // ---------- Stats ----------
@@ -666,9 +744,7 @@ function updateStats() {
 window.backToCorners = function() {
   document.getElementById('cornerCard').style.display = 'block';
   document.getElementById('markingCard').style.display = 'none';
-  bubbleHits.forEach(b => b.remove());
-  bubbleHits = [];
-  drawHandles();
+  requestAnimationFrame(() => drawHandles());
 };
 
 // ---------- Save ----------
@@ -769,13 +845,10 @@ window.saveResults = async function() {
   btn.innerHTML = '💾 Save কর — Bill কাটো';
 };
 
-// ---------- Redraw on resize ----------
+// ---------- Resize ----------
 window.addEventListener('resize', () => {
   if (document.getElementById('cornerCard').style.display !== 'none' && cornerHandles.length) {
     drawHandles();
-  }
-  if (document.getElementById('markingCard').style.display !== 'none') {
-    renderBubbleGrid();
   }
 });
 </script>
