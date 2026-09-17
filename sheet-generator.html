@@ -35,6 +35,7 @@
   .btn-primary:disabled { background: #999; cursor: not-allowed; }
   .btn-success { background: #28a745; color: white; }
   .btn-success:hover { background: #1e7e34; }
+  .btn-success:disabled { background: #999; cursor: not-allowed; }
   .btn-secondary { background: #6c757d; color: white; }
   .btn-secondary:hover { background: #5a6268; }
 
@@ -82,6 +83,7 @@
     page-break-after: always;
     font-family: Arial, sans-serif;
   }
+  .sheet-page:last-child { page-break-after: auto; }
 
   /* Corner markers for CV detection */
   .marker {
@@ -133,21 +135,78 @@
   }
 
   /* =====================================================
-     PRINT STYLES
+     PRINT STYLES — Fixed for correct output
      ===================================================== */
   @media print {
-    body { background: white; padding: 0; }
-    .container > *:not(.preview-area) { display: none !important; }
-    .preview-area { background: white; padding: 0; max-height: none; overflow: visible; }
+    /* 1. Reset body and hide non-preview elements */
+    html, body {
+      background: white !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
+    /* Hide the header, sub-title, config card, all cards except previewCard */
+    .container > h1,
+    .container > .sub,
+    .container > .card:not(#previewCard) {
+      display: none !important;
+    }
+
+    /* Reset the preview card */
+    #previewCard {
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      background: white !important;
+      display: block !important;
+    }
+    #previewCard > h3 { display: none !important; }
+
+    /* Preview area — remove overflow/max-height so all pages print */
+    .preview-area {
+      background: white !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      max-height: none !important;
+      overflow: visible !important;
+      border-radius: 0 !important;
+      display: block !important;
+    }
+
+    /* Each sheet = one A4 page */
     .sheet-page {
-      margin: 0; padding: 8mm;
-      box-shadow: none; page-break-after: always;
-      width: 100%; min-height: auto;
+      width: 100% !important;
+      min-height: auto !important;
+      margin: 0 !important;
+      padding: 8mm !important;
+      box-shadow: none !important;
+      page-break-after: always;
+      page-break-inside: avoid;
+      display: block !important;
     }
     .sheet-page:last-child { page-break-after: auto; }
-    .marker { background: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .sheet-table th { background: #e8e8e8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    @page { size: A4; margin: 0; }
+
+    /* Force colors to print */
+    .marker {
+      background: black !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .marker::after {
+      background: white !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .sheet-table th {
+      background: #e8e8e8 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .sheet-table td { border: 0.3mm solid #000 !important; }
+    .bubble { border: 0.4mm solid #000 !important; }
+
+    @page { size: A4 portrait; margin: 0; }
   }
 </style>
 </head>
@@ -243,12 +302,10 @@ let currentMode = 'day';
 init();
 
 async function init() {
-  // Default date = today
   const today = new Date();
   document.getElementById('singleDate').value =
     today.toISOString().split('T')[0];
 
-  // Default month = current
   const yyyymm = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   document.getElementById('monthRange').value = yyyymm;
 
@@ -300,7 +357,6 @@ window.generatePreview = async function() {
   btn.innerHTML = '<span class="spinner"></span>লোড হচ্ছে...';
 
   try {
-    // Fetch students for batch
     const q = query(collection(db, 'students'), where('batchName', '==', batch));
     const snap = await getDocs(q);
 
@@ -312,7 +368,6 @@ window.generatePreview = async function() {
       throw new Error('এই batch-এ কোনো student নেই');
     }
 
-    // Determine dates to generate
     let dates = [];
     if (currentMode === 'day') {
       const d = document.getElementById('singleDate').value;
@@ -328,7 +383,6 @@ window.generatePreview = async function() {
       }
     }
 
-    // Build preview
     previewArea.innerHTML = '';
     const perPage = Number(perPageSel.value);
     const pagesPerDay = Math.ceil(loadedStudents.length / perPage);
@@ -371,10 +425,8 @@ function makePage(batch, date, students, pageNum, totalPages) {
     weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
   });
 
-  // Sheet ID for later OMR recognition
   const sheetId = `${date}-P${pageNum}`;
 
-  // Table rows
   let rowsHtml = '';
   students.forEach(s => {
     rowsHtml += `
@@ -388,7 +440,6 @@ function makePage(batch, date, students, pageNum, totalPages) {
       </tr>`;
   });
 
-  // Fill empty rows if less than perPage (for consistent grid)
   const perPage = Number(perPageSel.value);
   for (let i = students.length; i < perPage; i++) {
     rowsHtml += `
@@ -432,7 +483,8 @@ function makePage(batch, date, students, pageNum, totalPages) {
 
 // ---------- Print ----------
 window.printSheets = function() {
-  window.print();
+  // Small delay ensures DOM is fully rendered
+  setTimeout(() => window.print(), 100);
 };
 
 // ---------- Clear ----------
