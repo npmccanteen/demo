@@ -22,8 +22,9 @@
   .btn-success:disabled { background: #999; cursor: not-allowed; }
   .btn-secondary { background: #6c757d; color: white; }
   .btn-secondary:hover { background: #5a6268; }
-  .btn-test { background: #ff9800; color: white; }
+  .btn-test { background: #ff9800; color: white; padding: 8px 16px; font-size: 13px; }
   .btn-test:hover { background: #e68900; }
+  .btn-test:disabled { background: #999; cursor: not-allowed; }
 
   .api-status {
     display: flex; align-items: center; gap: 10px;
@@ -35,10 +36,7 @@
   .api-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff9800; flex-shrink: 0; }
   .api-status.ok .api-dot { background: #28a745; }
   .api-status.error .api-dot { background: #dc3545; }
-  .api-status button {
-    margin: 0 0 0 auto; padding: 6px 14px; font-size: 13px;
-    background: rgba(0,0,0,0.08); color: inherit;
-  }
+  .api-status button { margin: 0 0 0 auto; }
 
   .dropzone {
     border: 2px dashed #2c5aa0; border-radius: 10px;
@@ -99,20 +97,17 @@
   <h1>📋 Student List Import</h1>
   <p class="sub">ছবি বা PDF আপলোড কর — <span class="badge badge-ai">🤖 Gemini AI</span> নাম-রোল বের করবে</p>
 
-  <!-- API Status -->
   <div class="api-status" id="apiStatus">
     <div class="api-dot"></div>
-    <span id="apiStatusText">API key যাচাই করা হয়নি</span>
-    <button onclick="testAPI()" id="testBtn">🧪 Test কর</button>
+    <span id="apiStatusText">API key যাচাই করা হয়নি — Test বাটনে ক্লিক কর</span>
+    <button class="btn-test" onclick="testAPI()" id="testBtn">🧪 Test কর</button>
   </div>
 
-  <!-- Batch Name -->
   <div class="card">
     <label>Batch Name</label>
     <input type="text" id="batchName" placeholder="যেমন: Batch A, CSE-2024" />
   </div>
 
-  <!-- Upload -->
   <div class="card">
     <div class="dropzone" id="dropzone">
       <div class="icon">📷</div>
@@ -125,7 +120,6 @@
     <img id="previewImg" class="preview-img" style="display:none;" />
   </div>
 
-  <!-- Result -->
   <div class="card" id="resultCard" style="display:none;">
     <div class="actions-row">
       <h3>✏️ যাচাই করে ঠিক কর</h3>
@@ -188,7 +182,6 @@ function setStatus(msg, type) {
   statusEl.className = 'status active ' + (type || '');
   statusEl.innerHTML = msg;
 }
-function hideStatus() { statusEl.className = 'status'; }
 function setProgress(pct) {
   progressBar.style.display = 'block';
   progressFill.style.width = pct + '%';
@@ -205,14 +198,16 @@ function showToast(msg, type) {
 }
 
 // ==========================================================
-// 🧪 API TEST
+// 🧪 API TEST — manual only, no auto-run
 // ==========================================================
 window.testAPI = async function() {
   testBtn.disabled = true;
   testBtn.innerHTML = '<span class="loading-spinner dark" style="width:12px;height:12px;"></span>Testing';
 
   try {
-    if (!GEMINI_API_KEY) throw new Error('API key নেই');
+    if (!GEMINI_API_KEY || GEMINI_API_KEY.length < 20) {
+      throw new Error('API key লোড হয়নি');
+    }
 
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent';
     const res = await fetch(url, {
@@ -227,7 +222,11 @@ window.testAPI = async function() {
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+
+    if (!res.ok) {
+      const msg = data.error?.message || `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
 
     apiStatus.className = 'api-status ok';
     apiStatusText.textContent = '✅ API কাজ করছে (gemini-3.6-flash)';
@@ -239,12 +238,9 @@ window.testAPI = async function() {
     apiStatusText.textContent = '❌ ' + e.message;
     showToast('❌ API Test ব্যর্থ', 'error');
     testBtn.disabled = false;
-    testBtn.textContent = 'আবার Test কর';
+    testBtn.textContent = '🔄 আবার Test কর';
   }
 };
-
-// Auto-test on load
-testAPI();
 
 // ==========================================================
 // Upload handling
@@ -354,8 +350,6 @@ function fileToBase64(file) {
 // ==========================================================
 // Gemini API
 // ==========================================================
-const MODELS = ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
-
 async function callGemini(base64Data, mimeType) {
   const prompt = `You are an expert OCR assistant. Analyze the attached image of a student list.
 Extract ALL student records visible.
@@ -368,59 +362,48 @@ Rules:
 - Keep names exactly as they appear.
 - Preserve leading zeros in roll numbers.`;
 
-  let lastError = null;
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent';
 
-  for (const model of MODELS) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': GEMINI_API_KEY
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              { inline_data: { mime_type: mimeType, data: base64Data } }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.1,
-            responseMimeType: "application/json"
-          }
-        })
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        lastError = new Error(errData.error?.message || `HTTP ${res.status}`);
-        continue;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': GEMINI_API_KEY
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: mimeType, data: base64Data } }
+        ]
+      }],
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: "application/json"
       }
+    })
+  });
 
-      const data = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-      const cleaned = text.trim()
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/, '')
-        .replace(/\s*```$/, '');
-
-      const parsed = JSON.parse(cleaned);
-      if (!Array.isArray(parsed)) throw new Error('Response is not an array');
-
-      return parsed.map(s => ({
-        roll: String(s.roll || '').trim(),
-        name: String(s.name || '').trim()
-      })).filter(s => s.roll && s.name);
-
-    } catch (e) {
-      lastError = e;
-    }
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error?.message || `HTTP ${res.status}`);
   }
 
-  throw new Error(lastError?.message || 'AI response পাওয়া যায়নি');
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+  const cleaned = text.trim()
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/, '')
+    .replace(/\s*```$/, '');
+
+  const parsed = JSON.parse(cleaned);
+  if (!Array.isArray(parsed)) throw new Error('AI response ভুল ফরম্যাটে');
+
+  return parsed.map(s => ({
+    roll: String(s.roll || '').trim(),
+    name: String(s.name || '').trim()
+  })).filter(s => s.roll && s.name);
 }
 
 // ==========================================================
@@ -437,7 +420,7 @@ function renderTable(students) {
       <td><input type="text" value="${escapeHtml(s.roll)}" data-field="roll"></td>
       <td><input type="text" value="${escapeHtml(s.name)}" data-field="name"></td>
       <td style="text-align:center;">
-        <button style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;"
+        <button style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;margin:0;"
           onclick="this.closest('tr').remove(); updateCount();">✕</button>
       </td>`;
     tbody.appendChild(tr);
@@ -458,7 +441,7 @@ window.addEmptyRow = function() {
     <td><input type="text" value="" data-field="roll"></td>
     <td><input type="text" value="" data-field="name"></td>
     <td style="text-align:center;">
-      <button style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;"
+      <button style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;margin:0;"
         onclick="this.closest('tr').remove(); updateCount();">✕</button>
     </td>`;
   tbody.appendChild(tr);
