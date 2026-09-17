@@ -1,6 +1,4 @@
 // firebase-config.js
-// ⚠️ এটা client-side config — public-safe (GitHub-এ push করা ঠিক আছে)
-
 export const firebaseConfig = {
   apiKey: "AIzaSyCmMJ1oQSaespqPdo4Lr8B0d0bXRalPjQA",
   authDomain: "canteenappnpmc.firebaseapp.com",
@@ -10,5 +8,5 @@ export const firebaseConfig = {
   appId: "1:177224931219:web:328101a5af09a197adfa66"
 };
 
-// 🔑 Gemini API Key (নতুন ফরম্যাট: AQ. দিয়ে শুরু)
-export const GEMINI_API_KEY = "AQ.Ab8RN6JF_2uVuOdBIaXleMjZtKOfU8dYdzRuBukGM9-kcUme0g";
+// ✅ তোর নতুন AQ. ফরম্যাটের কী এখানে বসানো হলো
+export const GEMINI_API_KEY = "AQ.Ab8RN6LGkOACDOiCSQ5KghdIlQP6kX0Uc9mSBodniGO4iiEeiQ"; // <-- এখানে তোর পুরো কী-টা বসাবি
