@@ -309,7 +309,7 @@ async function handleFile(file) {
 }
 
 // ==========================================================
-//  🎯 Gemini Vision API Call
+//  🎯 Gemini Vision API Call (ਕੀ-సహిత URL & সঠিক হেডার)
 // ==========================================================
 async function callGeminiVision(file) {
   // Convert to base64
@@ -357,7 +357,8 @@ Rules:
 - Only include students who have AT LEAST ONE filled bubble.
 - If you cannot read the sheet clearly, return an empty object {}.`;
 
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent';
+  // সুনির্দিষ্টভাবে gemini-2.5-flash মডেল এবং query string এ API Key যুক্ত করা হয়েছে
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
   const body = {
     contents: [{
@@ -379,8 +380,7 @@ Rules:
   const res = await fetch(url, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': GEMINI_API_KEY
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify(body)
   });
