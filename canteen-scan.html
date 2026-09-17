@@ -18,10 +18,7 @@
   .row { display: flex; gap: 12px; flex-wrap: wrap; }
   .col { flex: 1; min-width: 200px; }
   label { display: block; font-weight: 600; margin: 10px 0 5px; font-size: 13px; }
-  input[type="text"], select, input[type="date"], input[type="number"] {
-    width: 100%; padding: 10px 12px; border: 1.5px solid #ddd;
-    border-radius: 8px; font-size: 14px; font-family: inherit;
-  }
+  input, select { width: 100%; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; }
   input:focus, select:focus { border-color: #2c5aa0; outline: none; }
 
   button {
@@ -38,6 +35,7 @@
   .btn-secondary { background: #6c757d; color: white; }
   .btn-secondary:hover { background: #5a6268; }
   .btn-warning { background: #ff9800; color: white; }
+  .btn-warning:hover { background: #e68900; }
 
   .dropzone {
     border: 2px dashed #2c5aa0; border-radius: 10px;
@@ -57,33 +55,22 @@
   .info-banner.warn { background: #fff3cd; border-left-color: #ff9800; color: #856404; }
   .info-banner.ok { background: #d4edda; border-left-color: #28a745; color: #155724; }
 
-  /* Corner step canvas */
+  /* Corner step */
   #canvasWrap {
-    position: relative;
-    display: inline-block;
-    line-height: 0;
-    max-width: 100%;
-    background: #222;
-    border-radius: 8px;
-    overflow: hidden;
-    touch-action: none;
-    user-select: none;
+    position: relative; display: inline-block;
+    line-height: 0; max-width: 100%;
+    background: #222; border-radius: 8px;
+    overflow: hidden; touch-action: none; user-select: none;
   }
-  #canvas {
-    display: block;
-    max-width: 100%;
-    height: auto;
-  }
+  #canvas { display: block; max-width: 100%; height: auto; }
 
   .handle {
-    position: absolute;
-    width: 26px; height: 26px;
+    position: absolute; width: 26px; height: 26px;
     background: #ff1744; border: 3px solid white;
     border-radius: 50%; cursor: grab;
     box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     transform: translate(-50%, -50%);
-    z-index: 10;
-    touch-action: none;
+    z-index: 10; touch-action: none;
   }
   .handle:active { cursor: grabbing; background: #ffeb3b; }
   .handle-label {
@@ -93,30 +80,37 @@
     pointer-events: none; transform: translate(-50%, 22px);
   }
 
-  /* Marking step canvas */
+  /* Marking step */
   #markWrap {
-    position: relative;
-    display: inline-block;
-    line-height: 0;
-    max-width: 100%;
-    background: #222;
-    border-radius: 8px;
-    overflow: hidden;
-    touch-action: manipulation;
-    user-select: none;
+    position: relative; display: inline-block;
+    line-height: 0; max-width: 100%;
+    background: #222; border-radius: 8px;
+    overflow: hidden; user-select: none;
   }
-  #markCanvas {
-    display: block;
-    max-width: 100%;
-    height: auto;
-    cursor: crosshair;
+  #markCanvas { display: block; max-width: 100%; height: auto; cursor: crosshair; }
+
+  /* Big instruction overlay */
+  .instruction-bar {
+    background: #fff3cd; border-left: 4px solid #ff9800;
+    padding: 14px 18px; border-radius: 8px; margin-bottom: 12px;
+    font-size: 15px; color: #856404; font-weight: 600;
+    display: flex; align-items: center; gap: 10px;
   }
+  .instruction-bar .step-num {
+    background: #ff9800; color: white;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px; flex-shrink: 0;
+  }
+  .instruction-bar.ok { background: #d4edda; border-left-color: #28a745; color: #155724; }
+  .instruction-bar.ok .step-num { background: #28a745; }
 
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
     background: #333; color: white; padding: 14px 24px;
     border-radius: 8px; font-size: 14px; display: none;
     z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    max-width: 90%;
   }
   .toast.show { display: block; }
   .toast.success { background: #28a745; }
@@ -155,27 +149,14 @@
   }
   .stat-box .num { font-size: 20px; font-weight: 700; color: #2c5aa0; }
   .stat-box .lbl { font-size: 10px; color: #666; margin-top: 3px; text-transform: uppercase; }
-
-  details.tuner {
-    margin-top: 15px; background: #f8f9fa; border-radius: 8px;
-    padding: 10px 15px; font-size: 13px;
-  }
-  details.tuner summary { cursor: pointer; font-weight: 600; color: #2c5aa0; }
-  details.tuner .ctrl-row {
-    display: flex; align-items: center; gap: 10px; margin-top: 8px;
-  }
-  details.tuner .ctrl-row label { margin: 0; min-width: 100px; font-size: 12px; }
-  details.tuner .ctrl-row input[type="range"] { flex: 1; }
-  details.tuner .ctrl-row span { min-width: 45px; text-align: right; font-family: monospace; font-size: 12px; }
 </style>
 </head>
 <body>
 
 <div class="container">
   <h1>📷 Canteen Scan</h1>
-  <p class="sub">ছবি upload কর → কোণা ঠিক কর → bubble mark কর → Save</p>
+  <p class="sub">ছবি upload → কোণা ঠিক কর → ২টা bubble tap কর → Mark কর → Save</p>
 
-  <!-- SETUP -->
   <div class="card">
     <div class="row">
       <div class="col">
@@ -197,11 +178,8 @@
     </div>
   </div>
 
-  <!-- UPLOAD -->
   <div class="card" id="uploadCard">
-    <div class="info-banner">
-      📸 Sheet-এর ছবি upload কর। ভালো আলো, সোজা angle।
-    </div>
+    <div class="info-banner">📸 Sheet-এর ছবি upload কর।</div>
     <div class="dropzone" id="dropzone">
       <div class="icon">📷</div>
       <p>ছবি drag-drop কর বা ক্লিক কর</p>
@@ -210,15 +188,12 @@
     </div>
   </div>
 
-  <!-- CORNER -->
   <div class="card" id="cornerCard" style="display:none;">
-    <h3 style="color:#2c5aa0; margin-bottom:8px;">🎯 কোণা ঠিক কর</h3>
+    <h3 style="color:#2c5aa0; margin-bottom:8px;">🎯 Step 1: কোণা ঠিক কর</h3>
     <div class="info-banner warn">
-      ⚠️ <strong>৪টা লাল বিন্দু</strong> sheet-এর <strong>কালো corner marker-এর center-এ</strong> drag করে বসাও।
+      ⚠️ ৪টা লাল বিন্দু sheet-এর <strong>কালো corner marker-এর center-এ</strong> drag করে বসাও।
     </div>
-    <div id="canvasWrap">
-      <canvas id="canvas"></canvas>
-    </div>
+    <div id="canvasWrap"><canvas id="canvas"></canvas></div>
     <div style="margin-top:15px;">
       <button class="btn-primary" onclick="confirmCorners()">✅ কোণা Confirm কর</button>
       <button class="btn-secondary" onclick="resetCorners()">↻ Reset</button>
@@ -226,50 +201,30 @@
     </div>
   </div>
 
-  <!-- MARKING -->
   <div class="card" id="markingCard" style="display:none;">
-    <h3 style="color:#2c5aa0; margin-bottom:8px;">✏️ Bubble Mark কর</h3>
-    <div class="info-banner ok">
-      ✅ যেই bubble-এ meal খেয়েছে সেটার উপর <strong>tap</strong> কর → সবুজ হয়ে যাবে।
+    <h3 style="color:#2c5aa0; margin-bottom:8px;">✏️ Step 2: Bubble Calibrate + Mark</h3>
+
+    <div class="instruction-bar" id="instructionBar">
+      <div class="step-num" id="stepNum">1</div>
+      <div id="instructionText">প্রথম bubble-এ tap কর — <strong>Row 1, Lunch Full</strong> (একদম উপরের-বাম দিকের meal bubble)</div>
     </div>
 
     <div class="legend">
       <div class="legend-item"><div class="legend-dot"></div>Empty</div>
-      <div class="legend-item"><div class="legend-dot filled"></div>Filled (খেয়েছে)</div>
+      <div class="legend-item"><div class="legend-dot filled"></div>Filled</div>
     </div>
 
     <div id="markWrap" style="margin-top:12px;">
       <canvas id="markCanvas"></canvas>
     </div>
 
-    <details class="tuner" id="tuner">
-      <summary>🔧 Alignment ঠিক কর (দরকার হলে)</summary>
-      <div class="ctrl-row">
-        <label>সব bubble ডানে/বামে</label>
-        <input type="range" id="offsetX" min="-100" max="100" value="0" />
-        <span id="offsetXVal">0</span>
-      </div>
-      <div class="ctrl-row">
-        <label>সব bubble উপরে/নিচে</label>
-        <input type="range" id="offsetY" min="-100" max="100" value="0" />
-        <span id="offsetYVal">0</span>
-      </div>
-      <div class="ctrl-row">
-        <label>Bubble size</label>
-        <input type="range" id="bubbleSize" min="6" max="30" value="14" />
-        <span id="bubbleSizeVal">14</span>
-      </div>
-      <div style="margin-top:8px;">
-        <button class="btn-secondary" onclick="resetTuner()" style="font-size:12px; padding:6px 12px;">Reset</button>
-      </div>
-    </details>
-
     <div class="stats-grid" id="statsGrid"></div>
 
     <div style="margin-top:15px;">
-      <button class="btn-success" onclick="saveResults()" id="saveBtn">
+      <button class="btn-success" onclick="saveResults()" id="saveBtn" disabled>
         💾 Save কর — Bill কাটো
       </button>
+      <button class="btn-warning" onclick="restartCalibration()">🎯 আবার Calibrate কর</button>
       <button class="btn-secondary" onclick="backToCorners()">← কোণা আবার ঠিক কর</button>
     </div>
   </div>
@@ -290,10 +245,12 @@ let students = [];
 let pricing = { lunchFull: 80, lunchHalf: 60, dinnerFull: 80, dinnerHalf: 60 };
 let sourceImage = null;
 let corners = { tl: {x:0,y:0}, tr: {x:0,y:0}, bl: {x:0,y:0}, br: {x:0,y:0} };
+let markingCorners = {};     // same as corners (canvas coords)
 let marking = {};
-let markingCorners = {}; // corners in markCanvas coords
-let bubblePositions = {}; // {roll: {lunchFull: {x,y}, ...}}
-let tuner = { offsetX: 0, offsetY: 0, bubbleSize: 14 };
+let bubblePositions = {};    // {roll: {lunchFull: {x, y}, ...}}
+let calibStep = 0;           // 0 = need first, 1 = need last, 2 = done
+let calibFirst = null;       // {u, v} of first bubble in marker-rect
+let calibLast = null;        // {u, v} of last bubble in marker-rect
 let cornerHandles = [];
 
 // ---------- Elements ----------
@@ -312,15 +269,13 @@ function showToast(msg, type) {
   t.textContent = msg;
   t.className = 'toast show ' + (type || '');
   clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3500);
 }
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
-function setStatus(html) { document.getElementById('statusMsg').innerHTML = html; }
 
-// ---------- Init ----------
 init();
 
 async function init() {
@@ -328,7 +283,6 @@ async function init() {
   scanDate.value = today.toISOString().split('T')[0];
   await loadBatches();
   await loadPricing();
-  setupTuner();
 }
 
 async function loadBatches() {
@@ -342,9 +296,7 @@ async function loadBatches() {
     batchSelect.innerHTML = '<option value="">— Select —</option>' +
       batches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
     if (batches.length === 1) batchSelect.value = batches[0];
-  } catch (e) {
-    console.error(e); showToast('❌ Batch load fail', 'error');
-  }
+  } catch (e) { console.error(e); showToast('❌ Batch load fail', 'error'); }
 }
 
 async function loadPricing() {
@@ -357,42 +309,8 @@ async function loadPricing() {
         dinnerFull: p.dinnerFull ?? 80, dinnerHalf: p.dinnerHalf ?? 60
       };
     }
-  } catch (e) { console.warn('Pricing not loaded', e); }
+  } catch (e) { console.warn(e); }
 }
-
-// ---------- Tuner sliders ----------
-function setupTuner() {
-  const ox = document.getElementById('offsetX');
-  const oy = document.getElementById('offsetY');
-  const bs = document.getElementById('bubbleSize');
-
-  ox.addEventListener('input', () => {
-    tuner.offsetX = Number(ox.value);
-    document.getElementById('offsetXVal').textContent = ox.value;
-    if (markingCorners.tl) { recomputeBubbles(); drawMarking(); }
-  });
-  oy.addEventListener('input', () => {
-    tuner.offsetY = Number(oy.value);
-    document.getElementById('offsetYVal').textContent = oy.value;
-    if (markingCorners.tl) { recomputeBubbles(); drawMarking(); }
-  });
-  bs.addEventListener('input', () => {
-    tuner.bubbleSize = Number(bs.value);
-    document.getElementById('bubbleSizeVal').textContent = bs.value;
-    if (markingCorners.tl) drawMarking();
-  });
-}
-
-window.resetTuner = function() {
-  document.getElementById('offsetX').value = 0;
-  document.getElementById('offsetY').value = 0;
-  document.getElementById('bubbleSize').value = 14;
-  tuner = { offsetX: 0, offsetY: 0, bubbleSize: 14 };
-  document.getElementById('offsetXVal').textContent = '0';
-  document.getElementById('offsetYVal').textContent = '0';
-  document.getElementById('bubbleSizeVal').textContent = '14';
-  if (markingCorners.tl) { recomputeBubbles(); drawMarking(); }
-};
 
 // ---------- Upload ----------
 dropzone.addEventListener('click', () => fileInput.click());
@@ -419,7 +337,7 @@ function handleFile(file) {
 
 async function loadStudentsAndStart() {
   try {
-    setStatus('<div class="info-banner">📥 Student list লোড হচ্ছে...</div>');
+    document.getElementById('statusMsg').innerHTML = '<div class="info-banner">📥 Student list লোড হচ্ছে...</div>';
     const q = query(collection(db, 'students'), where('batchName', '==', batchSelect.value));
     const snap = await getDocs(q);
     students = snap.docs.map(d => ({ id: d.id, ...d.data() }))
@@ -442,11 +360,14 @@ async function loadStudentsAndStart() {
       br: { x: w * (1 - inset), y: h * (1 - inset) }
     };
 
-    showCornerStep();
-    setStatus('');
+    document.getElementById('uploadCard').style.display = 'none';
+    document.getElementById('cornerCard').style.display = 'block';
+    document.getElementById('markingCard').style.display = 'none';
+    requestAnimationFrame(() => drawHandles());
+    document.getElementById('statusMsg').innerHTML = '';
   } catch (e) {
     console.error(e);
-    setStatus(`<div class="info-banner warn">❌ ${escapeHtml(e.message)}</div>`);
+    document.getElementById('statusMsg').innerHTML = `<div class="info-banner warn">❌ ${escapeHtml(e.message)}</div>`;
   }
 }
 
@@ -455,23 +376,13 @@ function drawCornerCanvas(img) {
   const scale = Math.min(1, maxW / img.width);
   canvas.width = img.width * scale;
   canvas.height = img.height * scale;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
 }
 
-// ---------- Corner Step ----------
-function showCornerStep() {
-  document.getElementById('uploadCard').style.display = 'none';
-  document.getElementById('cornerCard').style.display = 'block';
-  document.getElementById('markingCard').style.display = 'none';
-  // Wait for layout then draw handles
-  requestAnimationFrame(() => drawHandles());
-}
-
+// ---------- Corner Handles ----------
 function drawHandles() {
   cornerHandles.forEach(h => h.remove());
   cornerHandles = [];
-
   const wrapRect = canvasWrap.getBoundingClientRect();
   const canvasRect = canvas.getBoundingClientRect();
   const offsetX = canvasRect.left - wrapRect.left;
@@ -481,77 +392,55 @@ function drawHandles() {
 
   ['tl', 'tr', 'bl', 'br'].forEach(key => {
     const c = corners[key];
-    const dispX = offsetX + c.x * scaleX;
-    const dispY = offsetY + c.y * scaleY;
-
     const handle = document.createElement('div');
     handle.className = 'handle';
-    handle.style.left = dispX + 'px';
-    handle.style.top = dispY + 'px';
-
+    handle.style.left = (offsetX + c.x * scaleX) + 'px';
+    handle.style.top = (offsetY + c.y * scaleY) + 'px';
     const label = document.createElement('div');
     label.className = 'handle-label';
     label.textContent = key.toUpperCase();
     handle.appendChild(label);
 
     let dragging = false;
-    const startDrag = (e) => { e.preventDefault(); dragging = true; handle.style.background = '#ffeb3b'; };
-    const moveDrag = (e) => {
+    const startDrag = e => { e.preventDefault(); dragging = true; handle.style.background = '#ffeb3b'; };
+    const moveDrag = e => {
       if (!dragging) return;
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const px = clientX - rect.left;
-      const py = clientY - rect.top;
-      const imgX = px / (rect.width / canvas.width);
-      const imgY = py / (rect.height / canvas.height);
-      corners[key] = {
-        x: Math.max(0, Math.min(canvas.width, imgX)),
-        y: Math.max(0, Math.min(canvas.height, imgY))
-      };
-      const dx = offsetX + corners[key].x * scaleX;
-      const dy = offsetY + corners[key].y * scaleY;
-      handle.style.left = dx + 'px';
-      handle.style.top = dy + 'px';
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+      const px = (cx - rect.left) / (rect.width / canvas.width);
+      const py = (cy - rect.top) / (rect.height / canvas.height);
+      corners[key] = { x: Math.max(0, Math.min(canvas.width, px)), y: Math.max(0, Math.min(canvas.height, py)) };
+      handle.style.left = (offsetX + corners[key].x * scaleX) + 'px';
+      handle.style.top = (offsetY + corners[key].y * scaleY) + 'px';
     };
     const endDrag = () => { dragging = false; handle.style.background = '#ff1744'; };
-
     handle.addEventListener('mousedown', startDrag);
     document.addEventListener('mousemove', moveDrag);
     document.addEventListener('mouseup', endDrag);
     handle.addEventListener('touchstart', startDrag, { passive: false });
     document.addEventListener('touchmove', moveDrag, { passive: false });
     document.addEventListener('touchend', endDrag);
-
     canvasWrap.appendChild(handle);
     cornerHandles.push(handle);
   });
 }
 
 window.resetCorners = function() {
-  const w = canvas.width, h = canvas.height;
-  const inset = 0.06;
-  corners = {
-    tl: { x: w * inset, y: h * inset },
-    tr: { x: w * (1 - inset), y: h * inset },
-    bl: { x: w * inset, y: h * (1 - inset) },
-    br: { x: w * (1 - inset), y: h * (1 - inset) }
-  };
+  const w = canvas.width, h = canvas.height, inset = 0.06;
+  corners = { tl:{x:w*inset,y:h*inset}, tr:{x:w*(1-inset),y:h*inset}, bl:{x:w*inset,y:h*(1-inset)}, br:{x:w*(1-inset),y:h*(1-inset)} };
   drawHandles();
 };
 
 window.clearAll = function() {
-  sourceImage = null;
-  corners = {};
-  markingCorners = {};
-  marking = {};
-  cornerHandles.forEach(h => h.remove());
-  cornerHandles = [];
+  sourceImage = null; corners = {}; markingCorners = {}; marking = {};
+  calibFirst = null; calibLast = null; calibStep = 0;
+  cornerHandles.forEach(h => h.remove()); cornerHandles = [];
   document.getElementById('uploadCard').style.display = 'block';
   document.getElementById('cornerCard').style.display = 'none';
   document.getElementById('markingCard').style.display = 'none';
-  setStatus('');
+  document.getElementById('statusMsg').innerHTML = '';
   fileInput.value = '';
 };
 
@@ -560,112 +449,203 @@ window.confirmCorners = function() {
   document.getElementById('cornerCard').style.display = 'none';
   document.getElementById('markingCard').style.display = 'block';
 
-  // Draw marking canvas at same scale as corner canvas so corners transfer 1:1
   markCanvas.width = canvas.width;
   markCanvas.height = canvas.height;
-  const ctx = markCanvas.getContext('2d');
-  ctx.drawImage(sourceImage, 0, 0, markCanvas.width, markCanvas.height);
 
-  // Corners already in canvas coords == markCanvas coords (same size)
-  markingCorners = { ...corners };
+  // Corners are in canvas coords == markCanvas coords (same size)
+  markingCorners = JSON.parse(JSON.stringify(corners));
 
-  recomputeBubbles();
+  // Reset calibration
+  calibFirst = null; calibLast = null; calibStep = 0;
+  bubblePositions = {};
   drawMarking();
+  updateInstruction();
   updateStats();
+  document.getElementById('saveBtn').disabled = true;
 
-  // Attach click handler
-  markCanvas.onclick = handleMarkCanvasClick;
+  markCanvas.onclick = handleCanvasClick;
 };
 
-// ---------- Compute all bubble positions ----------
-function computeBubblePos(rowIdx, colIdx) {
-  const c = markingCorners;
-  const perPage = Number(perPageSel.value);
-  const totalRows = perPage;
+// ---------- Instruction ----------
+function updateInstruction() {
+  const bar = document.getElementById('instructionBar');
+  const num = document.getElementById('stepNum');
+  const txt = document.getElementById('instructionText');
 
-  // Fractions of marker rectangle
-  // Tuned based on actual A4 sheet layout with 40 rows
-  const TABLE_TOP = 0.135;      // first row center as fraction of marker height
-  const TABLE_BOTTOM = 0.975;   // last row center as fraction of marker height
-  const rowStep = (TABLE_BOTTOM - TABLE_TOP) / (totalRows - 1);
-  const rowY = TABLE_TOP + rowStep * rowIdx;
-
-  // Column centers as fraction of marker width
-  const colCenters = [0.740, 0.817, 0.894, 0.971];
-  const colX = colCenters[colIdx];
-
-  // Bilinear interpolation inside marker rectangle
-  const u = colX;
-  const v = rowY;
-
-  const xTop = c.tl.x + (c.tr.x - c.tl.x) * u;
-  const xBot = c.bl.x + (c.br.x - c.bl.x) * u;
-  const yLeft = c.tl.y + (c.bl.y - c.tl.y) * v;
-  const yRight = c.tr.y + (c.br.y - c.tr.y) * v;
-
-  let px = xTop + (xBot - xTop) * v;
-  let py = yLeft + (yRight - yLeft) * u;
-
-  // Apply tuner offsets (in canvas pixels)
-  px += tuner.offsetX;
-  py += tuner.offsetY;
-
-  return { x: px, y: py };
+  if (calibStep === 0) {
+    bar.className = 'instruction-bar';
+    num.textContent = '1';
+    txt.innerHTML = 'প্রথম bubble-এ tap কর — <strong>Row 1, Lunch Full</strong> (একদম উপরের-বাম meal bubble)';
+  } else if (calibStep === 1) {
+    bar.className = 'instruction-bar';
+    num.textContent = '2';
+    txt.innerHTML = 'শেষ bubble-এ tap কর — <strong>শেষ row, Dinner Half</strong> (একদম নিচের-ডান meal bubble)';
+  } else {
+    bar.className = 'instruction-bar ok';
+    num.textContent = '✓';
+    txt.innerHTML = 'Calibration সফল! যেই bubble-এ meal খেয়েছে সেগুলোতে tap কর — সবুজ হবে।';
+  }
 }
 
-function recomputeBubbles() {
+// ---------- Bilinear ----------
+function imageToUV(x, y) {
+  const {tl, tr, bl, br} = markingCorners;
+  let u = 0.5, v = 0.5;
+  for (let iter = 0; iter < 15; iter++) {
+    const px = (1-u)*(1-v)*tl.x + u*(1-v)*tr.x + (1-u)*v*bl.x + u*v*br.x;
+    const py = (1-u)*(1-v)*tl.y + u*(1-v)*tr.y + (1-u)*v*bl.y + u*v*br.y;
+    const dpx_du = (1-v)*(tr.x - tl.x) + v*(br.x - bl.x);
+    const dpx_dv = (1-u)*(bl.x - tl.x) + u*(br.x - tr.x);
+    const dpy_du = (1-v)*(tr.y - tl.y) + v*(br.y - bl.y);
+    const dpy_dv = (1-u)*(bl.y - tl.y) + u*(br.y - tr.y);
+    const det = dpx_du * dpy_dv - dpx_dv * dpy_du;
+    if (Math.abs(det) < 1e-9) break;
+    const dx = x - px, dy = y - py;
+    const du = (dpy_dv * dx - dpx_dv * dy) / det;
+    const dv = (-dpy_du * dx + dpx_du * dy) / det;
+    u += du; v += dv;
+    if (Math.abs(du) < 1e-6 && Math.abs(dv) < 1e-6) break;
+  }
+  return { u, v };
+}
+
+function uvToImage(u, v) {
+  const {tl, tr, bl, br} = markingCorners;
+  return {
+    x: (1-u)*(1-v)*tl.x + u*(1-v)*tr.x + (1-u)*v*bl.x + u*v*br.x,
+    y: (1-u)*(1-v)*tl.y + u*(1-v)*tr.y + (1-u)*v*bl.y + u*v*br.y
+  };
+}
+
+// ---------- Canvas Click ----------
+function handleCanvasClick(e) {
+  const rect = markCanvas.getBoundingClientRect();
+  const scaleX = markCanvas.width / rect.width;
+  const scaleY = markCanvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+
+  if (calibStep === 0) {
+    calibFirst = imageToUV(x, y);
+    calibStep = 1;
+    drawMarking();
+    updateInstruction();
+    showToast('✅ ১ম bubble ধরা হয়েছে — এখন শেষ bubble-এ tap কর', 'success');
+    return;
+  }
+  if (calibStep === 1) {
+    calibLast = imageToUV(x, y);
+    calibStep = 2;
+    computeBubblePositions();
+    drawMarking();
+    updateInstruction();
+    updateStats();
+    document.getElementById('saveBtn').disabled = false;
+    showToast('✅ সব bubble তৈরি! এখন ভুল থাকলে tap করে ঠিক কর।', 'success');
+    return;
+  }
+  // Calibrated — toggle nearest bubble
+  toggleNearestBubble(x, y);
+}
+
+function computeBubblePositions() {
   bubblePositions = {};
-  const perPage = Number(perPageSel.value);
+  const N = Math.min(students.length, Number(perPageSel.value));
   const cols = ['lunchFull', 'lunchHalf', 'dinnerFull', 'dinnerHalf'];
 
   students.forEach((s, rowIdx) => {
-    if (rowIdx >= perPage) return;
+    if (rowIdx >= N) return;
     bubblePositions[s.roll] = {};
     cols.forEach((col, colIdx) => {
-      bubblePositions[s.roll][col] = computeBubblePos(rowIdx, colIdx);
+      const u = calibFirst.u + (calibLast.u - calibFirst.u) * colIdx / 3;
+      const v = calibFirst.v + (calibLast.v - calibFirst.v) * rowIdx / (N - 1);
+      const pos = uvToImage(u, v);
+      bubblePositions[s.roll][col] = pos;
     });
   });
 }
 
-// ---------- Draw marking canvas ----------
+function toggleNearestBubble(x, y) {
+  let best = null, bestDist = Infinity;
+  const cols = ['lunchFull', 'lunchHalf', 'dinnerFull', 'dinnerHalf'];
+  students.forEach(s => {
+    const positions = bubblePositions[s.roll];
+    if (!positions) return;
+    cols.forEach(col => {
+      const pos = positions[col];
+      const d = Math.hypot(pos.x - x, pos.y - y);
+      if (d < bestDist) { bestDist = d; best = { roll: s.roll, col }; }
+    });
+  });
+  if (best && bestDist < 50) {
+    marking[best.roll][best.col] = !marking[best.roll][best.col];
+    drawMarking();
+    updateStats();
+  }
+}
+
+// ---------- Draw Marking ----------
 function drawMarking() {
   const ctx = markCanvas.getContext('2d');
   ctx.drawImage(sourceImage, 0, 0, markCanvas.width, markCanvas.height);
 
-  // Draw green outline of marker rect
-  ctx.strokeStyle = 'rgba(40, 167, 69, 0.7)';
-  ctx.lineWidth = 2;
-  const c = markingCorners;
-  ctx.beginPath();
-  ctx.moveTo(c.tl.x, c.tl.y);
-  ctx.lineTo(c.tr.x, c.tr.y);
-  ctx.lineTo(c.br.x, c.br.y);
-  ctx.lineTo(c.bl.x, c.bl.y);
-  ctx.closePath();
-  ctx.stroke();
+  // Marker rect outline
+  if (markingCorners.tl) {
+    const c = markingCorners;
+    ctx.strokeStyle = 'rgba(40, 167, 69, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(c.tl.x, c.tl.y);
+    ctx.lineTo(c.tr.x, c.tr.y);
+    ctx.lineTo(c.br.x, c.br.y);
+    ctx.lineTo(c.bl.x, c.bl.y);
+    ctx.closePath();
+    ctx.stroke();
+  }
 
-  // Draw each bubble
-  const radius = tuner.bubbleSize;
+  // Calibration markers (2 big dots if set)
+  if (calibFirst) {
+    const p = uvToImage(calibFirst.u, calibFirst.v);
+    ctx.fillStyle = '#ff1744';
+    ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, 2*Math.PI); ctx.fill();
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('1', p.x, p.y);
+  }
+  if (calibLast) {
+    const p = uvToImage(calibLast.u, calibLast.v);
+    ctx.fillStyle = '#ff1744';
+    ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, 2*Math.PI); ctx.fill();
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('2', p.x, p.y);
+  }
+
+  // Draw bubbles
+  const radius = 11;
   const cols = ['lunchFull', 'lunchHalf', 'dinnerFull', 'dinnerHalf'];
-
-  students.forEach((s) => {
+  students.forEach(s => {
     const positions = bubblePositions[s.roll];
     if (!positions) return;
     cols.forEach(col => {
       const pos = positions[col];
       const filled = marking[s.roll][col];
-
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI);
+      ctx.arc(pos.x, pos.y, radius, 0, 2*Math.PI);
       ctx.fillStyle = filled ? 'rgba(40, 167, 69, 0.75)' : 'rgba(255, 235, 59, 0.55)';
       ctx.fill();
       ctx.strokeStyle = filled ? '#1e7e34' : 'rgba(255, 152, 0, 1)';
       ctx.lineWidth = 2;
       ctx.stroke();
-
       if (filled) {
         ctx.fillStyle = 'white';
-        ctx.font = `bold ${Math.round(radius * 1.1)}px Arial`;
+        ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('✓', pos.x, pos.y);
@@ -674,69 +654,38 @@ function drawMarking() {
   });
 }
 
-// ---------- Click to toggle ----------
-function handleMarkCanvasClick(e) {
-  const rect = markCanvas.getBoundingClientRect();
-  const scaleX = markCanvas.width / rect.width;
-  const scaleY = markCanvas.height / rect.height;
-  const x = (e.clientX - rect.left) * scaleX;
-  const y = (e.clientY - rect.top) * scaleY;
-
-  const radius = tuner.bubbleSize;
-  const threshold = Math.max(radius * 1.6, 20);
-
-  let best = null;
-  let bestDist = threshold;
-  const cols = ['lunchFull', 'lunchHalf', 'dinnerFull', 'dinnerHalf'];
-
+// ---------- Restart Calibration ----------
+window.restartCalibration = function() {
+  calibFirst = null; calibLast = null; calibStep = 0;
+  bubblePositions = {};
+  marking = {};
   students.forEach(s => {
-    const positions = bubblePositions[s.roll];
-    if (!positions) return;
-    cols.forEach(col => {
-      const pos = positions[col];
-      const d = Math.hypot(pos.x - x, pos.y - y);
-      if (d < bestDist) {
-        bestDist = d;
-        best = { roll: s.roll, col };
-      }
-    });
+    marking[s.roll] = { lunchFull: false, lunchHalf: false, dinnerFull: false, dinnerHalf: false };
   });
-
-  if (best) {
-    marking[best.roll][best.col] = !marking[best.roll][best.col];
-    drawMarking();
-    updateStats();
-  }
-}
+  drawMarking();
+  updateInstruction();
+  updateStats();
+  document.getElementById('saveBtn').disabled = true;
+  showToast('🔄 আবার calibrate কর', 'success');
+};
 
 // ---------- Stats ----------
 function updateStats() {
-  let lf = 0, lh = 0, df = 0, dh = 0, ate = 0;
+  let lf=0, lh=0, df=0, dh=0, ate=0;
   students.forEach(s => {
-    const m = marking[s.roll];
-    if (!m) return;
-    if (m.lunchFull) lf++;
-    if (m.lunchHalf) lh++;
-    if (m.dinnerFull) df++;
-    if (m.dinnerHalf) dh++;
+    const m = marking[s.roll]; if (!m) return;
+    if (m.lunchFull) lf++; if (m.lunchHalf) lh++;
+    if (m.dinnerFull) df++; if (m.dinnerHalf) dh++;
     if (m.lunchFull || m.lunchHalf || m.dinnerFull || m.dinnerHalf) ate++;
   });
-
-  const totalBill =
-    lf * pricing.lunchFull + lh * pricing.lunchHalf +
-    df * pricing.dinnerFull + dh * pricing.dinnerHalf;
-
+  const totalBill = lf*pricing.lunchFull + lh*pricing.lunchHalf + df*pricing.dinnerFull + dh*pricing.dinnerHalf;
   document.getElementById('statsGrid').innerHTML = `
     <div class="stat-box"><div class="num">${lf}</div><div class="lbl">Lunch Full</div></div>
     <div class="stat-box"><div class="num">${lh}</div><div class="lbl">Lunch Half</div></div>
     <div class="stat-box"><div class="num">${df}</div><div class="lbl">Dinner Full</div></div>
     <div class="stat-box"><div class="num">${dh}</div><div class="lbl">Dinner Half</div></div>
-    <div class="stat-box" style="border-left-color:#28a745;">
-      <div class="num">${ate}</div><div class="lbl">Meal খেয়েছে</div>
-    </div>
-    <div class="stat-box" style="border-left-color:#ff9800;">
-      <div class="num">৳${totalBill}</div><div class="lbl">মোট Bill</div>
-    </div>
+    <div class="stat-box" style="border-left-color:#28a745;"><div class="num">${ate}</div><div class="lbl">Meal খেয়েছে</div></div>
+    <div class="stat-box" style="border-left-color:#ff9800;"><div class="num">৳${totalBill}</div><div class="lbl">মোট Bill</div></div>
   `;
 }
 
@@ -749,31 +698,24 @@ window.backToCorners = function() {
 
 // ---------- Save ----------
 window.saveResults = async function() {
+  if (calibStep !== 2) return showToast('⚠️ আগে calibration শেষ কর', 'error');
   if (!batchSelect.value) return showToast('⚠️ Batch select কর', 'error');
   if (!scanDate.value) return showToast('⚠️ Date দে', 'error');
 
   const perPage = Number(perPageSel.value);
   const dateStr = scanDate.value;
-
   const records = [];
   let totalBill = 0;
 
   students.forEach((s, idx) => {
     if (idx >= perPage) return;
-    const m = marking[s.roll];
-    if (!m) return;
-    const bill =
-      (m.lunchFull ? pricing.lunchFull : 0) +
-      (m.lunchHalf ? pricing.lunchHalf : 0) +
-      (m.dinnerFull ? pricing.dinnerFull : 0) +
-      (m.dinnerHalf ? pricing.dinnerHalf : 0);
+    const m = marking[s.roll]; if (!m) return;
+    const bill = (m.lunchFull?pricing.lunchFull:0) + (m.lunchHalf?pricing.lunchHalf:0) +
+                 (m.dinnerFull?pricing.dinnerFull:0) + (m.dinnerHalf?pricing.dinnerHalf:0);
     if (bill > 0) {
-      records.push({
-        studentId: s.id, roll: s.roll, name: s.name,
+      records.push({ studentId: s.id, roll: s.roll, name: s.name,
         lunchFull: m.lunchFull, lunchHalf: m.lunchHalf,
-        dinnerFull: m.dinnerFull, dinnerHalf: m.dinnerHalf,
-        bill
-      });
+        dinnerFull: m.dinnerFull, dinnerHalf: m.dinnerHalf, bill });
       totalBill += bill;
     }
   });
@@ -786,17 +728,12 @@ window.saveResults = async function() {
   btn.innerHTML = '<span class="spinner"></span>Save হচ্ছে...';
 
   try {
-    const existingQ = query(
-      collection(db, 'mealRecords'),
-      where('batchName', '==', batchSelect.value),
-      where('date', '==', dateStr)
-    );
+    const existingQ = query(collection(db, 'mealRecords'),
+      where('batchName', '==', batchSelect.value), where('date', '==', dateStr));
     const existing = await getDocs(existingQ);
     if (!existing.empty) {
-      if (!confirm('⚠️ এই date-এর record আগেই আছে। নতুন করে save করলে double bill হবে। চালিয়ে যাব?')) {
-        btn.disabled = false;
-        btn.innerHTML = '💾 Save কর — Bill কাটো';
-        return;
+      if (!confirm('⚠️ এই date-এর record আগেই আছে। চালিয়ে যাব?')) {
+        btn.disabled = false; btn.innerHTML = '💾 Save কর — Bill কাটো'; return;
       }
     }
 
@@ -809,47 +746,33 @@ window.saveResults = async function() {
       const studentRef = doc(db, 'students', r.studentId);
       const studentSnap = await getDoc(studentRef);
       if (!studentSnap.exists()) continue;
-
       const sData = studentSnap.data();
       const newBalance = Number(sData.balance || 0) - r.bill;
       const newTotalBill = Number(sData.totalBill || 0) + r.bill;
-
       await updateDoc(studentRef, { balance: newBalance, totalBill: newTotalBill });
-
       await addDoc(collection(db, 'transactions'), {
         studentId: r.studentId, roll: r.roll, name: r.name,
         batchName: batchSelect.value, date: dateStr,
         type: 'meal', amount: -r.bill,
-        details: {
-          lunchFull: r.lunchFull, lunchHalf: r.lunchHalf,
-          dinnerFull: r.dinnerFull, dinnerHalf: r.dinnerHalf
-        },
+        details: { lunchFull: r.lunchFull, lunchHalf: r.lunchHalf, dinnerFull: r.dinnerFull, dinnerHalf: r.dinnerHalf },
         recordId: recordRef.id, createdAt: serverTimestamp()
       });
     }
 
     showToast(`✅ ${records.length} জন — ৳${totalBill} bill হয়েছে`, 'success');
-    setStatus(`<div class="info-banner ok">✅ Save সফল! ${records.length} জন student, মোট ৳${totalBill}</div>`);
-
-    setTimeout(() => {
-      if (confirm('আরেকটা sheet scan করব?')) clearAll();
-    }, 500);
-
+    document.getElementById('statusMsg').innerHTML = `<div class="info-banner ok">✅ Save সফল! ${records.length} জন, মোট ৳${totalBill}</div>`;
+    setTimeout(() => { if (confirm('আরেকটা scan করব?')) clearAll(); }, 500);
   } catch (e) {
     console.error(e);
     showToast('❌ ' + e.message, 'error');
-    setStatus(`<div class="info-banner warn">❌ Save fail: ${escapeHtml(e.message)}</div>`);
   }
 
   btn.disabled = false;
   btn.innerHTML = '💾 Save কর — Bill কাটো';
 };
 
-// ---------- Resize ----------
 window.addEventListener('resize', () => {
-  if (document.getElementById('cornerCard').style.display !== 'none' && cornerHandles.length) {
-    drawHandles();
-  }
+  if (document.getElementById('cornerCard').style.display !== 'none' && cornerHandles.length) drawHandles();
 });
 </script>
 
