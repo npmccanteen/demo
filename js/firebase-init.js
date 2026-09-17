@@ -13,7 +13,8 @@ import {
   orderBy,
   updateDoc,
   getDoc,
-  setDoc
+  setDoc,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { firebaseConfig } from "../firebase-config.js";
 
@@ -32,18 +33,6 @@ export {
   orderBy,
   updateDoc,
   getDoc,
-  setDoc
-};
-
-
-import {
-  getFirestore, collection, addDoc, getDocs, query, where,
-  serverTimestamp, doc, deleteDoc, orderBy, updateDoc, getDoc, setDoc,
-  writeBatch
-} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-
-export {
-  collection, addDoc, getDocs, query, where,
-  serverTimestamp, doc, deleteDoc, orderBy, updateDoc, getDoc, setDoc,
+  setDoc,
   writeBatch
 };
