@@ -1,278 +1,207 @@
-
 <!DOCTYPE html>
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard — Students</title>
+<title>Student Dashboard</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #222; }
-  .container { max-width: 1200px; margin: 0 auto; }
-  h1 { color: #2c5aa0; margin-bottom: 5px; }
-  .sub { color: #666; margin-bottom: 25px; font-size: 14px; }
+  .container { max-width: 700px; margin: 0 auto; }
 
-  .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px; }
-
-  .stats { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; }
-  .stat {
-    flex: 1; min-width: 150px; background: white; padding: 20px;
-    border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-    border-left: 4px solid #2c5aa0;
+  .header {
+    background: linear-gradient(135deg, #2c5aa0, #1e4079);
+    color: white; padding: 25px; border-radius: 12px; margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(44,90,160,0.2);
   }
-  .stat .num { font-size: 28px; font-weight: 700; color: #2c5aa0; }
-  .stat .label { font-size: 13px; color: #666; margin-top: 4px; }
-
-  .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
-  .toolbar input, .toolbar select {
-    padding: 9px 12px; border: 1px solid #ccc; border-radius: 6px;
-    font-size: 14px; font-family: inherit;
+  .header h1 { font-size: 20px; margin-bottom: 6px; }
+  .header .roll { opacity: 0.92; font-size: 14px; }
+  .header .batch-badge {
+    display: inline-block; background: rgba(255,255,255,0.2);
+    padding: 3px 10px; border-radius: 12px; font-size: 12px;
+    margin-left: 6px; font-weight: 600;
   }
-  .toolbar input { flex: 1; min-width: 200px; }
-  .toolbar button {
-    padding: 9px 18px; border: none; border-radius: 6px;
-    font-weight: 600; cursor: pointer; font-size: 14px;
+
+  .balance-card {
+    background: white; padding: 28px; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px;
+    text-align: center;
   }
-  .btn-primary { background: #2c5aa0; color: white; }
-  .btn-primary:hover { background: #1e4079; }
-  .btn-danger { background: #dc3545; color: white; }
-  .btn-danger:hover { background: #b02a37; }
-  .btn-secondary { background: #6c757d; color: white; }
-  .btn-secondary:hover { background: #5a6268; }
+  .balance-label { color: #666; font-size: 13px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .balance-amount { font-size: 44px; font-weight: 700; color: #28a745; line-height: 1; }
+  .balance-amount.neg { color: #dc3545; }
+  .balance-note { color: #999; font-size: 12px; margin-top: 8px; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { border-bottom: 1px solid #eee; padding: 12px 10px; text-align: left; }
-  th { background: #f0f4fa; font-weight: 600; color: #2c5aa0; position: sticky; top: 0; }
-  tr:hover { background: #fafbff; }
-  td.roll { font-family: monospace; font-weight: 600; }
-  td.balance { font-weight: 600; }
-  td.balance.pos { color: #28a745; }
-  td.balance.neg { color: #dc3545; }
-
-  .empty { text-align: center; padding: 60px 20px; color: #999; }
-  .empty-icon { font-size: 48px; margin-bottom: 15px; }
-
-  .loading { text-align: center; padding: 40px; color: #666; }
-
-  .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #e8f0ff; color: #2c5aa0; }
-  .badge-inactive { background: #f8d7da; color: #721c24; }
-
-  .del-btn {
-    background: #dc3545; color: white; border: none;
-    padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;
+  .info-card {
+    background: white; padding: 22px; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px;
   }
-  .del-btn:hover { background: #b02a37; }
-
-  .toast {
-    position: fixed; bottom: 20px; right: 20px;
-    background: #333; color: white; padding: 12px 20px;
-    border-radius: 8px; font-size: 14px; display: none;
-    z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  .info-card h3 {
+    color: #2c5aa0; font-size: 15px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
   }
-  .toast.show { display: block; animation: slideIn 0.3s; }
-  @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .info-row {
+    display: flex; justify-content: space-between; padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { color: #666; font-size: 14px; }
+  .info-value { font-weight: 600; font-size: 14px; color: #222; }
+  .info-value.mono { font-family: 'Courier New', monospace; font-size: 13px; }
+
+  .placeholder {
+    text-align: center; padding: 35px 20px; color: #999; font-size: 14px;
+    background: #f8f9fa; border-radius: 8px; line-height: 1.8;
+  }
+  .placeholder small { display: block; font-size: 12px; margin-top: 6px; }
+
+  .loading { text-align: center; padding: 80px 20px; color: #666; font-size: 15px; }
+  .loading .spinner {
+    display: inline-block; width: 32px; height: 32px;
+    border: 3px solid #e0e0e0; border-top-color: #2c5aa0;
+    border-radius: 50%; animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  button.logout-btn {
+    width: 100%; padding: 14px; background: #dc3545; color: white;
+    border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+    cursor: pointer; margin-top: 10px; transition: 0.2s;
+  }
+  button.logout-btn:hover { background: #b02a37; }
+
+  .error-box {
+    background: #fee; color: #721c24; padding: 20px;
+    border-radius: 12px; text-align: center; border-left: 4px solid #dc3545;
+  }
+  .error-box a { color: #2c5aa0; font-weight: 600; }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>👥 Admin Dashboard</h1>
-  <p class="sub">সব স্টুডেন্টের লিস্ট — batch অনুযায়ী ফিল্টার, search, delete</p>
-
-  <div class="stats">
-    <div class="stat">
-      <div class="num" id="statTotal">—</div>
-      <div class="label">মোট স্টুডেন্ট</div>
-    </div>
-    <div class="stat">
-      <div class="num" id="statBatches">—</div>
-      <div class="label">মোট Batch</div>
-    </div>
-    <div class="stat">
-      <div class="num" id="statActive">—</div>
-      <div class="label">Active</div>
-    </div>
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div>লোড হচ্ছে...</div>
   </div>
 
-  <div class="card">
-    <div class="toolbar">
-      <input type="text" id="searchInput" placeholder="🔍 Roll বা Name দিয়ে খোঁজ..." />
-      <select id="batchFilter">
-        <option value="">সব Batch</option>
-      </select>
-      <button class="btn-secondary" onclick="loadStudents()">🔄 Refresh</button>
-      <button class="btn-primary" onclick="window.location.href='../student-import.html'">+ নতুন Import</button>
+  <div id="content" style="display:none;">
+    <div class="header">
+      <h1>👋 <span id="studentName">—</span></h1>
+      <div class="roll">
+        Roll: <span id="studentRoll">—</span>
+        <span class="batch-badge" id="studentBatch">—</span>
+      </div>
     </div>
 
-    <div id="loading" class="loading">লোড হচ্ছে...</div>
-
-    <div id="emptyState" class="empty" style="display:none;">
-      <div class="empty-icon">📭</div>
-      <div>কোনো স্টুডেন্ট নেই</div>
-      <div style="margin-top:8px; font-size:13px;">Student Import দিয়ে শুরু কর</div>
+    <div class="balance-card">
+      <div class="balance-label">Current Balance</div>
+      <div class="balance-amount" id="balance">৳0</div>
+      <div class="balance-note" id="balanceNote">Advance deposit থেকে কাটা হবে</div>
     </div>
 
-    <div style="overflow-x:auto;">
-      <table id="studentTable" style="display:none;">
-        <thead>
-          <tr>
-            <th style="width:50px;">#</th>
-            <th style="width:100px;">Roll</th>
-            <th>Name</th>
-            <th style="width:150px;">Batch</th>
-            <th style="width:120px;">Balance</th>
-            <th style="width:100px;">Status</th>
-            <th style="width:80px;">Action</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    <div class="info-card">
+      <h3>📊 Account Info</h3>
+      <div class="info-row">
+        <span class="info-label">Total Deposit</span>
+        <span class="info-value" id="totalDeposit">৳0</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Total Bill</span>
+        <span class="info-value" id="totalBill">৳0</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Login Email</span>
+        <span class="info-value mono" id="loginEmail">—</span>
+      </div>
     </div>
+
+    <div class="info-card">
+      <h3>🍽️ Meal History</h3>
+      <div class="placeholder">
+        Meal history এখনো খালি<br>
+        <small>OMR স্ক্যান হলে এখানে দেখা যাবে (Phase 4)</small>
+      </div>
+    </div>
+
+    <button class="logout-btn" onclick="logout()">🚪 Logout</button>
   </div>
+
+  <div id="errorBox" style="display:none;"></div>
 </div>
-
-<div class="toast" id="toast"></div>
 
 <script type="module">
 import {
-  db, collection, getDocs, query, orderBy, doc, deleteDoc
-} from '../js/firebase-init.js';
-
-let allStudents = [];
-let filteredStudents = [];
-
-async function loadStudents() {
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('studentTable').style.display = 'none';
-  document.getElementById('emptyState').style.display = 'none';
-
-  try {
-    const snap = await getDocs(collection(db, 'students'));
-    allStudents = [];
-    snap.forEach(d => allStudents.push({ id: d.id, ...d.data() }));
-
-    // Sort: batch then roll
-    allStudents.sort((a, b) => {
-      const bc = (a.batchName || '').localeCompare(b.batchName || '');
-      if (bc !== 0) return bc;
-      return (a.roll || '').localeCompare(b.roll || '', undefined, { numeric: true });
-    });
-
-    updateStats();
-    updateBatchFilter();
-    applyFilters();
-
-    document.getElementById('loading').style.display = 'none';
-  } catch (e) {
-    console.error(e);
-    document.getElementById('loading').textContent = '❌ Error: ' + e.message;
-    showToast('❌ লোড করা যায়নি: ' + e.message);
-  }
-}
-
-function updateStats() {
-  document.getElementById('statTotal').textContent = allStudents.length;
-  const batches = new Set(allStudents.map(s => s.batchName).filter(Boolean));
-  document.getElementById('statBatches').textContent = batches.size;
-  document.getElementById('statActive').textContent = allStudents.filter(s => s.active !== false).length;
-}
-
-function updateBatchFilter() {
-  const batches = [...new Set(allStudents.map(s => s.batchName).filter(Boolean))].sort();
-  const sel = document.getElementById('batchFilter');
-  const current = sel.value;
-  sel.innerHTML = '<option value="">সব Batch</option>' +
-    batches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
-  sel.value = current;
-}
-
-function applyFilters() {
-  const search = document.getElementById('searchInput').value.trim().toLowerCase();
-  const batch = document.getElementById('batchFilter').value;
-
-  filteredStudents = allStudents.filter(s => {
-    if (batch && s.batchName !== batch) return false;
-    if (search) {
-      const hay = (s.roll + ' ' + s.name).toLowerCase();
-      if (!hay.includes(search)) return false;
-    }
-    return true;
-  });
-
-  renderTable();
-}
-
-function renderTable() {
-  const tbody = document.querySelector('#studentTable tbody');
-  const table = document.getElementById('studentTable');
-  const empty = document.getElementById('emptyState');
-
-  tbody.innerHTML = '';
-
-  if (filteredStudents.length === 0) {
-    table.style.display = 'none';
-    if (allStudents.length === 0) {
-      empty.style.display = 'block';
-    } else {
-      empty.style.display = 'block';
-      empty.innerHTML = '<div class="empty-icon">🔍</div><div>কিছু পাওয়া যায়নি</div>';
-    }
-    return;
-  }
-
-  empty.style.display = 'none';
-  table.style.display = 'table';
-
-  filteredStudents.forEach((s, i) => {
-    const bal = Number(s.balance || 0);
-    const balClass = bal > 0 ? 'pos' : (bal < 0 ? 'neg' : '');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${i + 1}</td>
-      <td class="roll">${escapeHtml(s.roll || '')}</td>
-      <td>${escapeHtml(s.name || '')}</td>
-      <td><span class="badge">${escapeHtml(s.batchName || '—')}</span></td>
-      <td class="balance ${balClass}">৳${bal}</td>
-      <td>${s.active === false
-        ? '<span class="badge badge-inactive">Inactive</span>'
-        : '<span class="badge">Active</span>'}</td>
-      <td><button class="del-btn" onclick="deleteStudent('${s.id}', '${escapeHtml(s.roll)}', '${escapeHtml(s.name)}')">Delete</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-window.deleteStudent = async function(id, roll, name) {
-  if (!confirm(`"${roll} — ${name}" কে ডিলিট করব?`)) return;
-  try {
-    await deleteDoc(doc(db, 'students', id));
-    showToast('✅ ডিলিট হয়েছে');
-    loadStudents();
-  } catch (e) {
-    showToast('❌ ' + e.message);
-  }
-};
+  db, auth, collection, getDocs, query, where,
+  onAuthStateChanged, signOut
+} from './js/firebase-init.js';
 
 function escapeHtml(str) {
   return String(str || '').replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 
-let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+function showError(msg) {
+  document.getElementById('loading').style.display = 'none';
+  const box = document.getElementById('errorBox');
+  box.style.display = 'block';
+  box.className = 'error-box';
+  box.innerHTML = msg + '<br><br><a href="student-login.html">← আবার Login কর</a>';
 }
 
-// Events
-document.getElementById('searchInput').addEventListener('input', applyFilters);
-document.getElementById('batchFilter').addEventListener('change', applyFilters);
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    window.location.href = 'student-login.html';
+    return;
+  }
 
-// Init
-loadStudents();
+  try {
+    const q = query(collection(db, 'students'), where('uid', '==', user.uid));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      showError('❌ তোমার student record পাওয়া যায়নি।<br>Batch Admin-এর সাথে যোগাযোগ কর।');
+      return;
+    }
+
+    const s = snap.docs[0].data();
+    const balance = Number(s.balance || 0);
+    const totalDeposit = Number(s.totalDeposit || 0);
+    const totalBill = Number(s.totalBill || 0);
+
+    document.getElementById('studentName').textContent = s.name || '—';
+    document.getElementById('studentRoll').textContent = s.roll || '—';
+    document.getElementById('studentBatch').textContent = s.batchName || '—';
+    document.getElementById('totalDeposit').textContent = '৳' + totalDeposit;
+    document.getElementById('totalBill').textContent = '৳' + totalBill;
+    document.getElementById('loginEmail').textContent = s.loginEmail || user.email || '—';
+
+    const balEl = document.getElementById('balance');
+    balEl.textContent = '৳' + balance;
+    if (balance < 0) {
+      balEl.classList.add('neg');
+      document.getElementById('balanceNote').textContent = '⚠️ Balance negative — Admin-এর সাথে যোগাযোগ কর';
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+  } catch (e) {
+    console.error(e);
+    showError('❌ Error: ' + escapeHtml(e.message));
+  }
+});
+
+window.logout = async function() {
+  if (!confirm('Logout করব?')) return;
+  try {
+    await signOut(auth);
+    window.location.href = 'student-login.html';
+  } catch (e) {
+    alert('Logout fail: ' + e.message);
+  }
+};
 </script>
 
 </body>
