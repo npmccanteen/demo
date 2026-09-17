@@ -15,7 +15,7 @@
   .col { flex: 1; min-width: 280px; }
   label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 14px; }
   input[type="text"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; font-family: inherit; }
-  textarea { font-family: monospace; font-size: 13px; line-height: 1.5; }
+  textarea { font-family: monospace; font-size: 12px; line-height: 1.5; }
   button { padding: 11px 22px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; margin-right: 8px; margin-top: 10px; }
   .btn-primary { background: #2c5aa0; color: white; }
   .btn-primary:hover { background: #1e4079; }
@@ -23,6 +23,8 @@
   .btn-success { background: #28a745; color: white; }
   .btn-success:hover { background: #1e7e34; }
   .btn-secondary { background: #6c757d; color: white; }
+  .btn-test { background: #ff9800; color: white; }
+  .btn-test:hover { background: #e68900; }
   .dropzone { border: 2px dashed #2c5aa0; border-radius: 10px; padding: 40px 20px; text-align: center; cursor: pointer; background: #f8faff; transition: 0.2s; }
   .dropzone:hover, .dropzone.dragover { background: #e8f0ff; }
   .dropzone p { color: #2c5aa0; font-weight: 600; }
@@ -34,12 +36,19 @@
   th { background: #f0f4fa; font-weight: 600; }
   td input { border: none; padding: 5px; width: 100%; background: transparent; }
   td input:focus { background: #fffbe6; outline: 1px solid #2c5aa0; }
-  .preview-img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; margin-top: 12px; max-height: 400px; }
+  .preview-img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; margin-top: 12px; max-height: 300px; }
   .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
   .badge-ok { background: #d4edda; color: #155724; }
   .badge-warn { background: #fff3cd; color: #856404; }
   .badge-ai { background: #e0e7ff; color: #3730a3; padding: 4px 10px; font-size: 12px; }
-  .log { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; margin-top: 12px; display: none; white-space: pre-wrap; }
+  .log { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; margin-top: 12px; display: none; white-space: pre-wrap; word-break: break-all; }
+  .log.error { color: #ff6b6b; }
+  .log.ok { color: #51cf66; }
+  .log.warn { color: #ffd43b; }
+  .alert-box { padding: 15px; border-radius: 8px; margin-top: 15px; font-size: 13px; display: none; }
+  .alert-error { background: #fee; border-left: 4px solid #dc3545; color: #721c24; }
+  .alert-success { background: #efe; border-left: 4px solid #28a745; color: #155724; }
+  .alert-info { background: #e7f3ff; border-left: 4px solid #2c5aa0; color: #004085; }
   .loading-spinner {
     display: inline-block; width: 16px; height: 16px;
     border: 2px solid #fff; border-top-color: transparent;
@@ -54,16 +63,22 @@
 <div class="container">
   <h1>📋 Student List Import</h1>
   <p class="sub">
-    ছবি বা PDF আপলোড কর — <span class="badge badge-ai">🤖 Gemini AI</span> নিজে নাম-রোল বের করবে
+    ছবি বা PDF আপলোড কর — <span class="badge badge-ai">🤖 Gemini AI</span>
   </p>
 
+  <!-- API TEST SECTION -->
+  <div class="card" style="background: #fffbe6; border-left: 4px solid #ff9800;">
+    <h3 style="color: #e68900; margin-bottom: 8px;">⚡ প্রথমে এটা কর — API Test</h3>
+    <p style="font-size: 13px; color: #666; margin-bottom: 10px;">
+      API key ঠিক আছে কিনা চেক কর। এটা কাজ না করলে OCR কোনোভাবেই কাজ করবে না।
+    </p>
+    <button class="btn-test" onclick="testAPI()" id="testBtn">🧪 API Test কর</button>
+    <div class="alert-box" id="testResult"></div>
+  </div>
+
   <div class="card">
-    <div class="row">
-      <div class="col">
-        <label>Batch Name</label>
-        <input type="text" id="batchName" placeholder="যেমন: Batch A, CSE-2024" />
-      </div>
-    </div>
+    <label>Batch Name</label>
+    <input type="text" id="batchName" placeholder="যেমন: Batch A, CSE-2024" />
   </div>
 
   <div class="card">
@@ -74,15 +89,14 @@
     </div>
     <div class="progress-bar" id="progressBar"><div id="progressFill"></div></div>
     <div class="status" id="status"></div>
+    <div class="alert-box" id="mainAlert"></div>
     <div class="log" id="log"></div>
     <img id="previewImg" class="preview-img" style="display:none;" />
   </div>
 
   <div class="card" id="resultCard" style="display:none;">
     <h3 style="margin-bottom:5px;">✏️ যাচাই করে ঠিক কর</h3>
-    <p style="color:#666; font-size:13px; margin-bottom:10px;">
-      AI যা বের করেছে — চেক কর, ভুল থাকলে edit কর।
-    </p>
+    <p style="color:#666; font-size:13px; margin-bottom:10px;">AI যা বের করেছে — চেক কর, ভুল থাকলে edit কর।</p>
     <div style="margin-bottom:10px;">
       <button class="btn-secondary" onclick="addEmptyRow()">+ নতুন Row</button>
       <span id="countBadge" style="margin-left:10px; font-size:13px; color:#555;"></span>
@@ -102,6 +116,12 @@
       <button class="btn-success" onclick="saveToFirestore()" id="saveBtn">💾 Firestore-এ Save কর</button>
     </div>
     <div id="saveStatus" style="margin-top:12px; font-size:14px;"></div>
+  </div>
+
+  <!-- RAW RESPONSE VIEWER -->
+  <div class="card" id="rawCard" style="display:none;">
+    <label>🔍 Raw Gemini Response (debugging)</label>
+    <textarea id="rawResponse" rows="6" readonly></textarea>
   </div>
 </div>
 
@@ -124,23 +144,113 @@ const statusEl = document.getElementById('status');
 const logEl = document.getElementById('log');
 const previewImg = document.getElementById('previewImg');
 const resultCard = document.getElementById('resultCard');
+const mainAlert = document.getElementById('mainAlert');
+const testResult = document.getElementById('testResult');
+const rawCard = document.getElementById('rawCard');
+const rawResponse = document.getElementById('rawResponse');
 
 // ---------- Helpers ----------
-function log(msg) {
+function log(msg, type) {
   logEl.style.display = 'block';
-  logEl.textContent += msg + '\n';
+  const cls = type ? `log-${type}` : '';
+  logEl.innerHTML += `<span class="${cls}">${escapeHtml(msg)}</span>\n`;
   logEl.scrollTop = logEl.scrollHeight;
+  console.log(msg);
 }
 function setStatus(msg, loading) {
   statusEl.style.display = 'block';
-  statusEl.innerHTML = (loading ? '<span class="loading-spinner"></span>' : '') + msg;
+  statusEl.innerHTML = (loading ? '<span class="loading-spinner" style="border-color:#2c5aa0;border-top-color:transparent;"></span>' : '') + msg;
 }
 function setProgress(pct) {
   progressBar.style.display = 'block';
   progressFill.style.width = pct + '%';
 }
+function showAlert(el, msg, type) {
+  el.style.display = 'block';
+  el.className = 'alert-box alert-' + type;
+  el.innerHTML = msg;
+}
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
 
-// ---------- Upload ----------
+// ==========================================================
+// 🧪 API TEST — এইটা first কাজ করতে হবে
+// ==========================================================
+window.testAPI = async function() {
+  const btn = document.getElementById('testBtn');
+  btn.disabled = true;
+  btn.textContent = 'টেস্ট চলছে...';
+  testResult.style.display = 'none';
+
+  try {
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'PASTE_YOUR_GEMINI_API_KEY_HERE') {
+      throw new Error('API key সেট করা হয়নি! firebase-config.js এ GEMINI_API_KEY বসা।');
+    }
+
+    log('=== API Test শুরু ===');
+    log(`Key prefix: ${GEMINI_API_KEY.substring(0, 10)}...`);
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+    const body = {
+      contents: [{
+        parts: [{ text: "Reply with exactly this text: OK" }]
+      }]
+    };
+
+    log(`URL: ${url.split('?')[0]}?key=***`);
+    log('Request পাঠানো হচ্ছে...');
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    log(`Response status: ${res.status} ${res.statusText}`);
+
+    const data = await res.json();
+    log(`Response data: ${JSON.stringify(data).slice(0, 300)}`);
+
+    if (!res.ok) {
+      const errMsg = data.error?.message || JSON.stringify(data);
+      throw new Error(`HTTP ${res.status}: ${errMsg}`);
+    }
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    log(`✅ Response text: "${text}"`, 'ok');
+
+    showAlert(testResult,
+      `✅ <strong>API কাজ করছে!</strong><br>` +
+      `Model: <code>gemini-2.5-flash</code><br>` +
+      `Response: <code>${escapeHtml(text)}</code>`,
+      'success'
+    );
+    log('=== API Test সফল ===', 'ok');
+
+  } catch (e) {
+    log(`❌ API Test failed: ${e.message}`, 'error');
+    showAlert(testResult,
+      `❌ <strong>API কাজ করছে না!</strong><br>` +
+      `<strong>Error:</strong> ${escapeHtml(e.message)}<br><br>` +
+      `<strong>সমাধান:</strong><br>` +
+      `১. <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> এ গিয়ে নতুন key নে<br>` +
+      `২. firebase-config.js এ key টা সঠিকভাবে বসা<br>` +
+      `৩. Page টা refresh কর (Ctrl+F5)<br>` +
+      `৪. Browser Console (F12) এ পুরো error দেখ`,
+      'error'
+    );
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🧪 API Test কর';
+};
+
+// ==========================================================
+// Upload handling
+// ==========================================================
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
@@ -152,16 +262,23 @@ fileInput.addEventListener('change', e => {
   if (e.target.files.length) handleFile(e.target.files[0]);
 });
 
-// ---------- Main Flow ----------
+// ==========================================================
+// Main flow
+// ==========================================================
 async function handleFile(file) {
-  if (GEMINI_API_KEY === 'PASTE_YOUR_GEMINI_API_KEY_HERE') {
-    alert('⚠️ firebase-config.js এ Gemini API key বসা হয়নি!\n\nGoogle AI Studio থেকে key নিয়ে ওখানে paste কর।');
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'PASTE_YOUR_GEMINI_API_KEY_HERE') {
+    showAlert(mainAlert, '⚠️ প্রথমে firebase-config.js এ Gemini API key বসা।', 'error');
     return;
   }
 
   logEl.textContent = '';
+  logEl.style.display = 'none';
   resultCard.style.display = 'none';
+  rawCard.style.display = 'none';
+  mainAlert.style.display = 'none';
   setProgress(0);
+
+  log(`📁 File: ${file.name} (${file.type}, ${(file.size/1024).toFixed(0)} KB)`);
 
   try {
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
@@ -169,12 +286,13 @@ async function handleFile(file) {
     } else if (file.type.startsWith('image/')) {
       await processImage(file);
     } else {
-      alert('শুধু ছবি বা PDF দেওয়া যাবে');
+      throw new Error('শুধু ছবি বা PDF দেওয়া যাবে');
     }
   } catch (e) {
     console.error(e);
-    setStatus('❌ সমস্যা: ' + e.message);
-    log('❌ Error: ' + e.message);
+    setStatus('❌ ' + e.message);
+    showAlert(mainAlert, `❌ <strong>সমস্যা:</strong> ${escapeHtml(e.message)}`, 'error');
+    log(`❌ ${e.message}`, 'error');
   }
 }
 
@@ -184,6 +302,7 @@ async function processImage(file) {
   previewImg.style.display = 'block';
 
   const base64 = await fileToBase64(file);
+  log(`✅ Base64 ready (${(base64.length/1024).toFixed(0)} KB)`);
   setProgress(30);
 
   const students = await callGemini(base64, file.type);
@@ -220,11 +339,10 @@ async function processPDF(file) {
 
     const base64 = canvas.toDataURL('image/png').split(',')[1];
     const students = await callGemini(base64, 'image/png');
-    log(`✅ Page ${p}: ${students.length} জন`);
+    log(`✅ Page ${p}: ${students.length} জন`, 'ok');
     allStudents = allStudents.concat(students);
   }
 
-  // Duplicate roll merge
   const seen = new Set();
   allStudents = allStudents.filter(s => {
     if (seen.has(s.roll)) return false;
@@ -238,7 +356,6 @@ async function processPDF(file) {
   resultCard.style.display = 'block';
 }
 
-// ---------- File → Base64 ----------
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -248,71 +365,101 @@ function fileToBase64(file) {
   });
 }
 
-// ---------- Gemini API Call ----------
-async function callGemini(base64Data, mimeType) {
-  log('🤖 Gemini API কে পাঠানো হচ্ছে...');
+// ==========================================================
+// Gemini API — Multiple model fallback
+// ==========================================================
+const MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-latest'
+];
 
+async function callGemini(base64Data, mimeType) {
   const prompt = `You are an expert OCR assistant. Analyze the attached image of a student list.
 Extract ALL student records visible.
 For each student, identify their Roll number and full Name.
-Return ONLY a valid JSON array of objects, nothing else. No markdown, no explanation.
+Return ONLY a valid JSON array of objects, nothing else.
 Each object must have exactly two keys: "roll" (string) and "name" (string).
-Example format:
-[{"roll":"101","name":"Rahim Uddin"},{"roll":"102","name":"Karim Ahmed"}]
+Example: [{"roll":"101","name":"Rahim Uddin"},{"roll":"102","name":"Karim Ahmed"}]
 Rules:
 - If roll or name cannot be read clearly, skip that record.
 - Keep names exactly as they appear.
 - Preserve leading zeros in roll numbers.`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  let lastError = null;
 
-  const body = {
-    contents: [{
-      parts: [
-        { text: prompt },
-        { inline_data: { mime_type: mimeType, data: base64Data } }
-      ]
-    }],
-    generationConfig: {
-      temperature: 0.1,
-      responseMimeType: "application/json"
+  for (const model of MODELS) {
+    try {
+      log(`🤖 Trying model: ${model}`);
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+      const body = {
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: mimeType, data: base64Data } }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: "application/json"
+        }
+      };
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      log(`   Status: ${res.status}`);
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        const msg = errData.error?.message || `HTTP ${res.status}`;
+        log(`   ❌ ${msg}`, 'error');
+        lastError = new Error(msg);
+        continue; // try next model
+      }
+
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      log(`   📥 Response: ${text.length} chars`, 'ok');
+
+      rawResponse.value = text;
+      rawCard.style.display = 'block';
+
+      // Parse JSON
+      let cleaned = text.trim()
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/, '')
+        .replace(/\s*```$/, '');
+
+      const parsed = JSON.parse(cleaned);
+      if (!Array.isArray(parsed)) throw new Error('Response is not an array');
+
+      const students = parsed.map(s => ({
+        roll: String(s.roll || '').trim(),
+        name: String(s.name || '').trim()
+      })).filter(s => s.roll && s.name);
+
+      log(`   ✅ ${students.length} students extracted`, 'ok');
+      return students;
+
+    } catch (e) {
+      log(`   ❌ Model ${model} failed: ${e.message}`, 'error');
+      lastError = e;
+      // continue to next model
     }
-  };
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Gemini API error (${res.status}): ${errText.slice(0, 200)}`);
   }
 
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  log(`📥 Gemini response: ${text.length} chars`);
-
-  // Parse JSON
-  let cleaned = text.trim();
-  cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
-
-  try {
-    const parsed = JSON.parse(cleaned);
-    if (!Array.isArray(parsed)) throw new Error('Response is not an array');
-    return parsed.map(s => ({
-      roll: String(s.roll || '').trim(),
-      name: String(s.name || '').trim()
-    })).filter(s => s.roll && s.name);
-  } catch (e) {
-    log('⚠️ JSON parse failed. Raw text:');
-    log(text.slice(0, 500));
-    throw new Error('AI response parse করা যায়নি');
-  }
+  throw new Error(`সব model fail করেছে। শেষ error: ${lastError?.message || 'Unknown'}`);
 }
 
-// ---------- Table Rendering ----------
+// ==========================================================
+// Table rendering
+// ==========================================================
 function renderTable(students) {
   const tbody = document.querySelector('#studentTable tbody');
   tbody.innerHTML = '';
@@ -330,11 +477,6 @@ function renderTable(students) {
     tbody.appendChild(tr);
   });
   updateCount();
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, c =>
-    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 
 function updateCount() {
@@ -357,7 +499,9 @@ window.addEmptyRow = function() {
   updateCount();
 };
 
-// ---------- Save to Firestore ----------
+// ==========================================================
+// Save to Firestore
+// ==========================================================
 window.saveToFirestore = async function() {
   const batchName = document.getElementById('batchName').value.trim();
   if (!batchName) return alert('Batch Name দে');
@@ -390,20 +534,16 @@ window.saveToFirestore = async function() {
         where('batchName', '==', batchName),
         where('roll', '==', s.roll)
       ));
-      if (!dup.empty) { skipped++; log(`⚠️ Duplicate: ${s.roll}`); continue; }
+      if (!dup.empty) { skipped++; continue; }
 
       await addDoc(collection(db, 'students'), {
-        roll: s.roll,
-        name: s.name,
-        batchName: batchName,
-        balance: 0,
-        active: true,
-        createdAt: serverTimestamp()
+        roll: s.roll, name: s.name, batchName: batchName,
+        balance: 0, active: true, createdAt: serverTimestamp()
       });
       success++;
       saveStatus.textContent = `Progress: ${success}/${students.length}`;
     } catch (e) {
-      log(`❌ ${s.roll}: ${e.message}`);
+      log(`❌ Save error on ${s.roll}: ${e.message}`, 'error');
     }
   }
 
