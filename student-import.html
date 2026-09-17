@@ -3,16 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Student Import — OCR</title>
+<title>Student Import</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #222; }
-  .container { max-width: 900px; margin: 0 auto; }
+  .container { max-width: 950px; margin: 0 auto; }
   h1 { color: #2c5aa0; margin-bottom: 5px; }
   .sub { color: #666; margin-bottom: 25px; font-size: 14px; }
   .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px; }
   label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 14px; }
-  input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; font-family: inherit; }
+  input[type="text"], textarea {
+    width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px;
+    font-size: 14px; font-family: inherit;
+  }
+  textarea { font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; resize: vertical; }
   button { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; margin-right: 8px; margin-top: 10px; transition: 0.2s; }
   .btn-primary { background: #2c5aa0; color: white; }
   .btn-primary:hover { background: #1e4079; }
@@ -22,21 +26,28 @@
   .btn-success:disabled { background: #999; cursor: not-allowed; }
   .btn-secondary { background: #6c757d; color: white; }
   .btn-secondary:hover { background: #5a6268; }
+  .btn-danger { background: #dc3545; color: white; }
+  .btn-danger:hover { background: #b02a37; }
 
-  .info-banner {
-    display: flex; align-items: center; gap: 10px;
-    padding: 14px 18px; background: #e7f3ff; border-left: 4px solid #2c5aa0;
-    border-radius: 6px; margin-bottom: 20px; font-size: 14px; color: #004085;
+  /* Tabs */
+  .tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; }
+  .tab {
+    padding: 12px 22px; background: transparent; border: none; cursor: pointer;
+    font-size: 14px; font-weight: 600; color: #666; border-bottom: 3px solid transparent;
+    margin: 0; border-radius: 0;
   }
+  .tab.active { color: #2c5aa0; border-bottom-color: #2c5aa0; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
 
   .dropzone {
     border: 2px dashed #2c5aa0; border-radius: 10px;
-    padding: 50px 20px; text-align: center; cursor: pointer;
+    padding: 40px 20px; text-align: center; cursor: pointer;
     background: #f8faff; transition: 0.2s;
   }
   .dropzone:hover, .dropzone.dragover { background: #e8f0ff; border-color: #1e4079; }
-  .dropzone .icon { font-size: 42px; margin-bottom: 10px; }
-  .dropzone p { color: #2c5aa0; font-weight: 600; font-size: 16px; }
+  .dropzone .icon { font-size: 38px; margin-bottom: 10px; }
+  .dropzone p { color: #2c5aa0; font-weight: 600; font-size: 15px; }
   .dropzone small { color: #888; font-size: 13px; }
 
   .progress-bar { height: 6px; background: #e0e0e0; border-radius: 4px; margin-top: 15px; overflow: hidden; display: none; }
@@ -54,7 +65,6 @@
   td input:focus { background: #fff; border-color: #2c5aa0; outline: none; }
 
   .preview-img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; margin-top: 15px; max-height: 250px; display: block; }
-  .preview-label { font-size: 12px; color: #666; margin-top: 8px; font-style: italic; }
 
   .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
   .badge-ok { background: #d4edda; color: #155724; }
@@ -83,62 +93,87 @@
 
   .tip-box {
     background: #fffbe6; padding: 12px 16px; border-left: 4px solid #ff9800;
-    border-radius: 6px; font-size: 13px; color: #856404; margin-top: 15px;
+    border-radius: 6px; font-size: 13px; color: #856404; margin-top: 15px; line-height: 1.7;
   }
   .tip-box strong { color: #e68900; }
+  .tip-box code { background: #fff; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>📋 Student List Import</h1>
-  <p class="sub">ছবি বা PDF আপলোড কর — OCR স্বয়ংক্রিয়ভাবে নাম-রোল বের করবে</p>
+  <h1>📋 Student Import</h1>
+  <p class="sub">Batch Name দে → স্টুডেন্ট যোগ কর → Firestore-এ Save কর</p>
 
-  <div class="info-banner">
-    <span>💡</span>
-    <span><strong>100% ফ্রি</strong> — কোনো API key লাগবে না। OCR সম্পূর্ণ তোমার ব্রাউজারেই চলে।</span>
-  </div>
-
+  <!-- Batch Name -->
   <div class="card">
-    <label>Batch Name</label>
+    <label>Batch Name *</label>
     <input type="text" id="batchName" placeholder="যেমন: Batch A, CSE-2024" />
   </div>
 
+  <!-- Tabs -->
   <div class="card">
-    <div class="dropzone" id="dropzone">
-      <div class="icon">📷</div>
-      <p>এখানে ছবি বা PDF ড্র্যাগ কর</p>
-      <small>অথবা ক্লিক করে সিলেক্ট কর — JPG, PNG, PDF</small>
-      <input type="file" id="fileInput" accept="image/*,.pdf" style="display:none;" />
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('paste')">📋 Manual Paste</button>
+      <button class="tab" onclick="switchTab('ocr')">📷 OCR Upload</button>
     </div>
-    <div class="progress-bar" id="progressBar"><div id="progressFill"></div></div>
-    <div class="status" id="status"></div>
 
-    <img id="originalImg" class="preview-img" style="display:none;" />
-    <div id="originalLabel" class="preview-label" style="display:none;">📷 Original</div>
+    <!-- TAB 1: MANUAL PASTE -->
+    <div class="tab-content active" id="tab-paste">
+      <label>এখানে স্টুডেন্ট লিস্ট paste কর</label>
+      <p style="font-size:13px; color:#666; margin-bottom:8px;">
+        প্রতি লাইনে একজন। Format: <code>Roll Name</code> অথবা <code>Roll, Name</code>
+      </p>
+      <textarea id="pasteInput" rows="12" placeholder="101 Rahim Uddin
+102 Karim Ahmed
+103 Jamil Hossain
+104, Sabbir Rahman
+105 - Naeem Islam"></textarea>
 
-    <img id="processedImg" class="preview-img" style="display:none;" />
-    <div id="processedLabel" class="preview-label" style="display:none;">🔧 Preprocessed (OCR-এ এইটা যাচ্ছে)</div>
+      <div class="tip-box">
+        <strong>💡 Excel/Google Sheets থেকে:</strong> রোল + নাম সিলেক্ট কর → কপি → এখানে paste কর।<br>
+        <strong>💡 ভুল হলে:</strong> নিচে টেবিলে edit করতে পারবি।<br>
+        <strong>💡 টিপস:</strong> Roll আর Name-এর মাঝে যেকোনো চিহ্ন (space, comma, dash, dot) থাকলেই হবে।
+      </div>
 
-    <div class="tip-box">
-      <strong>ভালো ফলাফলের টিপস:</strong><br>
-      • সাদা কাগজে কালো ছাপা টেক্সট হলে ৯৫%+ সঠিক আসবে<br>
-      • ছবি সোজা করে তুলো (কাত না)<br>
-      • ভালো আলোতে, শ্যাডো ছাড়া<br>
-      • হাতের লেখা হলে accuracy কম হবে
+      <button class="btn-primary" onclick="parsePaste()">➡️ টেবিলে দেখাও</button>
+      <button class="btn-secondary" onclick="document.getElementById('pasteInput').value=''">🧹 Clear</button>
+    </div>
+
+    <!-- TAB 2: OCR UPLOAD -->
+    <div class="tab-content" id="tab-ocr">
+      <div class="dropzone" id="dropzone">
+        <div class="icon">📷</div>
+        <p>ছবি বা PDF ড্র্যাগ কর</p>
+        <small>অথবা ক্লিক করে সিলেক্ট কর — JPG, PNG, PDF</small>
+        <input type="file" id="fileInput" accept="image/*,.pdf" style="display:none;" />
+      </div>
+      <div class="progress-bar" id="progressBar"><div id="progressFill"></div></div>
+      <div class="status" id="status"></div>
+      <img id="previewImg" class="preview-img" style="display:none;" />
+
+      <div class="tip-box">
+        <strong>💡 ভালো ফলাফলের জন্য:</strong><br>
+        • পরিষ্কার, সোজা ছবি — কাত না<br>
+        • ভালো আলোতে — শ্যাডো ছাড়া<br>
+        • প্রিন্ট করা লিস্ট হলে ভালো, হাতের লেখা হলে কম<br>
+        • OCR-এ error হলে উপরের <strong>Manual Paste</strong> tab use কর
+      </div>
     </div>
   </div>
 
+  <!-- Result Table -->
   <div class="card" id="resultCard" style="display:none;">
     <div class="actions-row">
       <h3>✏️ যাচাই করে ঠিক কর</h3>
       <span class="count-text" id="countBadge">মোট: 0 জন</span>
     </div>
     <p style="color:#666; font-size:13px; margin-bottom:10px;">
-      OCR যা বের করেছে — চেক কর, ভুল থাকলে edit কর বা row যোগ/মুছে ফেল।
+      Roll আর Name check কর — ভুল হলে edit কর বা row মুছে ফেল।
     </p>
     <div style="margin-bottom:10px;">
       <button class="btn-secondary" onclick="addEmptyRow()">+ নতুন Row</button>
+      <button class="btn-danger" onclick="clearAllRows()">🗑️ সব মুছুন</button>
     </div>
     <table id="studentTable">
       <thead>
@@ -160,28 +195,15 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- Tesseract.js + PDF.js -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <script type="module">
 import { db, collection, addDoc, getDocs, query, where, serverTimestamp }
   from './js/firebase-init.js';
+import { OCR_API_KEY } from './firebase-config.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-// ---------- Elements ----------
-const dropzone = document.getElementById('dropzone');
-const fileInput = document.getElementById('fileInput');
-const progressBar = document.getElementById('progressBar');
-const progressFill = document.getElementById('progressFill');
-const statusEl = document.getElementById('status');
-const originalImg = document.getElementById('originalImg');
-const processedImg = document.getElementById('processedImg');
-const originalLabel = document.getElementById('originalLabel');
-const processedLabel = document.getElementById('processedLabel');
-const resultCard = document.getElementById('resultCard');
 
 // ---------- Helpers ----------
 function escapeHtml(str) {
@@ -189,14 +211,18 @@ function escapeHtml(str) {
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 function setStatus(msg, type) {
-  statusEl.className = 'status active ' + (type || '');
-  statusEl.innerHTML = msg;
+  const el = document.getElementById('status');
+  el.className = 'status active ' + (type || '');
+  el.innerHTML = msg;
 }
 function setProgress(pct) {
-  progressBar.style.display = 'block';
-  progressFill.style.width = pct + '%';
+  const pb = document.getElementById('progressBar');
+  pb.style.display = 'block';
+  document.getElementById('progressFill').style.width = pct + '%';
 }
-function hideProgress() { progressBar.style.display = 'none'; }
+function hideProgress() {
+  document.getElementById('progressBar').style.display = 'none';
+}
 
 let toastTimer;
 function showToast(msg, type) {
@@ -207,122 +233,50 @@ function showToast(msg, type) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// ---------- Tabs ----------
+window.switchTab = function(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+};
+
 // ==========================================================
-// 🖼️ Image Preprocessing — OCR-এর accuracy বাড়ানোর মূল চাবিকাঠি
+// 📋 PASTE PARSING
 // ==========================================================
-function preprocessImage(sourceCanvas) {
-  const canvas = document.createElement('canvas');
-  canvas.width = sourceCanvas.width;
-  canvas.height = sourceCanvas.height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(sourceCanvas, 0, 0);
+const parsedStudents = [];  // global — টেবিলে যা আছে
 
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
+window.parsePaste = function() {
+  const text = document.getElementById('pasteInput').value.trim();
+  if (!text) return showToast('⚠️ কিছু paste কর', 'error');
 
-  // Step 1: Grayscale + Contrast boost + Threshold
-  for (let i = 0; i < data.length; i += 4) {
-    // Grayscale (luminance formula)
-    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-
-    // Contrast boost: push dark pixels darker, light pixels lighter
-    let val = (gray - 128) * 1.8 + 128;
-
-    // Threshold: anything below 140 → black, above → white
-    // এতে ছবি প্রায় pure black & white হয়ে যায়, Tesseract ভালো পড়ে
-    val = val < 140 ? 0 : 255;
-
-    data[i] = val;
-    data[i + 1] = val;
-    data[i + 2] = val;
+  const students = parseStudents(text);
+  if (students.length === 0) {
+    showToast('⚠️ কোনো স্টুডেন্ট পাওয়া যায়নি', 'error');
+    return;
   }
 
-  ctx.putImageData(imageData, 0, 0);
-  return canvas;
-}
+  renderTable(students);
+  document.getElementById('resultCard').style.display = 'block';
+  showToast(`✅ ${students.length} জন পাওয়া গেছে`, 'success');
+  document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+};
 
-// ==========================================================
-// 📄 File → Canvas Conversion
-// ==========================================================
-async function fileToCanvas(file) {
-  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-    const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-    const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale: 3.0 }); // Higher scale = better OCR
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    await page.render({
-      canvasContext: canvas.getContext('2d'),
-      viewport
-    }).promise;
-    return canvas;
-  }
-
-  // Image → Canvas
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        // Scale up for better OCR
-        const scale = Math.max(1, 2000 / img.width);
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas);
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-// ==========================================================
-// 🔍 Tesseract OCR
-// ==========================================================
-async function runOCR(canvas) {
-  setStatus('OCR চলছে... (প্রথমবার ১০-২০ সেকেন্ড লাগবে)', '');
-
-  const result = await Tesseract.recognize(canvas, 'eng', {
-    logger: m => {
-      if (m.status === 'recognizing text') {
-        const pct = Math.round(m.progress * 100);
-        setProgress(pct);
-        setStatus(`OCR: ${pct}%`, '');
-      }
-    },
-    // Tesseract tuning: single column of text (student list)
-    tessedit_pageseg_mode: '6',
-    preserve_interword_spaces: '1'
-  });
-
-  return result.data.text;
-}
-
-// ==========================================================
-// 📝 Text Parsing — Roll + Name আলাদা করা
-// ==========================================================
 function parseStudents(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const students = [];
   const seen = new Set();
 
   for (let line of lines) {
-    // Skip header lines
-    if (/^(roll|name|sl|no|student|list|page|batch)/i.test(line)) continue;
-    if (line.length < 3) continue;
+    // Skip headers
+    if (/^(roll|name|sl|no|student|list|page|batch|#)/i.test(line)) continue;
+    if (line.length < 2) continue;
 
-    // Pattern 1: "101 Rahim Uddin" or "101. Rahim Uddin" or "101 - Rahim"
-    let match = line.match(/^(\d{1,6})[\s.\-:)\]]+(.+)$/);
+    // Pattern 1: "101 Rahim Uddin" / "101, Rahim" / "101. Rahim" / "101 - Rahim" / "101) Rahim"
+    let match = line.match(/^(\d{1,8})[\s,.\-:)\]|]+(.+)$/);
     if (match) {
       const roll = match[1];
-      const name = match[2].replace(/[^a-zA-Z\s.'-]/g, '').trim();
+      const name = match[2].trim().replace(/^[,.\-\s]+/, '');
       if (roll && name.length >= 2 && !seen.has(roll)) {
         seen.add(roll);
         students.push({ roll, name });
@@ -330,14 +284,24 @@ function parseStudents(text) {
       continue;
     }
 
-    // Pattern 2: "Rahim Uddin 101" (name first)
-    match = line.match(/^([a-zA-Z\s.'-]{3,})\s+(\d{1,6})$/);
+    // Pattern 2: "Rahim Uddin, 101" or "Rahim Uddin 101"
+    match = line.match(/^(.+?)[\s,]+(\d{1,8})$/);
     if (match) {
-      const name = match[1].trim();
+      const name = match[1].trim().replace(/[,.\-\s]+$/, '');
       const roll = match[2];
-      if (!seen.has(roll)) {
+      if (name.length >= 2 && !seen.has(roll)) {
         seen.add(roll);
         students.push({ roll, name });
+      }
+      continue;
+    }
+
+    // Pattern 3: Just a name — assign auto roll
+    if (/^[a-zA-Z\s.'-]{2,}$/.test(line)) {
+      const autoRoll = String(students.length + 1).padStart(3, '0');
+      if (!seen.has(autoRoll)) {
+        seen.add(autoRoll);
+        students.push({ roll: autoRoll, name: line });
       }
     }
   }
@@ -346,8 +310,12 @@ function parseStudents(text) {
 }
 
 // ==========================================================
-// 🎬 Main Flow
+// 📷 OCR UPLOAD (OCR.space API)
 // ==========================================================
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const previewImg = document.getElementById('previewImg');
+
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
@@ -360,53 +328,55 @@ fileInput.addEventListener('change', e => {
 });
 
 async function handleFile(file) {
-  resultCard.style.display = 'none';
-  hideProgress();
-  originalImg.style.display = 'none';
-  processedImg.style.display = 'none';
-  originalLabel.style.display = 'none';
-  processedLabel.style.display = 'none';
-
   try {
-    setStatus('ফাইল পড়া হচ্ছে...', '');
+    document.getElementById('resultCard').style.display = 'none';
+    hideProgress();
+    previewImg.style.display = 'none';
 
-    // Step 1: File → Canvas
-    const originalCanvas = await fileToCanvas(file);
-    originalImg.src = originalCanvas.toDataURL('image/png');
-    originalImg.style.display = 'block';
-    originalLabel.style.display = 'block';
+    let canvas;
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      setStatus('PDF লোড হচ্ছে...', '');
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 2.5 });
+      canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    } else if (file.type.startsWith('image/')) {
+      canvas = await imageToCanvas(file);
+    } else {
+      throw new Error('শুধু ছবি বা PDF দেওয়া যাবে');
+    }
+
+    previewImg.src = canvas.toDataURL('image/png');
+    previewImg.style.display = 'block';
     setProgress(20);
 
-    // Step 2: Preprocess
-    setStatus('ছবি প্রস্তুত করা হচ্ছে (preprocessing)...', '');
-    const processedCanvas = preprocessImage(originalCanvas);
-    processedImg.src = processedCanvas.toDataURL('image/png');
-    processedImg.style.display = 'block';
-    processedLabel.style.display = 'block';
-    setProgress(35);
-
-    // Step 3: OCR
-    const text = await runOCR(processedCanvas);
+    // OCR.space API call
+    setStatus('OCR চলছে... (৫-১৫ সেকেন্ড)', '');
+    const text = await ocrSpaceCall(canvas);
     setProgress(90);
 
-    // Step 4: Parse
-    setStatus('টেক্সট বিশ্লেষণ করা হচ্ছে...', '');
-    const students = parseStudents(text);
+    if (!text || text.trim().length < 3) {
+      setStatus('⚠️ কোনো টেক্সট পাওয়া যায়নি — Manual Paste use কর', 'error');
+      return;
+    }
 
+    // Parse
+    const students = parseStudents(text);
     if (students.length === 0) {
-      setStatus('⚠️ কোনো স্টুডেন্ট পাওয়া যায়নি — ছবি পরিষ্কার কিনা দেখ বা হাতে এন্ট্রি কর', 'error');
-      showToast('⚠️ কোনো ডেটা পাওয়া যায়নি', 'error');
-      // Still show table for manual entry
-      renderTable([]);
-      resultCard.style.display = 'block';
+      setStatus('⚠️ নাম-রোল বের করা যায়নি — Manual Paste use কর', 'error');
       return;
     }
 
     setProgress(100);
     setStatus(`✅ ${students.length} জন পাওয়া গেছে!`, 'ok');
     renderTable(students);
-    resultCard.style.display = 'block';
-    showToast(`✅ ${students.length} জন স্টুডেন্ট পাওয়া গেছে`, 'success');
+    document.getElementById('resultCard').style.display = 'block';
+    showToast(`✅ ${students.length} জন পাওয়া গেছে`, 'success');
+    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
 
   } catch (e) {
     console.error(e);
@@ -415,26 +385,85 @@ async function handleFile(file) {
   }
 }
 
+function imageToCanvas(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale = Math.max(1, 1800 / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function ocrSpaceCall(canvas) {
+  const base64 = canvas.toDataURL('image/png').split(',')[1];
+
+  const form = new FormData();
+  form.append('base64Image', 'data:image/png;base64,' + base64);
+  form.append('language', 'eng');
+  form.append('isOverlayRequired', 'false');
+  form.append('OCREngine', '2');
+  form.append('scale', 'true');
+  form.append('isTable', 'true');
+
+  const res = await fetch('https://api.ocr.space/parse/image', {
+    method: 'POST',
+    headers: { 'apikey': OCR_API_KEY },
+    body: form
+  });
+
+  if (!res.ok) throw new Error('OCR API error: HTTP ' + res.status);
+
+  const data = await res.json();
+
+  if (data.IsErroredOnProcessing) {
+    const errMsg = Array.isArray(data.ErrorMessage)
+      ? data.ErrorMessage.join(', ')
+      : (data.ErrorMessage || 'OCR failed');
+    throw new Error(errMsg);
+  }
+
+  return data.ParsedResults?.[0]?.ParsedText || '';
+}
+
 // ==========================================================
-// Table rendering
+// Table
 // ==========================================================
 function renderTable(students) {
   const tbody = document.querySelector('#studentTable tbody');
   tbody.innerHTML = '';
 
-  students.forEach((s, i) => {
+  students.forEach(s => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="text-align:center; color:#888;">${i + 1}</td>
+      <td style="text-align:center; color:#888;"></td>
       <td><input type="text" value="${escapeHtml(s.roll)}" data-field="roll"></td>
       <td><input type="text" value="${escapeHtml(s.name)}" data-field="name"></td>
       <td style="text-align:center;">
         <button style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;margin:0;"
-          onclick="this.closest('tr').remove(); updateCount();">✕</button>
+          onclick="this.closest('tr').remove(); renumber(); updateCount();">✕</button>
       </td>`;
     tbody.appendChild(tr);
   });
+  renumber();
   updateCount();
+}
+
+function renumber() {
+  document.querySelectorAll('#studentTable tbody tr').forEach((tr, i) => {
+    tr.children[0].textContent = i + 1;
+  });
 }
 
 function updateCount() {
@@ -446,14 +475,21 @@ window.addEmptyRow = function() {
   const tbody = document.querySelector('#studentTable tbody');
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td style="text-align:center; color:#888;">${tbody.children.length + 1}</td>
+    <td style="text-align:center; color:#888;"></td>
     <td><input type="text" value="" data-field="roll"></td>
     <td><input type="text" value="" data-field="name"></td>
     <td style="text-align:center;">
       <button style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;margin:0;"
-        onclick="this.closest('tr').remove(); updateCount();">✕</button>
+        onclick="this.closest('tr').remove(); renumber(); updateCount();">✕</button>
     </td>`;
   tbody.appendChild(tr);
+  renumber();
+  updateCount();
+};
+
+window.clearAllRows = function() {
+  if (!confirm('সব row মুছে ফেলব?')) return;
+  document.querySelector('#studentTable tbody').innerHTML = '';
   updateCount();
 };
 
@@ -462,7 +498,11 @@ window.addEmptyRow = function() {
 // ==========================================================
 window.saveToFirestore = async function() {
   const batchName = document.getElementById('batchName').value.trim();
-  if (!batchName) return showToast('⚠️ Batch Name দে', 'error');
+  if (!batchName) {
+    showToast('⚠️ Batch Name দে', 'error');
+    document.getElementById('batchName').focus();
+    return;
+  }
 
   const rows = document.querySelectorAll('#studentTable tbody tr');
   if (rows.length === 0) return showToast('⚠️ কোনো স্টুডেন্ট নেই', 'error');
@@ -495,8 +535,12 @@ window.saveToFirestore = async function() {
       if (!dup.empty) { skipped++; continue; }
 
       await addDoc(collection(db, 'students'), {
-        roll: s.roll, name: s.name, batchName: batchName,
-        balance: 0, active: true, createdAt: serverTimestamp()
+        roll: s.roll,
+        name: s.name,
+        batchName: batchName,
+        balance: 0,
+        active: true,
+        createdAt: serverTimestamp()
       });
       success++;
       saveStatus.textContent = `Progress: ${success}/${students.length}`;
