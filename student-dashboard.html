@@ -27,10 +27,7 @@
     box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px;
     text-align: center;
   }
-  .balance-label {
-    color: #666; font-size: 13px; margin-bottom: 10px;
-    text-transform: uppercase; letter-spacing: 1px;
-  }
+  .balance-label { color: #666; font-size: 13px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
   .balance-amount { font-size: 44px; font-weight: 700; color: #28a745; line-height: 1; }
   .balance-amount.neg { color: #dc3545; }
   .balance-note { color: #999; font-size: 12px; margin-top: 8px; }
@@ -39,10 +36,7 @@
     background: white; padding: 22px; border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px;
   }
-  .info-card h3 {
-    color: #2c5aa0; font-size: 15px; margin-bottom: 12px;
-    display: flex; align-items: center; gap: 6px;
-  }
+  .info-card h3 { color: #2c5aa0; font-size: 15px; margin-bottom: 12px; }
   .info-row {
     display: flex; justify-content: space-between; padding: 12px 0;
     border-bottom: 1px solid #f0f0f0;
@@ -50,7 +44,6 @@
   .info-row:last-child { border-bottom: none; }
   .info-label { color: #666; font-size: 14px; }
   .info-value { font-weight: 600; font-size: 14px; color: #222; }
-  .info-value.mono { font-family: 'Courier New', monospace; font-size: 13px; }
 
   .placeholder {
     text-align: center; padding: 35px 20px; color: #999; font-size: 14px;
@@ -67,18 +60,63 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  button.logout-btn {
-    width: 100%; padding: 14px; background: #dc3545; color: white;
-    border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
-    cursor: pointer; margin-top: 10px; transition: 0.2s;
+  button {
+    width: 100%; padding: 14px; border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    margin-top: 10px; transition: 0.2s;
   }
+  button.pin-btn { background: #ff9800; color: white; }
+  button.pin-btn:hover { background: #e68900; }
+  button.logout-btn { background: #dc3545; color: white; }
   button.logout-btn:hover { background: #b02a37; }
+  button:disabled { background: #999; cursor: not-allowed; }
 
   .error-box {
     background: #fee; color: #721c24; padding: 20px;
     border-radius: 12px; text-align: center; border-left: 4px solid #dc3545;
   }
   .error-box a { color: #2c5aa0; font-weight: 600; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: center; justify-content: center;
+    padding: 20px; z-index: 1000;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: white; border-radius: 14px; padding: 28px 24px;
+    max-width: 400px; width: 100%;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  }
+  .modal h3 { color: #2c5aa0; margin-bottom: 8px; font-size: 18px; }
+  .modal .sub { color: #666; font-size: 13px; margin-bottom: 15px; }
+  .modal label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 13px; color: #333; }
+  .modal input {
+    width: 100%; padding: 12px; border: 1.5px solid #ddd;
+    border-radius: 8px; font-size: 18px; text-align: center;
+    letter-spacing: 6px; font-weight: 600; font-family: inherit;
+    transition: 0.2s;
+  }
+  .modal input:focus { border-color: #2c5aa0; outline: none; box-shadow: 0 0 0 3px rgba(44,90,160,0.1); }
+  .modal .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+  .modal .btn-row button { margin-top: 0; flex: 1; }
+  .modal .btn-cancel { background: #6c757d; color: white; }
+  .modal .btn-cancel:hover { background: #5a6268; }
+  .modal .msg {
+    margin-top: 12px; padding: 10px; border-radius: 6px;
+    font-size: 13px; display: none; text-align: center;
+  }
+  .modal .msg.show { display: block; }
+  .modal .msg.error { background: #fee; color: #721c24; }
+  .modal .msg.ok { background: #d4edda; color: #155724; }
+
+  .modal-spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid #fff; border-top-color: transparent;
+    border-radius: 50%; animation: spin 1s linear infinite;
+    margin-right: 6px; vertical-align: middle;
+  }
 </style>
 </head>
 <body>
@@ -114,10 +152,6 @@
         <span class="info-label">Total Bill</span>
         <span class="info-value" id="totalBill">৳0</span>
       </div>
-      <div class="info-row">
-        <span class="info-label">Login Email</span>
-        <span class="info-value mono" id="loginEmail">—</span>
-      </div>
     </div>
 
     <div class="info-card">
@@ -128,21 +162,51 @@
       </div>
     </div>
 
+    <button class="pin-btn" onclick="openPinModal()">🔐 PIN Change কর</button>
     <button class="logout-btn" onclick="logout()">🚪 Logout</button>
   </div>
 
   <div id="errorBox" style="display:none;"></div>
 </div>
 
-<script type="module">
-import {
-  db, auth, collection, getDocs, query, where,
-  onAuthStateChanged, signOut
-} from './js/firebase-init.js';
+<!-- PIN Change Modal -->
+<div class="modal-overlay" id="pinModal">
+  <div class="modal">
+    <h3>🔐 PIN Change কর</h3>
+    <p class="sub">নিরাপত্তার জন্য আগে current PIN verify করতে হবে</p>
 
+    <label>Current PIN</label>
+    <input type="text" id="currentPin" maxlength="6" inputmode="numeric" placeholder="••••" />
+
+    <label>New PIN</label>
+    <input type="text" id="newPin" maxlength="6" inputmode="numeric" placeholder="••••" />
+
+    <label>Confirm New PIN</label>
+    <input type="text" id="confirmPin" maxlength="6" inputmode="numeric" placeholder="••••" />
+
+    <div class="msg" id="modalMsg"></div>
+
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closePinModal()">Cancel</button>
+      <button class="pin-btn" onclick="changePin()" id="changePinBtn">✅ Change</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { db, doc, getDoc, updateDoc } from './js/firebase-init.js';
+
+// ---------- Helpers ----------
 function escapeHtml(str) {
   return String(str || '').replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+async function hashPin(pin, roll) {
+  const data = new TextEncoder().encode(pin + ':' + roll + ':npmc');
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 function showError(msg) {
@@ -153,22 +217,41 @@ function showError(msg) {
   box.innerHTML = msg + '<br><br><a href="student-login.html">← আবার Login কর</a>';
 }
 
-onAuthStateChanged(auth, async user => {
-  if (!user) {
+// ---------- Load Dashboard ----------
+let currentStudent = null;      // { id, data }
+let currentStudentId = null;
+
+async function loadDashboard() {
+  const studentId = localStorage.getItem('npmc_student_id');
+  const loginTime = Number(localStorage.getItem('npmc_login_time') || 0);
+
+  if (!studentId) {
+    window.location.href = 'student-login.html';
+    return;
+  }
+
+  // 30-day expiry
+  const daysSince = (Date.now() - loginTime) / (1000 * 60 * 60 * 24);
+  if (daysSince > 30) {
+    localStorage.removeItem('npmc_student_id');
+    localStorage.removeItem('npmc_login_time');
     window.location.href = 'student-login.html';
     return;
   }
 
   try {
-    const q = query(collection(db, 'students'), where('uid', '==', user.uid));
-    const snap = await getDocs(q);
+    const snap = await getDoc(doc(db, 'students', studentId));
 
-    if (snap.empty) {
-      showError('❌ তোমার student record পাওয়া যায়নি।<br>Batch Admin-এর সাথে যোগাযোগ কর।');
+    if (!snap.exists()) {
+      localStorage.removeItem('npmc_student_id');
+      showError('❌ তোমার record পাওয়া যায়নি — আবার login কর।');
       return;
     }
 
-    const s = snap.docs[0].data();
+    currentStudentId = studentId;
+    currentStudent = snap.data();
+
+    const s = currentStudent;
     const balance = Number(s.balance || 0);
     const totalDeposit = Number(s.totalDeposit || 0);
     const totalBill = Number(s.totalBill || 0);
@@ -178,7 +261,6 @@ onAuthStateChanged(auth, async user => {
     document.getElementById('studentBatch').textContent = s.batchName || '—';
     document.getElementById('totalDeposit').textContent = '৳' + totalDeposit;
     document.getElementById('totalBill').textContent = '৳' + totalBill;
-    document.getElementById('loginEmail').textContent = s.loginEmail || user.email || '—';
 
     const balEl = document.getElementById('balance');
     balEl.textContent = '৳' + balance;
@@ -194,17 +276,108 @@ onAuthStateChanged(auth, async user => {
     console.error(e);
     showError('❌ Error: ' + escapeHtml(e.message));
   }
+}
+
+// ---------- PIN Change Modal ----------
+window.openPinModal = function() {
+  document.getElementById('pinModal').classList.add('show');
+  document.getElementById('currentPin').value = '';
+  document.getElementById('newPin').value = '';
+  document.getElementById('confirmPin').value = '';
+  document.getElementById('modalMsg').className = 'msg';
+  document.getElementById('currentPin').focus();
+};
+
+window.closePinModal = function() {
+  document.getElementById('pinModal').classList.remove('show');
+};
+
+function showModalMsg(text, type) {
+  const el = document.getElementById('modalMsg');
+  el.className = 'msg show ' + type;
+  el.innerHTML = text;
+}
+
+window.changePin = async function() {
+  const currentPin = document.getElementById('currentPin').value.trim();
+  const newPin = document.getElementById('newPin').value.trim();
+  const confirmPin = document.getElementById('confirmPin').value.trim();
+
+  // Validations
+  if (!currentPin || !newPin || !confirmPin) {
+    return showModalMsg('⚠️ সব field পূরণ কর', 'error');
+  }
+  if (!/^\d{4,6}$/.test(newPin)) {
+    return showModalMsg('⚠️ নতুন PIN ৪-৬ সংখ্যার হতে হবে', 'error');
+  }
+  if (newPin !== confirmPin) {
+    return showModalMsg('⚠️ New PIN আর Confirm PIN মিলছে না', 'error');
+  }
+  if (newPin === currentPin) {
+    return showModalMsg('⚠️ নতুন PIN আগেরটার মতোই — ভিন্ন PIN দে', 'error');
+  }
+
+  const btn = document.getElementById('changePinBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="modal-spinner"></span>Change হচ্ছে...';
+
+  try {
+    // Verify current PIN
+    const roll = currentStudent.roll;
+    const currentHash = await hashPin(currentPin, roll);
+
+    if (currentHash !== currentStudent.pinHash) {
+      throw new Error('Current PIN ভুল');
+    }
+
+    // Hash new PIN
+    const newHash = await hashPin(newPin, roll);
+
+    // Update Firestore
+    await updateDoc(doc(db, 'students', currentStudentId), {
+      pinHash: newHash,
+      pinChangedAt: new Date().toISOString()
+    });
+
+    // Update local cache
+    currentStudent.pinHash = newHash;
+
+    showModalMsg('✅ PIN সফলভাবে change হয়েছে!', 'ok');
+
+    setTimeout(() => {
+      closePinModal();
+    }, 1500);
+
+  } catch (e) {
+    console.error(e);
+    showModalMsg('❌ ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '✅ Change';
+};
+
+// ---------- Logout ----------
+window.logout = function() {
+  if (!confirm('Logout করব?')) return;
+  localStorage.removeItem('npmc_student_id');
+  localStorage.removeItem('npmc_login_time');
+  window.location.href = 'student-login.html';
+};
+
+// ---------- Modal: ESC to close + click outside ----------
+document.getElementById('pinModal').addEventListener('click', e => {
+  if (e.target.id === 'pinModal') closePinModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePinModal();
+  if (e.key === 'Enter' && document.getElementById('pinModal').classList.contains('show')) {
+    changePin();
+  }
 });
 
-window.logout = async function() {
-  if (!confirm('Logout করব?')) return;
-  try {
-    await signOut(auth);
-    window.location.href = 'student-login.html';
-  } catch (e) {
-    alert('Logout fail: ' + e.message);
-  }
-};
+// ---------- Init ----------
+loadDashboard();
 </script>
 
 </body>
