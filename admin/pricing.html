@@ -15,23 +15,6 @@
     background: white; padding: 25px; border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px;
   }
-  label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 14px; }
-  input[type="text"], select, input[type="number"] {
-    width: 100%; padding: 11px 14px; border: 1.5px solid #ddd;
-    border-radius: 8px; font-size: 15px; font-family: inherit;
-    transition: 0.2s;
-  }
-  input:focus, select:focus { border-color: #2c5aa0; outline: none; }
-
-  button {
-    padding: 12px 24px; border: none; border-radius: 8px;
-    cursor: pointer; font-size: 14px; font-weight: 600;
-    margin-right: 8px; margin-top: 10px; transition: 0.2s;
-  }
-  .btn-primary { background: #2c5aa0; color: white; }
-  .btn-primary:hover { background: #1e4079; }
-  .btn-primary:disabled { background: #999; cursor: not-allowed; }
-  .btn-secondary { background: #6c757d; color: white; }
 
   .price-grid {
     display: grid; grid-template-columns: 1fr 1fr;
@@ -45,17 +28,37 @@
   }
   .price-box .icon { font-size: 22px; margin-bottom: 6px; }
   .price-box label {
-    font-size: 13px; margin: 0 0 6px;
+    font-size: 12px; margin: 0 0 8px;
     color: #555; text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.5px; font-weight: 700;
   }
   .price-box .input-wrap { position: relative; }
   .price-box .input-wrap::before {
     content: '৳'; position: absolute; left: 12px; top: 50%;
-    transform: translateY(-50%); color: #666; font-weight: 600;
-    font-size: 16px;
+    transform: translateY(-50%); color: #666; font-weight: 700;
+    font-size: 17px;
   }
-  .price-box input { padding-left: 30px; font-weight: 600; font-size: 16px; }
+  .price-box input {
+    width: 100%; padding: 11px 14px 11px 32px;
+    border: 1.5px solid #ddd; border-radius: 8px;
+    font-weight: 700; font-size: 17px; font-family: inherit;
+    transition: 0.2s;
+  }
+  .price-box input:focus {
+    border-color: #2c5aa0; outline: none;
+    box-shadow: 0 0 0 3px rgba(44,90,160,0.1);
+  }
+
+  button {
+    padding: 12px 24px; border: none; border-radius: 8px;
+    cursor: pointer; font-size: 14px; font-weight: 600;
+    margin-right: 8px; margin-top: 10px; transition: 0.2s;
+  }
+  .btn-primary { background: #2c5aa0; color: white; }
+  .btn-primary:hover { background: #1e4079; }
+  .btn-primary:disabled { background: #999; cursor: not-allowed; }
+  .btn-secondary { background: #6c757d; color: white; }
+  .btn-secondary:hover { background: #5a6268; }
 
   .info-banner {
     padding: 12px 16px; border-radius: 8px; margin-bottom: 15px;
@@ -76,17 +79,25 @@
   .toast.error { background: #dc3545; }
 
   .current-prices {
-    background: #f8f9fa; border-radius: 8px; padding: 15px;
-    margin-top: 15px; display: none;
+    background: #f0f7ff; border-radius: 8px; padding: 18px;
+    margin-top: 18px; display: none;
+    border-left: 4px solid #2c5aa0;
   }
   .current-prices.show { display: block; }
-  .current-prices h4 { font-size: 13px; color: #666; margin-bottom: 10px; text-transform: uppercase; }
+  .current-prices h4 {
+    font-size: 13px; color: #2c5aa0; margin-bottom: 12px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
   .price-row {
     display: flex; justify-content: space-between;
-    padding: 8px 0; border-bottom: 1px solid #e0e0e0; font-size: 14px;
+    padding: 9px 0; border-bottom: 1px solid #d5e3f5; font-size: 14px;
   }
   .price-row:last-child { border-bottom: none; }
-  .price-row strong { color: #2c5aa0; }
+  .price-row strong { color: #2c5aa0; font-size: 15px; }
+  .updated-at {
+    text-align: right; font-size: 11px; color: #888;
+    margin-top: 10px; font-style: italic;
+  }
 
   .spinner {
     display: inline-block; width: 14px; height: 14px;
@@ -100,17 +111,12 @@
 <body>
 
 <div class="container">
-  <h1>💰 Meal Pricing Setup</h1>
-  <p class="sub">প্রতিটা batch-এর জন্য meal rate সেট কর — bill এই rate দিয়ে কাটা হবে</p>
+  <h1>💰 Meal Pricing</h1>
+  <p class="sub">সব batch-এর জন্য একই rate — এখানে set করলে সবার জন্য apply হবে</p>
 
   <div class="card">
-    <label>Batch Name</label>
-    <select id="batchSelect">
-      <option value="">লোড হচ্ছে...</option>
-    </select>
-
-    <div class="info-banner" style="margin-top:15px;">
-      💡 Meal rate change করলে <strong>নতুন record</strong>-এ নতুন rate apply হবে। পুরনো record অপরিবর্তিত থাকবে।
+    <div class="info-banner">
+      💡 এই rate গুলো <strong>সব batch</strong>-এর জন্য প্রযোজ্য। Bill এই rate দিয়ে calculate হবে।
     </div>
 
     <div class="price-grid">
@@ -149,17 +155,18 @@
 
     <div style="margin-top:20px;">
       <button class="btn-primary" onclick="savePrices()" id="saveBtn">
-        💾 Prices Save কর
+        💾 Save কর
       </button>
       <button class="btn-secondary" onclick="loadPrices()">🔄 Reload</button>
     </div>
 
     <div class="current-prices" id="currentPrices">
-      <h4>📊 এই Batch-এর Current Prices</h4>
-      <div class="price-row"><span>Lunch Full</span><strong id="curLF">—</strong></div>
-      <div class="price-row"><span>Lunch Half</span><strong id="curLH">—</strong></div>
-      <div class="price-row"><span>Dinner Full</span><strong id="curDF">—</strong></div>
-      <div class="price-row"><span>Dinner Half</span><strong id="curDH">—</strong></div>
+      <h4>📊 Current Prices</h4>
+      <div class="price-row"><span>🍛 Lunch Full</span><strong id="curLF">—</strong></div>
+      <div class="price-row"><span>🍚 Lunch Half</span><strong id="curLH">—</strong></div>
+      <div class="price-row"><span>🍽️ Dinner Full</span><strong id="curDF">—</strong></div>
+      <div class="price-row"><span>🥘 Dinner Half</span><strong id="curDH">—</strong></div>
+      <div class="updated-at" id="updatedAt"></div>
     </div>
   </div>
 </div>
@@ -167,11 +174,9 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import {
-  db, collection, getDocs, doc, getDoc, setDoc, serverTimestamp
-} from '../js/firebase-init.js';
+import { db, doc, getDoc, setDoc, serverTimestamp } from '../js/firebase-init.js';
 
-const batchSelect = document.getElementById('batchSelect');
+const PRICING_DOC_ID = 'current';   // একটা মাত্র document — সব batch-এর জন্য
 
 let toastTimer;
 function showToast(msg, type) {
@@ -182,59 +187,39 @@ function showToast(msg, type) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-function batchSlug(name) {
-  return name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-}
-
-async function loadBatches() {
-  try {
-    const snap = await getDocs(collection(db, 'students'));
-    const batches = [...new Set(snap.docs.map(d => d.data().batchName).filter(Boolean))].sort();
-
-    if (batches.length === 0) {
-      batchSelect.innerHTML = '<option value="">— কোনো batch নেই — Student Import কর —</option>';
-      return;
-    }
-
-    batchSelect.innerHTML = '<option value="">— Batch select কর —</option>' +
-      batches.map(b => `<option value="${b}">${b}</option>`).join('');
-
-    // Auto-select if only one
-    if (batches.length === 1) {
-      batchSelect.value = batches[0];
-      loadPrices();
-    }
-  } catch (e) {
-    console.error(e);
-    showToast('❌ Batch লোড হয়নি: ' + e.message, 'error');
-  }
-}
-
 window.loadPrices = async function() {
-  const batch = batchSelect.value;
-  if (!batch) {
-    document.getElementById('currentPrices').classList.remove('show');
-    return;
-  }
-
   try {
-    const docRef = doc(db, 'pricing', batchSlug(batch));
-    const snap = await getDoc(docRef);
+    const snap = await getDoc(doc(db, 'pricing', PRICING_DOC_ID));
 
     if (snap.exists()) {
       const p = snap.data();
-      document.getElementById('lunchFull').value = p.lunchFull ?? 80;
-      document.getElementById('lunchHalf').value = p.lunchHalf ?? 60;
-      document.getElementById('dinnerFull').value = p.dinnerFull ?? 80;
-      document.getElementById('dinnerHalf').value = p.dinnerHalf ?? 60;
+      const lf = p.lunchFull ?? 80;
+      const lh = p.lunchHalf ?? 60;
+      const df = p.dinnerFull ?? 80;
+      const dh = p.dinnerHalf ?? 60;
 
-      document.getElementById('curLF').textContent = '৳' + (p.lunchFull ?? 80);
-      document.getElementById('curLH').textContent = '৳' + (p.lunchHalf ?? 60);
-      document.getElementById('curDF').textContent = '৳' + (p.dinnerFull ?? 80);
-      document.getElementById('curDH').textContent = '৳' + (p.dinnerHalf ?? 60);
+      document.getElementById('lunchFull').value = lf;
+      document.getElementById('lunchHalf').value = lh;
+      document.getElementById('dinnerFull').value = df;
+      document.getElementById('dinnerHalf').value = dh;
+
+      document.getElementById('curLF').textContent = '৳' + lf;
+      document.getElementById('curLH').textContent = '৳' + lh;
+      document.getElementById('curDF').textContent = '৳' + df;
+      document.getElementById('curDH').textContent = '৳' + dh;
+
+      // Show updated-at if exists
+      if (p.updatedAt?.toDate) {
+        const d = p.updatedAt.toDate();
+        document.getElementById('updatedAt').textContent =
+          'Last updated: ' + d.toLocaleString('en-GB');
+      } else {
+        document.getElementById('updatedAt').textContent = '';
+      }
+
       document.getElementById('currentPrices').classList.add('show');
     } else {
-      // No prices saved yet — show defaults
+      // No pricing doc — show defaults
       document.getElementById('lunchFull').value = 80;
       document.getElementById('lunchHalf').value = 60;
       document.getElementById('dinnerFull').value = 80;
@@ -248,9 +233,6 @@ window.loadPrices = async function() {
 };
 
 window.savePrices = async function() {
-  const batch = batchSelect.value;
-  if (!batch) return showToast('⚠️ আগে Batch select কর', 'error');
-
   const lunchFull = Number(document.getElementById('lunchFull').value);
   const lunchHalf = Number(document.getElementById('lunchHalf').value);
   const dinnerFull = Number(document.getElementById('dinnerFull').value);
@@ -265,13 +247,12 @@ window.savePrices = async function() {
   btn.innerHTML = '<span class="spinner"></span>Save হচ্ছে...';
 
   try {
-    await setDoc(doc(db, 'pricing', batchSlug(batch)), {
-      batchName: batch,
+    await setDoc(doc(db, 'pricing', PRICING_DOC_ID), {
       lunchFull, lunchHalf, dinnerFull, dinnerHalf,
       updatedAt: serverTimestamp()
     });
 
-    showToast('✅ Prices save হয়েছে', 'success');
+    showToast('✅ Prices save হয়েছে — সব batch-এ apply হবে', 'success');
     await loadPrices();
   } catch (e) {
     console.error(e);
@@ -279,13 +260,11 @@ window.savePrices = async function() {
   }
 
   btn.disabled = false;
-  btn.innerHTML = '💾 Prices Save কর';
+  btn.innerHTML = '💾 Save কর';
 };
 
-batchSelect.addEventListener('change', loadPrices);
-
 // Init
-loadBatches();
+loadPrices();
 </script>
 
 </body>
