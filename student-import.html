@@ -21,7 +21,6 @@
   .btn-success:hover { background: #1e7e34; }
   .btn-success:disabled { background: #999; cursor: not-allowed; }
   .btn-secondary { background: #6c757d; color: white; }
-  .btn-secondary:hover { background: #5a6268; }
   .btn-test { background: #ff9800; color: white; padding: 8px 16px; font-size: 13px; }
   .btn-test:hover { background: #e68900; }
   .btn-test:disabled { background: #999; cursor: not-allowed; }
@@ -89,6 +88,9 @@
 
   .actions-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
   .count-text { font-size: 14px; color: #555; }
+
+  .debug-box { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 11px; max-height: 200px; overflow-y: auto; margin-top: 12px; display: none; white-space: pre-wrap; word-break: break-all; }
+  .debug-box.show { display: block; }
 </style>
 </head>
 <body>
@@ -117,6 +119,7 @@
     </div>
     <div class="progress-bar" id="progressBar"><div id="progressFill"></div></div>
     <div class="status" id="status"></div>
+    <div class="debug-box" id="debugBox"></div>
     <img id="previewImg" class="preview-img" style="display:none;" />
   </div>
 
@@ -172,6 +175,7 @@ const resultCard = document.getElementById('resultCard');
 const apiStatus = document.getElementById('apiStatus');
 const apiStatusText = document.getElementById('apiStatusText');
 const testBtn = document.getElementById('testBtn');
+const debugBox = document.getElementById('debugBox');
 
 // ---------- Helpers ----------
 function escapeHtml(str) {
@@ -187,6 +191,15 @@ function setProgress(pct) {
   progressFill.style.width = pct + '%';
 }
 function hideProgress() { progressBar.style.display = 'none'; }
+function showDebug(msg) {
+  debugBox.className = 'debug-box show';
+  debugBox.textContent += msg + '\n';
+  debugBox.scrollTop = debugBox.scrollHeight;
+}
+function clearDebug() {
+  debugBox.textContent = '';
+  debugBox.className = 'debug-box';
+}
 
 let toastTimer;
 function showToast(msg, type) {
@@ -198,45 +211,134 @@ function showToast(msg, type) {
 }
 
 // ==========================================================
-// 🧪 API TEST — manual only, no auto-run
+// 🔍 Key Debug — key-টা ঠিকভাবে লোড হয়েছে কিনা দেখার জন্য
+// ==========================================================
+function checkKeyIntegrity() {
+  if (!GEMINI_API_KEY) {
+    showDebug('❌ GEMINI_API_KEY: undefined বা empty');
+    return false;
+  }
+  const len = GEMINI_API_KEY.length;
+  const prefix = GEMINI_API_KEY.substring(0, 8);
+  const suffix = GEMINI_API_KEY.substring(len - 6);
+  showDebug(`🔑 Key length: ${len} chars`);
+  showDebug(`🔑 Prefix: ${prefix}...`);
+  showDebug(`🔑 Suffix: ...${suffix}`);
+  showDebug(`🔑 Has dots: ${GEMINI_API_KEY.includes('.') ? 'yes (AQ. format)' : 'no (AIza format)'}`);
+
+  if (len < 30) {
+    showDebug('⚠️ Key খুব ছোট — সম্ভবত কপি হয়নি');
+    return false;
+  }
+  return true;
+}
+
+// ==========================================================
+// 🧪 API TEST — দুই পদ্ধতিতে try করবে
 // ==========================================================
 window.testAPI = async function() {
   testBtn.disabled = true;
-  testBtn.innerHTML = '<span class="loading-spinner dark" style="width:12px;height:12px;"></span>Testing';
+  testBtn.innerHTML = '<span class="loading-spinner dark" style="width:12px;height:12px;"></span>Testing...';
+  clearDebug();
+
+  apiStatus.className = 'api-status';
+  apiStatusText.textContent = '⏳ API যাচাই করা হচ্ছে...';
 
   try {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY.length < 20) {
-      throw new Error('API key লোড হয়নি');
+    if (!checkKeyIntegrity()) {
+      throw new Error('API key লোড হয়নি বা ভুল');
     }
 
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent';
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': GEMINI_API_KEY
-      },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: "Reply with: OK" }] }]
-      })
-    });
+    // -------- Method 1: ?key= param --------
+    showDebug('\n--- Method 1: URL ?key= param ---');
+    let res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: "Reply with: OK" }] }]
+        })
+      }
+    );
+    showDebug(`Status: ${res.status} ${res.statusText}`);
+    let data = await res.json();
+    showDebug(`Response: ${JSON.stringify(data).slice(0, 250)}`);
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      const msg = data.error?.message || `HTTP ${res.status}`;
-      throw new Error(msg);
+    if (res.ok) {
+      showDebug('✅ Method 1 সফল!');
+      apiStatus.className = 'api-status ok';
+      apiStatusText.textContent = '✅ API কাজ করছে (?key= param)';
+      testBtn.style.display = 'none';
+      showToast('✅ API সফলভাবে যাচাই হয়েছে', 'success');
+      return;
     }
 
-    apiStatus.className = 'api-status ok';
-    apiStatusText.textContent = '✅ API কাজ করছে (gemini-3.6-flash)';
-    testBtn.style.display = 'none';
-    showToast('✅ API সফলভাবে যাচাই হয়েছে', 'success');
+    // -------- Method 2: x-goog-api-key header --------
+    showDebug('\n--- Method 2: x-goog-api-key header ---');
+    res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': GEMINI_API_KEY
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: "Reply with: OK" }] }]
+        })
+      }
+    );
+    showDebug(`Status: ${res.status} ${res.statusText}`);
+    data = await res.json();
+    showDebug(`Response: ${JSON.stringify(data).slice(0, 250)}`);
+
+    if (res.ok) {
+      showDebug('✅ Method 2 সফল!');
+      apiStatus.className = 'api-status ok';
+      apiStatusText.textContent = '✅ API কাজ করছে (x-goog-api-key header)';
+      testBtn.style.display = 'none';
+      showToast('✅ API সফলভাবে যাচাই হয়েছে', 'success');
+      return;
+    }
+
+    // -------- Method 3: Authorization Bearer --------
+    showDebug('\n--- Method 3: Authorization Bearer ---');
+    res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GEMINI_API_KEY}`
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: "Reply with: OK" }] }]
+        })
+      }
+    );
+    showDebug(`Status: ${res.status} ${res.statusText}`);
+    data = await res.json();
+    showDebug(`Response: ${JSON.stringify(data).slice(0, 250)}`);
+
+    if (res.ok) {
+      showDebug('✅ Method 3 সফল!');
+      apiStatus.className = 'api-status ok';
+      apiStatusText.textContent = '✅ API কাজ করছে (Bearer)';
+      testBtn.style.display = 'none';
+      showToast('✅ API সফলভাবে যাচাই হয়েছে', 'success');
+      return;
+    }
+
+    // সব fail
+    const errMsg = data.error?.message || `HTTP ${res.status}`;
+    throw new Error(errMsg);
 
   } catch (e) {
     apiStatus.className = 'api-status error';
     apiStatusText.textContent = '❌ ' + e.message;
-    showToast('❌ API Test ব্যর্থ', 'error');
+    showDebug(`\n❌ সব method fail: ${e.message}`);
+    showToast('❌ API Test ব্যর্থ — Debug box দেখ', 'error');
     testBtn.disabled = false;
     testBtn.textContent = '🔄 আবার Test কর';
   }
@@ -263,6 +365,7 @@ async function handleFile(file) {
   resultCard.style.display = 'none';
   hideProgress();
   previewImg.style.display = 'none';
+  clearDebug();
 
   try {
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
@@ -276,6 +379,7 @@ async function handleFile(file) {
     console.error(e);
     setStatus('❌ ' + e.message, 'error');
     showToast('❌ ' + e.message, 'error');
+    showDebug('❌ ' + e.message);
   }
 }
 
@@ -348,7 +452,7 @@ function fileToBase64(file) {
 }
 
 // ==========================================================
-// Gemini API
+// Gemini API — Dual auth fallback
 // ==========================================================
 async function callGemini(base64Data, mimeType) {
   const prompt = `You are an expert OCR assistant. Analyze the attached image of a student list.
@@ -362,35 +466,65 @@ Rules:
 - Keep names exactly as they appear.
 - Preserve leading zeros in roll numbers.`;
 
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent';
+  const model = 'gemini-3.6-flash';
+  const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const body = JSON.stringify({
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: mimeType, data: base64Data } }
+      ]
+    }],
+    generationConfig: {
+      temperature: 0.1,
+      responseMimeType: "application/json"
+    }
+  });
 
-  const res = await fetch(url, {
+  // --- Try Method 1: x-goog-api-key header ---
+  showDebug('🤖 Method 1: header');
+  let res = await fetch(baseUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-goog-api-key': GEMINI_API_KEY
     },
-    body: JSON.stringify({
-      contents: [{
-        parts: [
-          { text: prompt },
-          { inline_data: { mime_type: mimeType, data: base64Data } }
-        ]
-      }],
-      generationConfig: {
-        temperature: 0.1,
-        responseMimeType: "application/json"
-      }
-    })
+    body: body
   });
+
+  // --- Try Method 2: ?key= param ---
+  if (!res.ok) {
+    showDebug(`   Method 1 failed: ${res.status}, trying Method 2...`);
+    res = await fetch(`${baseUrl}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body
+    });
+  }
+
+  // --- Try Method 3: Authorization Bearer ---
+  if (!res.ok) {
+    showDebug(`   Method 2 failed: ${res.status}, trying Method 3...`);
+    res = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GEMINI_API_KEY}`
+      },
+      body: body
+    });
+  }
 
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.error?.message || `HTTP ${res.status}`);
+    const msg = errData.error?.message || `HTTP ${res.status}`;
+    showDebug(`❌ সব method fail: ${msg}`);
+    throw new Error(msg);
   }
 
   const data = await res.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  showDebug(`✅ Response: ${text.length} chars`);
 
   const cleaned = text.trim()
     .replace(/^```json\s*/i, '')
