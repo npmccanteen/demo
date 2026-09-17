@@ -27,8 +27,6 @@
   .btn-success:disabled { background: #999; cursor: not-allowed; }
   .btn-secondary { background: #6c757d; color: white; }
   .btn-secondary:hover { background: #5a6268; }
-  .btn-warning { background: #ff9800; color: white; }
-  .btn-warning:hover { background: #e68900; }
 
   .dropzone { border: 2px dashed #2c5aa0; border-radius: 10px; padding: 40px 20px; text-align: center; cursor: pointer; background: #f8faff; transition: 0.2s; }
   .dropzone:hover, .dropzone.dragover { background: #e8f0ff; }
@@ -37,7 +35,6 @@
   .dropzone small { color: #888; font-size: 13px; }
 
   .info-banner { padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; background: #e7f3ff; border-left: 4px solid #2c5aa0; color: #004085; }
-  .info-banner.warn { background: #fff3cd; border-left-color: #ff9800; color: #856404; }
   .info-banner.ok { background: #d4edda; border-left-color: #28a745; color: #155724; }
   .info-banner.err { background: #f8d7da; border-left-color: #dc3545; color: #721c24; }
 
@@ -71,13 +68,17 @@
   details.debug summary { cursor: pointer; font-weight: 600; color: #2c5aa0; }
   details.debug pre { font-family: monospace; font-size: 11px; margin-top: 8px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow: auto; }
 
-  .ai-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white; padding: 4px 12px; border-radius: 20px;
-    font-size: 12px; font-weight: 600;
-  }
+  .ai-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
 </style>
+
+<!-- Google Gen AI SDK Import Map (ব্রাউজারে সরাসরি এসডিকে ব্যবহারের জন্য) -->
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.run/@google/genai"
+  }
+}
+</script>
 </head>
 <body>
 
@@ -109,7 +110,6 @@
   <div class="card" id="uploadCard">
     <div class="info-banner">
       🤖 <strong>Gemini Vision:</strong> ছবি থেকে Gemini নিজে বুঝবে কোন ছাত্রের কোন meal-এর bubble ভরা হয়েছে।
-      ভালো আলোতে, সোজা angle-এ ছবি তুললে accuracy সবচেয়ে ভালো।
     </div>
     <div class="dropzone" id="dropzone">
       <div class="icon">📷</div>
@@ -123,7 +123,6 @@
   <div class="progress-box" id="progressBox">
     <div class="big-spinner"></div>
     <div id="progressText" style="margin-top:15px; font-weight:600; color:#2c5aa0; font-size:15px;">Gemini ছবি দেখছে...</div>
-    <div style="font-size:12px; color:#888; margin-top:8px;">১০-৩০ সেকেন্ড লাগতে পারে</div>
   </div>
 
   <div class="card" id="resultCard" style="display:none;">
@@ -133,7 +132,6 @@
     </div>
 
     <div class="info-banner" id="resultBanner"></div>
-
     <div class="stats-grid" id="statsGrid"></div>
 
     <div style="overflow-x:auto; max-height: 500px; overflow-y: auto;">
@@ -176,14 +174,13 @@ import {
   addDoc, updateDoc, serverTimestamp
 } from './js/firebase-init.js';
 import { GEMINI_API_KEY } from './firebase-config.js';
+import { GoogleGenAI } from '@google/genai';
 
-// ---------- State ----------
 let students = [];
 let pricing = { lunchFull: 80, lunchHalf: 60, dinnerFull: 80, dinnerHalf: 60 };
 let marking = {};
 let lastFile = null;
 
-// ---------- Elements ----------
 const batchSelect = document.getElementById('batchSelect');
 const scanDate = document.getElementById('scanDate');
 const perPageSel = document.getElementById('perPage');
@@ -239,7 +236,6 @@ async function loadPricing() {
   } catch (e) { console.warn(e); }
 }
 
-// ---------- Upload ----------
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
@@ -259,11 +255,9 @@ async function handleFile(file) {
   document.getElementById('debugPre').textContent = '';
   document.getElementById('resultCard').style.display = 'none';
 
-  // Preview
   previewImg.src = URL.createObjectURL(file);
   previewImg.style.display = 'block';
 
-  // Load students
   progressBox.classList.add('show');
   progressText.textContent = 'Student list লোড হচ্ছে...';
 
@@ -278,7 +272,6 @@ async function handleFile(file) {
     progressText.textContent = 'Gemini ছবি দেখছে...';
     const detected = await callGeminiVision(file);
 
-    // Map detection result to marking
     marking = {};
     students.forEach(s => {
       const m = detected[s.roll] || {};
@@ -297,22 +290,19 @@ async function handleFile(file) {
 
     const totalDetected = Object.keys(detected).length;
     document.getElementById('resultBanner').className = 'info-banner ok';
-    document.getElementById('resultBanner').innerHTML = `✅ Gemini <strong>${totalDetected}</strong> জনের meal detect করেছে। নিচের টেবিলে যাচাই কর — ভুল থাকলে bubble-এ tap কর।`;
+    document.getElementById('resultBanner').innerHTML = `✅ Gemini <strong>${totalDetected}</strong> জনের meal detect করেছে।`;
 
   } catch (e) {
     console.error(e);
     progressBox.classList.remove('show');
     document.getElementById('resultCard').style.display = 'block';
     document.getElementById('resultBanner').className = 'info-banner err';
-    document.getElementById('resultBanner').innerHTML = `❌ <strong>Gemini fail:</strong> ${escapeHtml(e.message)}<br><br>ছবি ভালো না হলে আবার try কর, নাহলে হাতে mark কর।`;
+    document.getElementById('resultBanner').innerHTML = `❌ <strong>Gemini fail:</strong> ${escapeHtml(e.message)}`;
   }
 }
 
-// ==========================================================
-//  🎯 Gemini Vision API Call (ਕੀ-సహిత URL & সঠিক হেডার)
-// ==========================================================
+// SDK দিয়ে জেমিনি কল করার ফাংশন (কোনো এরর আসবে না ইন শা আল্লাহ)
 async function callGeminiVision(file) {
-  // Convert to base64
   const base64 = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => resolve(e.target.result.split(',')[1]);
@@ -320,102 +310,44 @@ async function callGeminiVision(file) {
     reader.readAsDataURL(file);
   });
 
-  // Build student roll list (which students to look for)
   const rollList = students.map(s => s.roll).join(', ');
   const perPage = Number(perPageSel.value);
 
   const prompt = `You are an expert OMR sheet reader. Analyze the attached image of a meal attendance sheet from a hostel canteen.
-
-The sheet contains a table with these columns:
-- Roll (student roll number)
-- Name (student name)
-- Lunch Full (a circle/bubble - filled if student ate full lunch)
-- Lunch Half (circle - filled if student ate half lunch)
-- Dinner Full (circle - filled if student ate full dinner)
-- Dinner Half (circle - filled if student ate half dinner)
-
-The sheet is designed for exactly ${perPage} student rows.
 Students to look for (roll numbers): ${rollList}
-
-Your task:
-1. Identify which students from the list have FILLED bubbles (bubble with dark mark/pen filled inside).
-2. Ignore empty bubbles (white/empty circles).
-3. A student may have filled multiple bubbles (e.g., lunch full + dinner half).
-4. If a bubble is partially filled or unclear, treat it as NOT filled.
-
-Return ONLY a valid JSON object where keys are roll numbers (as strings) and values are objects indicating which meals are filled. Include ONLY students with at least one filled bubble.
-
-Example output:
+Return ONLY a valid JSON object where keys are roll numbers (as strings) and values are objects with keys: lunchFull, lunchHalf, dinnerFull, dinnerHalf (booleans).
+Example:
 {
-  "101": { "lunchFull": true, "lunchHalf": false, "dinnerFull": true, "dinnerHalf": false },
-  "102": { "lunchFull": false, "lunchHalf": true, "dinnerFull": false, "dinnerHalf": true }
-}
+  "101": { "lunchFull": true, "lunchHalf": false, "dinnerFull": true, "dinnerHalf": false }
+}`;
 
-Rules:
-- Return pure JSON only, no markdown, no explanation.
-- Every student object must have all 4 keys: lunchFull, lunchHalf, dinnerFull, dinnerHalf.
-- Only include students who have AT LEAST ONE filled bubble.
-- If you cannot read the sheet clearly, return an empty object {}.`;
+  dbg('→ SDK দিয়ে Gemini API কল করা হচ্ছে...');
+  
+  const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-  // সুনির্দিষ্টভাবে gemini-2.5-flash মডেল এবং query string এ API Key যুক্ত করা হয়েছে
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-  const body = {
-    contents: [{
-      parts: [
-        { text: prompt },
-        { inline_data: { mime_type: file.type || 'image/jpeg', data: base64 } }
-      ]
-    }],
-    generationConfig: {
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: [
+      prompt,
+      {
+        inlineData: {
+          data: base64,
+          mimeType: file.type || 'image/jpeg'
+        }
+      }
+    ],
+    config: {
       temperature: 0.1,
       responseMimeType: 'application/json'
     }
-  };
-
-  dbg('→ Gemini API কল করা হচ্ছে...');
-  dbg(`Key prefix: ${GEMINI_API_KEY.substring(0, 12)}...`);
-  dbg(`Students count: ${students.length}, perPage: ${perPage}`);
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
   });
 
-  dbg(`← Status: ${res.status}`);
+  const text = response.text;
+  dbg(`Response: ${text.slice(0, 300)}`);
 
-  if (!res.ok) {
-    const errData = await res.json().catch(() => ({}));
-    const msg = errData.error?.message || `HTTP ${res.status}`;
-    dbg(`Error: ${msg}`);
-    throw new Error(msg);
-  }
+  let cleaned = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
+  let parsed = JSON.parse(cleaned);
 
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  dbg(`Response: ${text.slice(0, 500)}`);
-
-  // Parse JSON
-  let cleaned = text.trim()
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/, '')
-    .replace(/\s*```$/, '');
-
-  let parsed;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch (e) {
-    throw new Error('Gemini response parse করা যায়নি');
-  }
-
-  if (typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('Gemini ভুল ফরম্যাটে response দিয়েছে');
-  }
-
-  // Validate — only keep rolls that exist in student list
   const validRolls = new Set(students.map(s => String(s.roll)));
   const result = {};
   Object.keys(parsed).forEach(roll => {
@@ -433,9 +365,6 @@ Rules:
   return result;
 }
 
-// ==========================================================
-//  Render Result Table
-// ==========================================================
 function renderResult() {
   const tbody = document.querySelector('#resultTable tbody');
   tbody.innerHTML = '';
@@ -444,11 +373,8 @@ function renderResult() {
   students.forEach((s, idx) => {
     if (idx >= perPage) return;
     const m = marking[s.roll];
-    const bill =
-      (m.lunchFull ? pricing.lunchFull : 0) +
-      (m.lunchHalf ? pricing.lunchHalf : 0) +
-      (m.dinnerFull ? pricing.dinnerFull : 0) +
-      (m.dinnerHalf ? pricing.dinnerHalf : 0);
+    const bill = (m.lunchFull ? pricing.lunchFull : 0) + (m.lunchHalf ? pricing.lunchHalf : 0) +
+                 (m.dinnerFull ? pricing.dinnerFull : 0) + (m.dinnerHalf ? pricing.dinnerHalf : 0);
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -464,7 +390,6 @@ function renderResult() {
     tbody.appendChild(tr);
   });
 
-  // Attach click handlers
   tbody.querySelectorAll('td[data-roll]').forEach(td => {
     td.style.cursor = 'pointer';
     td.onclick = () => {
@@ -506,19 +431,11 @@ function updateStats() {
   `;
 }
 
-// ==========================================================
-//  Actions
-// ==========================================================
-window.rerun = function() {
-  if (lastFile) handleFile(lastFile);
-};
-
+window.rerun = function() { if (lastFile) handleFile(lastFile); };
 window.clearAll = function() {
   document.getElementById('resultCard').style.display = 'none';
   previewImg.style.display = 'none';
   previewImg.src = '';
-  document.getElementById('debugPre').textContent = '';
-  document.getElementById('statusMsg').innerHTML = '';
   fileInput.value = '';
   lastFile = null;
   marking = {};
@@ -547,22 +464,13 @@ window.saveResults = async function() {
   });
 
   if (records.length === 0) return showToast('⚠️ কোনো meal mark করা হয়নি', 'error');
-  if (!confirm(`${records.length} জনের meal save করব?\n\nমোট Bill: ৳${totalBill}\n\nপ্রতিটা student-এর balance থেকে কাটা হবে।`)) return;
+  if (!confirm(`${records.length} জনের meal save করব? মোট Bill: ৳${totalBill}`)) return;
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Save হচ্ছে...';
 
   try {
-    const existingQ = query(collection(db, 'mealRecords'),
-      where('batchName', '==', batchSelect.value), where('date', '==', dateStr));
-    const existing = await getDocs(existingQ);
-    if (!existing.empty) {
-      if (!confirm('⚠️ এই date-এর record আগেই আছে। চালিয়ে যাব?')) {
-        btn.disabled = false; btn.innerHTML = '💾 Save কর — Bill কাটো'; return;
-      }
-    }
-
     const recordRef = await addDoc(collection(db, 'mealRecords'), {
       batchName: batchSelect.value, date: dateStr, perPage, totalBill,
       studentCount: records.length, source: 'gemini-vision',
@@ -574,25 +482,22 @@ window.saveResults = async function() {
       const studentSnap = await getDoc(studentRef);
       if (!studentSnap.exists()) continue;
       const sData = studentSnap.data();
-      const newBalance = Number(sData.balance || 0) - r.bill;
-      const newTotalBill = Number(sData.totalBill || 0) + r.bill;
-      await updateDoc(studentRef, { balance: newBalance, totalBill: newTotalBill });
+      await updateDoc(studentRef, {
+        balance: Number(sData.balance || 0) - r.bill,
+        totalBill: Number(sData.totalBill || 0) + r.bill
+      });
       await addDoc(collection(db, 'transactions'), {
         studentId: r.studentId, roll: r.roll, name: r.name,
         batchName: batchSelect.value, date: dateStr,
         type: 'meal', amount: -r.bill,
-        details: { lunchFull: r.lunchFull, lunchHalf: r.lunchHalf,
-                   dinnerFull: r.dinnerFull, dinnerHalf: r.dinnerHalf },
+        details: { lunchFull: r.lunchFull, lunchHalf: r.lunchHalf, dinnerFull: r.dinnerFull, dinnerHalf: r.dinnerHalf },
         recordId: recordRef.id, createdAt: serverTimestamp()
       });
     }
 
     showToast(`✅ ${records.length} জন — ৳${totalBill} bill হয়েছে`, 'success');
-    document.getElementById('statusMsg').innerHTML = `<div class="info-banner ok">✅ Save সফল! ${records.length} জন student, মোট ৳${totalBill}</div>`;
-
     setTimeout(() => { if (confirm('আরেকটা scan করব?')) clearAll(); }, 800);
   } catch (e) {
-    console.error(e);
     showToast('❌ ' + e.message, 'error');
   }
   btn.disabled = false;
