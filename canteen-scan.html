@@ -59,7 +59,7 @@
   .info-banner.warn { background: #fff3cd; border-left-color: #ff9800; color: #856404; }
   .info-banner.ok { background: #d4edda; border-left-color: #28a745; color: #155724; }
 
-  /* Canvas area */
+  /* Canvas area — corner step */
   #canvasWrap {
     position: relative; background: #222;
     border-radius: 8px; overflow: hidden;
@@ -71,7 +71,7 @@
 
   /* Corner handles */
   .handle {
-    position: absolute; width: 24px; height: 24px;
+    position: absolute; width: 26px; height: 26px;
     background: #ff1744; border: 3px solid white;
     border-radius: 50%; cursor: grab;
     box-shadow: 0 2px 8px rgba(0,0,0,0.4);
@@ -82,37 +82,48 @@
   .handle:active { cursor: grabbing; background: #ffeb3b; }
 
   .handle-label {
-    position: absolute; font-size: 11px; color: white;
-    background: rgba(0,0,0,0.7); padding: 2px 6px;
+    position: absolute; font-size: 10px; color: white;
+    background: rgba(0,0,0,0.75); padding: 2px 5px;
     border-radius: 3px; white-space: nowrap;
-    pointer-events: none; transform: translate(-50%, -32px);
+    pointer-events: none; transform: translate(-50%, 22px);
   }
 
-  /* Bubble grid overlay (positioned elements on top of canvas) */
-  .bubble-grid {
-    position: absolute; top: 0; left: 0;
-    pointer-events: none;
+  /* Marking step — wrap around canvas */
+  #markWrap {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+    max-width: 100%;
   }
+  #markCanvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Clickable bubble overlays */
   .bubble-hit {
-    position: absolute; width: 30px; height: 30px;
+    position: absolute; width: 22px; height: 22px;
     border-radius: 50%; cursor: pointer;
-    background: rgba(255, 235, 59, 0.35);
-    border: 2px solid rgba(255, 235, 59, 0.9);
+    background: rgba(255, 235, 59, 0.55);
+    border: 2px solid rgba(255, 152, 0, 0.95);
     pointer-events: auto;
     transform: translate(-50%, -50%);
     transition: 0.15s;
     touch-action: manipulation;
+    z-index: 5;
   }
-  .bubble-hit:hover { transform: translate(-50%, -50%) scale(1.15); }
+  .bubble-hit:hover { transform: translate(-50%, -50%) scale(1.2); }
   .bubble-hit.filled {
-    background: rgba(40, 167, 69, 0.65);
-    border-color: #28a745;
-    box-shadow: 0 0 10px rgba(40, 167, 69, 0.8);
+    background: rgba(40, 167, 69, 0.75);
+    border-color: #1e7e34;
+    box-shadow: 0 0 8px rgba(40, 167, 69, 0.9);
   }
   .bubble-hit.filled::after {
     content: '✓'; position: absolute;
     top: 50%; left: 50%; transform: translate(-50%, -50%);
-    color: white; font-weight: 700; font-size: 16px;
+    color: white; font-weight: 700; font-size: 13px;
+    line-height: 1;
   }
 
   .toast {
@@ -140,24 +151,24 @@
   .legend-item { display: flex; align-items: center; gap: 6px; }
   .legend-dot {
     width: 14px; height: 14px; border-radius: 50%;
-    background: rgba(255, 235, 59, 0.35);
-    border: 2px solid rgba(255, 235, 59, 0.9);
+    background: rgba(255, 235, 59, 0.55);
+    border: 2px solid rgba(255, 152, 0, 0.95);
   }
   .legend-dot.filled {
-    background: rgba(40, 167, 69, 0.65);
-    border-color: #28a745;
+    background: rgba(40, 167, 69, 0.75);
+    border-color: #1e7e34;
   }
 
   .stats-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px; margin-top: 10px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px; margin-top: 12px;
   }
   .stat-box {
-    background: #f8f9fa; padding: 12px; border-radius: 8px;
+    background: #f8f9fa; padding: 10px; border-radius: 8px;
     text-align: center; border-left: 3px solid #2c5aa0;
   }
-  .stat-box .num { font-size: 22px; font-weight: 700; color: #2c5aa0; }
-  .stat-box .lbl { font-size: 11px; color: #666; margin-top: 3px; text-transform: uppercase; }
+  .stat-box .num { font-size: 20px; font-weight: 700; color: #2c5aa0; }
+  .stat-box .lbl { font-size: 10px; color: #666; margin-top: 3px; text-transform: uppercase; }
 </style>
 </head>
 <body>
@@ -191,7 +202,7 @@
   <!-- UPLOAD CARD -->
   <div class="card" id="uploadCard">
     <div class="info-banner">
-      📸 Sheet-এর ছবি তুলে upload কর। ভালো আলো, সোজা angle — কিন্তু নিখুঁত না হলেও সমস্যা নেই, পরের step-এ ঠিক করা যাবে।
+      📸 Sheet-এর ছবি তুলে upload কর। ভালো আলো, সোজা angle।
     </div>
     <div class="dropzone" id="dropzone">
       <div class="icon">📷</div>
@@ -205,12 +216,11 @@
   <div class="card" id="cornerCard" style="display:none;">
     <h3 style="color:#2c5aa0; margin-bottom:8px;">🎯 কোণা ঠিক কর</h3>
     <div class="info-banner warn">
-      ⚠️ <strong>৪টা লাল বিন্দু</strong> sheet-এর <strong>৪টা কালো কোণা marker-এর center-এ</strong> drag করে বসাও। নিখুঁত হলে detection সহজ হবে।
+      ⚠️ <strong>৪টা লাল বিন্দু</strong> sheet-এর <strong>৪টা কালো কোণা marker-এর center-এ</strong> drag করে বসাও।
     </div>
 
     <div id="canvasWrap">
       <canvas id="canvas"></canvas>
-      <!-- Handles will be inserted here by JS -->
     </div>
 
     <div style="margin-top:15px;">
@@ -224,7 +234,7 @@
   <div class="card" id="markingCard" style="display:none;">
     <h3 style="color:#2c5aa0; margin-bottom:8px;">✏️ Bubble Mark কর</h3>
     <div class="info-banner ok">
-      ✅ <strong>সবুজ</strong> = meal খেয়েছে। যেটা ভুল হয়েছে সেটা <strong>tap করে toggle</strong> কর।
+      ✅ <strong>সবুজ</strong> = meal খেয়েছে। ভুল হলে <strong>tap করে toggle</strong> কর।
     </div>
 
     <div class="legend">
@@ -233,11 +243,10 @@
     </div>
 
     <div id="markWrap" style="margin-top:12px;">
-      <canvas id="markCanvas" style="max-width:100%;"></canvas>
-      <!-- Bubble hits overlaid -->
+      <canvas id="markCanvas"></canvas>
     </div>
 
-    <div class="stats-grid" id="statsGrid" style="margin-top:15px;"></div>
+    <div class="stats-grid" id="statsGrid"></div>
 
     <div style="margin-top:15px;">
       <button class="btn-success" onclick="saveResults()" id="saveBtn">
@@ -255,20 +264,15 @@
 <script type="module">
 import {
   db, collection, getDocs, query, where, doc, getDoc,
-  addDoc, updateDoc, serverTimestamp, writeBatch
+  addDoc, updateDoc, serverTimestamp
 } from './js/firebase-init.js';
 
 // ---------- State ----------
-let students = [];          // sorted student list
+let students = [];
 let pricing = { lunchFull: 80, lunchHalf: 60, dinnerFull: 80, dinnerHalf: 60 };
-let sourceImage = null;     // HTMLImageElement
-let corners = {             // source image coords (x, y)
-  tl: { x: 0, y: 0 },
-  tr: { x: 0, y: 0 },
-  bl: { x: 0, y: 0 },
-  br: { x: 0, y: 0 }
-};
-let marking = {};           // { rollNum: { lunchFull: bool, lunchHalf, dinnerFull, dinnerHalf } }
+let sourceImage = null;
+let corners = { tl: {x:0,y:0}, tr: {x:0,y:0}, bl: {x:0,y:0}, br: {x:0,y:0} };
+let marking = {};
 let cornerHandles = [];
 let bubbleHits = [];
 
@@ -283,7 +287,6 @@ const markCanvas = document.getElementById('markCanvas');
 const canvasWrap = document.getElementById('canvasWrap');
 const markWrap = document.getElementById('markWrap');
 
-// ---------- Helpers ----------
 function showToast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -295,9 +298,7 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
-function setStatus(html) {
-  document.getElementById('statusMsg').innerHTML = html;
-}
+function setStatus(html) { document.getElementById('statusMsg').innerHTML = html; }
 
 // ---------- Init ----------
 init();
@@ -305,7 +306,6 @@ init();
 async function init() {
   const today = new Date();
   scanDate.value = today.toISOString().split('T')[0];
-
   await loadBatches();
   await loadPricing();
 }
@@ -333,15 +333,11 @@ async function loadPricing() {
     if (snap.exists()) {
       const p = snap.data();
       pricing = {
-        lunchFull: p.lunchFull ?? 80,
-        lunchHalf: p.lunchHalf ?? 60,
-        dinnerFull: p.dinnerFull ?? 80,
-        dinnerHalf: p.dinnerHalf ?? 60
+        lunchFull: p.lunchFull ?? 80, lunchHalf: p.lunchHalf ?? 60,
+        dinnerFull: p.dinnerFull ?? 80, dinnerHalf: p.dinnerHalf ?? 60
       };
     }
-  } catch (e) {
-    console.warn('Pricing not loaded, using defaults', e);
-  }
+  } catch (e) { console.warn('Pricing not loaded', e); }
 }
 
 // ---------- Upload ----------
@@ -357,17 +353,13 @@ fileInput.addEventListener('change', e => {
 });
 
 function handleFile(file) {
+  if (!batchSelect.value) return showToast('⚠️ আগে Batch select কর', 'error');
+
   const reader = new FileReader();
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
       sourceImage = img;
-
-      // Load batch students
-      if (!batchSelect.value) {
-        showToast('⚠️ আগে Batch select কর', 'error');
-        return;
-      }
       loadStudentsAndStart();
     };
     img.src = e.target.result;
@@ -385,18 +377,14 @@ async function loadStudentsAndStart() {
 
     if (students.length === 0) throw new Error('এই batch-এ কোনো student নেই');
 
-    // Init marking for each student
     marking = {};
     students.forEach(s => {
       marking[s.roll] = { lunchFull: false, lunchHalf: false, dinnerFull: false, dinnerHalf: false };
     });
 
-    // Draw canvas with image
     drawImageOnCanvas(sourceImage);
-
-    // Set default corners (image edges, slightly inset)
     const w = canvas.width, h = canvas.height;
-    const inset = 0.05;
+    const inset = 0.06;
     corners = {
       tl: { x: w * inset, y: h * inset },
       tr: { x: w * (1 - inset), y: h * inset },
@@ -430,7 +418,6 @@ function showCornerStep() {
 }
 
 function drawHandles() {
-  // Remove old handles
   cornerHandles.forEach(h => h.remove());
   cornerHandles = [];
 
@@ -450,42 +437,30 @@ function drawHandles() {
     handle.className = 'handle';
     handle.style.left = dispX + 'px';
     handle.style.top = dispY + 'px';
-    handle.dataset.key = key;
 
     const label = document.createElement('div');
     label.className = 'handle-label';
     label.textContent = key.toUpperCase();
-    label.style.left = dispX + 'px';
-    label.style.top = dispY + 'px';
-    label.style.position = 'absolute';
     handle.appendChild(label);
 
-    // Drag logic
     let dragging = false;
-    const startDrag = (e) => {
-      e.preventDefault();
-      dragging = true;
-      handle.style.background = '#ffeb3b';
-    };
+    const startDrag = (e) => { e.preventDefault(); dragging = true; handle.style.background = '#ffeb3b'; };
     const moveDrag = (e) => {
       if (!dragging) return;
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
       const px = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
       const py = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-      const imgX = px / scaleX;
-      const imgY = py / scaleY;
+      const imgX = px / (rect.width / canvas.width);
+      const imgY = py / (rect.height / canvas.height);
       corners[key] = {
         x: Math.max(0, Math.min(canvas.width, imgX)),
         y: Math.max(0, Math.min(canvas.height, imgY))
       };
-      // Update handle position
       const dispX2 = offsetX + corners[key].x * scaleX;
       const dispY2 = offsetY + corners[key].y * scaleY;
       handle.style.left = dispX2 + 'px';
       handle.style.top = dispY2 + 'px';
-      label.style.left = dispX2 + 'px';
-      label.style.top = dispY2 + 'px';
     };
     const endDrag = () => { dragging = false; handle.style.background = '#ff1744'; };
 
@@ -503,7 +478,7 @@ function drawHandles() {
 
 window.resetCorners = function() {
   const w = canvas.width, h = canvas.height;
-  const inset = 0.05;
+  const inset = 0.06;
   corners = {
     tl: { x: w * inset, y: h * inset },
     tr: { x: w * (1 - inset), y: h * inset },
@@ -518,6 +493,8 @@ window.clearAll = function() {
   corners = {};
   cornerHandles.forEach(h => h.remove());
   cornerHandles = [];
+  bubbleHits.forEach(b => b.remove());
+  bubbleHits = [];
   document.getElementById('uploadCard').style.display = 'block';
   document.getElementById('cornerCard').style.display = 'none';
   document.getElementById('markingCard').style.display = 'none';
@@ -530,13 +507,16 @@ window.confirmCorners = function() {
   document.getElementById('cornerCard').style.display = 'none';
   document.getElementById('markingCard').style.display = 'block';
   drawMarkCanvas();
-  renderBubbleGrid();
-  updateStats();
+  // Wait for layout
+  setTimeout(() => {
+    renderBubbleGrid();
+    updateStats();
+  }, 100);
 };
 
 function drawMarkCanvas() {
-  // Same size as source canvas (or slightly smaller)
-  const maxW = 900;
+  // Marking canvas at a reasonable size (max 1000px wide)
+  const maxW = 1000;
   const scale = Math.min(1, maxW / sourceImage.width);
   markCanvas.width = sourceImage.width * scale;
   markCanvas.height = sourceImage.height * scale;
@@ -544,17 +524,10 @@ function drawMarkCanvas() {
   const ctx = markCanvas.getContext('2d');
   ctx.drawImage(sourceImage, 0, 0, markCanvas.width, markCanvas.height);
 
-  // Compute the displayed corners in markCanvas coords
-  // corners are in canvas coords; convert to source coords
-  const canvasScale = canvas.width / sourceImage.width;
-  // Actually corners are stored in canvas coords, and canvas was drawn at same scale
-  // So markCanvas at same scale as canvas → reuse corners directly
-  // (because canvas.width = sourceImage.width * scale, markCanvas.width = sourceImage.width * scale)
-  // Convert to markCanvas coords via ratio
+  // Corners → markCanvas coords
   const ratioX = markCanvas.width / canvas.width;
   const ratioY = markCanvas.height / canvas.height;
 
-  // Store scaled corners for later use
   marking._corners = {
     tl: { x: corners.tl.x * ratioX, y: corners.tl.y * ratioY },
     tr: { x: corners.tr.x * ratioX, y: corners.tr.y * ratioY },
@@ -564,7 +537,7 @@ function drawMarkCanvas() {
 
   // Draw outline
   ctx.strokeStyle = '#28a745';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 3;
   const c = marking._corners;
   ctx.beginPath();
   ctx.moveTo(c.tl.x, c.tl.y);
@@ -576,52 +549,24 @@ function drawMarkCanvas() {
 }
 
 // ---------- Compute bubble positions ----------
-// Given 4 corners of sheet, compute bubble center for (rowIdx, colIdx)
-// colIdx: 0=LunchFull, 1=LunchHalf, 2=DinnerFull, 3=DinnerHalf
 function computeBubblePos(rowIdx, colIdx) {
   const c = marking._corners;
   const perPage = Number(perPageSel.value);
   const totalRows = perPage;
 
-  // Layout fractions (from sheet top-left, relative to full sheet between markers)
-  // Marker-to-marker region: markers are at 5mm from edge, size 8mm
-  // So marker centers form rectangle: (9mm, 9mm) to (201mm, 288mm) → 192mm x 279mm
-  //
-  // Table starts below header. Header occupies ~45mm from top (approx).
-  // Table top ≈ 55mm from top of sheet. In marker-rect coords: (55-9)/279 = 16.5%
-  // Row height: 6.5mm → 6.5/279 = 2.33% per row
-  //
-  // Table left: 10mm from sheet left → (10-9)/192 = 0.5%
-  // Table right: 200mm from sheet left → (200-9)/192 = 99.5%
-  //
-  // Column widths (from CSS): Roll 14mm, Name 116mm, then 4 x 15mm
-  // Table inner width: 190mm. 
-  // Meal columns (right 60mm of table):
-  //   Lunch Full: from 130mm to 145mm from table left → center at 137.5mm → 137.5/190 = 72.4%
-  //   Lunch Half: center at 152.5mm → 80.3%
-  //   Dinner Full: center at 167.5mm → 88.2%
-  //   Dinner Half: center at 182.5mm → 96.1%
-  
-  const TABLE_TOP_FRAC = 0.165;
-  const ROW_HEIGHT_FRAC = 1.0 / (totalRows + 1);  // approximate — actual row height relative to remaining area
-  
-  // More accurate: table occupies from 16.5% to ~95% (bottom margin)
-  const TABLE_TOP = 0.165;
-  const TABLE_BOTTOM = 0.955;
-  const tableHeight = TABLE_BOTTOM - TABLE_TOP;
-  const headerHeight = 0.08; // header of the table (~8% of table area)
-  const dataTop = TABLE_TOP + tableHeight * 0.03;
-  const dataBottom = TABLE_BOTTOM;
-  const dataHeight = dataBottom - dataTop;
+  // Fractions of marker-region (0..1)
+  const TABLE_TOP = 0.175;      // where first data row starts
+  const TABLE_BOTTOM = 0.960;   // where last data row ends
+  const dataHeight = TABLE_BOTTOM - TABLE_TOP;
   const rowH = dataHeight / totalRows;
-  
-  const rowY = dataTop + rowH * (rowIdx + 0.5);
 
-  const colCenters = [0.724, 0.803, 0.882, 0.961];
+  const rowY = TABLE_TOP + rowH * (rowIdx + 0.5);
+
+  // Column centers (relative to marker region width)
+  const colCenters = [0.735, 0.813, 0.891, 0.969];
   const colX = colCenters[colIdx];
 
-  // Bilinear interpolation on 4 corners
-  // TL: (0,0), TR: (1,0), BL: (0,1), BR: (1,1) in (u,v) space
+  // Bilinear interpolation
   const u = colX;
   const v = rowY;
 
@@ -638,14 +583,16 @@ function computeBubblePos(rowIdx, colIdx) {
 
 // ---------- Render clickable bubbles ----------
 function renderBubbleGrid() {
-  // Clear old
   bubbleHits.forEach(b => b.remove());
   bubbleHits = [];
 
-  const wrapRect = markWrap.getBoundingClientRect();
+  // Clear old absolutely-positioned children (keep canvas)
+  [...markWrap.children].forEach(ch => {
+    if (ch.tagName !== 'CANVAS') ch.remove();
+  });
+
+  // Get display size of the canvas
   const canvasRect = markCanvas.getBoundingClientRect();
-  const offsetX = canvasRect.left - wrapRect.left;
-  const offsetY = canvasRect.top - wrapRect.top;
   const scaleX = canvasRect.width / markCanvas.width;
   const scaleY = canvasRect.height / markCanvas.height;
 
@@ -656,8 +603,9 @@ function renderBubbleGrid() {
     if (rowIdx >= perPage) return;
     cols.forEach((col, colIdx) => {
       const pos = computeBubblePos(rowIdx, colIdx);
-      const dispX = offsetX + pos.x * scaleX;
-      const dispY = offsetY + pos.y * scaleY;
+      // Position relative to markWrap. Since canvas is top-left of markWrap:
+      const dispX = pos.x * scaleX;
+      const dispY = pos.y * scaleY;
 
       const hit = document.createElement('div');
       hit.className = 'bubble-hit';
@@ -668,7 +616,8 @@ function renderBubbleGrid() {
       hit.dataset.col = col;
       hit.title = `${s.roll} ${s.name} — ${col}`;
 
-      hit.addEventListener('click', () => {
+      hit.addEventListener('click', (e) => {
+        e.preventDefault();
         marking[s.roll][col] = !marking[s.roll][col];
         hit.classList.toggle('filled');
         updateStats();
@@ -678,29 +627,26 @@ function renderBubbleGrid() {
       bubbleHits.push(hit);
     });
   });
+
+  console.log(`Rendered ${bubbleHits.length} bubbles. Canvas: ${canvasRect.width}×${canvasRect.height}px, scale: ${scaleX.toFixed(3)}/${scaleY.toFixed(3)}`);
 }
 
 // ---------- Stats ----------
 function updateStats() {
-  let lf = 0, lh = 0, df = 0, dh = 0, total = 0;
-  Object.values(marking).forEach(m => {
-    if (typeof m !== 'object' || !m.lunchFull && m.lunchFull !== false) return;
+  let lf = 0, lh = 0, df = 0, dh = 0, ate = 0;
+  students.forEach(s => {
+    const m = marking[s.roll];
+    if (!m) return;
     if (m.lunchFull) lf++;
     if (m.lunchHalf) lh++;
     if (m.dinnerFull) df++;
     if (m.dinnerHalf) dh++;
-  });
-  students.forEach(s => {
-    const m = marking[s.roll];
-    if (!m) return;
-    if (m.lunchFull || m.lunchHalf || m.dinnerFull || m.dinnerHalf) total++;
+    if (m.lunchFull || m.lunchHalf || m.dinnerFull || m.dinnerHalf) ate++;
   });
 
-  const lfBill = lf * pricing.lunchFull;
-  const lhBill = lh * pricing.lunchHalf;
-  const dfBill = df * pricing.dinnerFull;
-  const dhBill = dh * pricing.dinnerHalf;
-  const totalBill = lfBill + lhBill + dfBill + dhBill;
+  const totalBill =
+    lf * pricing.lunchFull + lh * pricing.lunchHalf +
+    df * pricing.dinnerFull + dh * pricing.dinnerHalf;
 
   document.getElementById('statsGrid').innerHTML = `
     <div class="stat-box"><div class="num">${lf}</div><div class="lbl">Lunch Full</div></div>
@@ -708,7 +654,7 @@ function updateStats() {
     <div class="stat-box"><div class="num">${df}</div><div class="lbl">Dinner Full</div></div>
     <div class="stat-box"><div class="num">${dh}</div><div class="lbl">Dinner Half</div></div>
     <div class="stat-box" style="border-left-color:#28a745;">
-      <div class="num">${total}</div><div class="lbl">Meal খেয়েছে</div>
+      <div class="num">${ate}</div><div class="lbl">Meal খেয়েছে</div>
     </div>
     <div class="stat-box" style="border-left-color:#ff9800;">
       <div class="num">৳${totalBill}</div><div class="lbl">মোট Bill</div>
@@ -733,7 +679,6 @@ window.saveResults = async function() {
   const perPage = Number(perPageSel.value);
   const dateStr = scanDate.value;
 
-  // Build records — only students who ate
   const records = [];
   let totalBill = 0;
 
@@ -746,34 +691,25 @@ window.saveResults = async function() {
       (m.lunchHalf ? pricing.lunchHalf : 0) +
       (m.dinnerFull ? pricing.dinnerFull : 0) +
       (m.dinnerHalf ? pricing.dinnerHalf : 0);
-
     if (bill > 0) {
       records.push({
-        studentId: s.id,
-        roll: s.roll,
-        name: s.name,
-        lunchFull: m.lunchFull,
-        lunchHalf: m.lunchHalf,
-        dinnerFull: m.dinnerFull,
-        dinnerHalf: m.dinnerHalf,
+        studentId: s.id, roll: s.roll, name: s.name,
+        lunchFull: m.lunchFull, lunchHalf: m.lunchHalf,
+        dinnerFull: m.dinnerFull, dinnerHalf: m.dinnerHalf,
         bill
       });
       totalBill += bill;
     }
   });
 
-  if (records.length === 0) {
-    return showToast('⚠️ কোনো meal mark করা হয়নি', 'error');
-  }
-
-  if (!confirm(`${records.length} জনের meal save করব?\n\nমোট Bill: ৳${totalBill}\nপ্রতিটা student-এর balance থেকে কাটা হবে।`)) return;
+  if (records.length === 0) return showToast('⚠️ কোনো meal mark করা হয়নি', 'error');
+  if (!confirm(`${records.length} জনের meal save করব?\n\nমোট Bill: ৳${totalBill}`)) return;
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Save হচ্ছে...';
 
   try {
-    // Check if record already exists for this batch+date
     const existingQ = query(
       collection(db, 'mealRecords'),
       where('batchName', '==', batchSelect.value),
@@ -781,20 +717,18 @@ window.saveResults = async function() {
     );
     const existing = await getDocs(existingQ);
     if (!existing.empty) {
-      throw new Error('এই date-এর record আগেই save করা আছে');
+      if (!confirm('⚠️ এই date-এর record আগেই আছে। নতুন করে save করলে double bill হবে। চালিয়ে যাব?')) {
+        btn.disabled = false;
+        btn.innerHTML = '💾 Save কর — Bill কাটো';
+        return;
+      }
     }
 
-    // 1. Save mealRecord
     const recordRef = await addDoc(collection(db, 'mealRecords'), {
-      batchName: batchSelect.value,
-      date: dateStr,
-      perPage,
-      totalBill,
-      studentCount: records.length,
-      createdAt: serverTimestamp()
+      batchName: batchSelect.value, date: dateStr, perPage, totalBill,
+      studentCount: records.length, createdAt: serverTimestamp()
     });
 
-    // 2. Update each student's balance + save transaction
     for (const r of records) {
       const studentRef = doc(db, 'students', r.studentId);
       const studentSnap = await getDoc(studentRef);
@@ -804,34 +738,23 @@ window.saveResults = async function() {
       const newBalance = Number(sData.balance || 0) - r.bill;
       const newTotalBill = Number(sData.totalBill || 0) + r.bill;
 
-      await updateDoc(studentRef, {
-        balance: newBalance,
-        totalBill: newTotalBill
-      });
+      await updateDoc(studentRef, { balance: newBalance, totalBill: newTotalBill });
 
       await addDoc(collection(db, 'transactions'), {
-        studentId: r.studentId,
-        roll: r.roll,
-        name: r.name,
-        batchName: batchSelect.value,
-        date: dateStr,
-        type: 'meal',
-        amount: -r.bill,
+        studentId: r.studentId, roll: r.roll, name: r.name,
+        batchName: batchSelect.value, date: dateStr,
+        type: 'meal', amount: -r.bill,
         details: {
-          lunchFull: r.lunchFull,
-          lunchHalf: r.lunchHalf,
-          dinnerFull: r.dinnerFull,
-          dinnerHalf: r.dinnerHalf
+          lunchFull: r.lunchFull, lunchHalf: r.lunchHalf,
+          dinnerFull: r.dinnerFull, dinnerHalf: r.dinnerHalf
         },
-        recordId: recordRef.id,
-        createdAt: serverTimestamp()
+        recordId: recordRef.id, createdAt: serverTimestamp()
       });
     }
 
-    showToast(`✅ ${records.length} জনের meal save হয়েছে — ৳${totalBill}`, 'success');
-    setStatus(`<div class="info-banner ok">✅ Save সফল! ${records.length} জন student, মোট ৳${totalBill} bill হয়েছে।</div>`);
+    showToast(`✅ ${records.length} জন — ৳${totalBill} bill হয়েছে`, 'success');
+    setStatus(`<div class="info-banner ok">✅ Save সফল! ${records.length} জন student, মোট ৳${totalBill}</div>`);
 
-    // Reset for next scan
     setTimeout(() => {
       if (confirm('আরেকটা sheet scan করব?')) clearAll();
     }, 500);
@@ -846,7 +769,7 @@ window.saveResults = async function() {
   btn.innerHTML = '💾 Save কর — Bill কাটো';
 };
 
-// ---------- Redraw on window resize ----------
+// ---------- Redraw on resize ----------
 window.addEventListener('resize', () => {
   if (document.getElementById('cornerCard').style.display !== 'none' && cornerHandles.length) {
     drawHandles();
