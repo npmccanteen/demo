@@ -377,8 +377,8 @@ Only include a roll in the output if it has at least one filled bubble. Skip rol
   const data = await response.json();
 
   if (!response.ok) {
-    const msg = data.error?.message || `HTTP ${response.status}`;
-    dbg(`  ❌ ${msg}`);
+    dbg(`  ❌ Raw error body: ${JSON.stringify(data)}`);
+    const msg = data.error?.message || data.message || JSON.stringify(data.error || data) || `HTTP ${response.status}`;
     throw new Error(msg);
   }
 
