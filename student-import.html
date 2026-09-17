@@ -5,59 +5,145 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Student Import — Gemini AI</title>
 <style>
-  /* ... (তোর আগের CSS স্টাইল এখানে থাকবে, কিছু বদলাতে হবে না) ... */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #222; }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { color: #2c5aa0; margin-bottom: 5px; }
+  .sub { color: #666; margin-bottom: 25px; font-size: 14px; }
+  .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px; }
+  label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 14px; }
+  input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; font-family: inherit; }
+  button { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; margin-right: 8px; margin-top: 10px; transition: 0.2s; }
+  .btn-primary { background: #2c5aa0; color: white; }
+  .btn-primary:hover { background: #1e4079; }
+  .btn-primary:disabled { background: #999; cursor: not-allowed; }
+  .btn-success { background: #28a745; color: white; }
+  .btn-success:hover { background: #1e7e34; }
+  .btn-success:disabled { background: #999; cursor: not-allowed; }
+  .btn-secondary { background: #6c757d; color: white; }
+  .btn-secondary:hover { background: #5a6268; }
+  .btn-test { background: #ff9800; color: white; }
+  .btn-test:hover { background: #e68900; }
+
+  .api-status {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px; background: #fff3cd; border-left: 4px solid #ff9800;
+    border-radius: 6px; margin-bottom: 20px; font-size: 14px;
+  }
+  .api-status.ok { background: #d4edda; border-left-color: #28a745; color: #155724; }
+  .api-status.error { background: #f8d7da; border-left-color: #dc3545; color: #721c24; }
+  .api-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff9800; flex-shrink: 0; }
+  .api-status.ok .api-dot { background: #28a745; }
+  .api-status.error .api-dot { background: #dc3545; }
+  .api-status button {
+    margin: 0 0 0 auto; padding: 6px 14px; font-size: 13px;
+    background: rgba(0,0,0,0.08); color: inherit;
+  }
+
+  .dropzone {
+    border: 2px dashed #2c5aa0; border-radius: 10px;
+    padding: 50px 20px; text-align: center; cursor: pointer;
+    background: #f8faff; transition: 0.2s;
+  }
+  .dropzone:hover, .dropzone.dragover { background: #e8f0ff; border-color: #1e4079; }
+  .dropzone .icon { font-size: 42px; margin-bottom: 10px; }
+  .dropzone p { color: #2c5aa0; font-weight: 600; font-size: 16px; }
+  .dropzone small { color: #888; font-size: 13px; }
+
+  .progress-bar { height: 6px; background: #e0e0e0; border-radius: 4px; margin-top: 15px; overflow: hidden; display: none; }
+  .progress-bar > div { height: 100%; background: linear-gradient(90deg, #2c5aa0, #4a7fc1); width: 0%; transition: width 0.3s; }
+
+  .status { margin-top: 15px; font-size: 14px; color: #555; display: none; text-align: center; padding: 12px; background: #f8f9fa; border-radius: 6px; }
+  .status.active { display: block; }
+  .status.ok { background: #d4edda; color: #155724; }
+  .status.error { background: #f8d7da; color: #721c24; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 15px; }
+  th, td { border: 1px solid #e0e0e0; padding: 10px; text-align: left; }
+  th { background: #f0f4fa; font-weight: 600; color: #2c5aa0; font-size: 13px; }
+  td input { border: 1px solid transparent; padding: 6px 8px; width: 100%; background: transparent; border-radius: 4px; font-size: 14px; }
+  td input:focus { background: #fff; border-color: #2c5aa0; outline: none; }
+
+  .preview-img { max-width: 100%; border: 1px solid #ddd; border-radius: 6px; margin-top: 15px; max-height: 300px; display: block; }
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-ok { background: #d4edda; color: #155724; }
+  .badge-warn { background: #fff3cd; color: #856404; }
+  .badge-ai { background: #e0e7ff; color: #3730a3; padding: 4px 10px; font-size: 12px; }
+
+  .loading-spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid #fff; border-top-color: transparent;
+    border-radius: 50%; animation: spin 1s linear infinite;
+    margin-right: 6px; vertical-align: middle;
+  }
+  .loading-spinner.dark { border-color: #2c5aa0; border-top-color: transparent; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #333; color: white; padding: 14px 24px;
+    border-radius: 8px; font-size: 14px; display: none;
+    z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .toast.show { display: block; }
+  .toast.success { background: #28a745; }
+  .toast.error { background: #dc3545; }
+
+  .actions-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .count-text { font-size: 14px; color: #555; }
 </style>
 </head>
 <body>
 
 <div class="container">
   <h1>📋 Student List Import</h1>
-  <p class="sub">
-    ছবি বা PDF আপলোড কর — <span class="badge badge-ai">🤖 Gemini AI</span>
-  </p>
+  <p class="sub">ছবি বা PDF আপলোড কর — <span class="badge badge-ai">🤖 Gemini AI</span> নাম-রোল বের করবে</p>
 
-  <!-- API TEST SECTION -->
-  <div class="card" style="background: #fffbe6; border-left: 4px solid #ff9800;">
-    <h3 style="color: #e68900; margin-bottom: 8px;">⚡ প্রথমে এটা কর — API Test</h3>
-    <p style="font-size: 13px; color: #666; margin-bottom: 10px;">
-      API key ঠিক আছে কিনা চেক কর। এটা কাজ না করলে OCR কোনোভাবেই কাজ করবে না।
-    </p>
-    <button class="btn-test" onclick="testAPI()" id="testBtn">🧪 API Test কর</button>
-    <div class="alert-box" id="testResult"></div>
+  <!-- API Status -->
+  <div class="api-status" id="apiStatus">
+    <div class="api-dot"></div>
+    <span id="apiStatusText">API key যাচাই করা হয়নি</span>
+    <button onclick="testAPI()" id="testBtn">🧪 Test কর</button>
   </div>
 
+  <!-- Batch Name -->
   <div class="card">
     <label>Batch Name</label>
     <input type="text" id="batchName" placeholder="যেমন: Batch A, CSE-2024" />
   </div>
 
+  <!-- Upload -->
   <div class="card">
     <div class="dropzone" id="dropzone">
-      <p>📷 এখানে ছবি বা PDF ড্র্যাগ কর, নাইলে ক্লিক কর</p>
-      <small style="color:#888;">Supported: JPG, PNG, PDF</small>
+      <div class="icon">📷</div>
+      <p>এখানে ছবি বা PDF ড্র্যাগ কর</p>
+      <small>অথবা ক্লিক করে সিলেক্ট কর — JPG, PNG, PDF</small>
       <input type="file" id="fileInput" accept="image/*,.pdf" style="display:none;" />
     </div>
     <div class="progress-bar" id="progressBar"><div id="progressFill"></div></div>
     <div class="status" id="status"></div>
-    <div class="alert-box" id="mainAlert"></div>
-    <div class="log" id="log"></div>
     <img id="previewImg" class="preview-img" style="display:none;" />
   </div>
 
+  <!-- Result -->
   <div class="card" id="resultCard" style="display:none;">
-    <h3 style="margin-bottom:5px;">✏️ যাচাই করে ঠিক কর</h3>
-    <p style="color:#666; font-size:13px; margin-bottom:10px;">AI যা বের করেছে — চেক কর, ভুল থাকলে edit কর।</p>
+    <div class="actions-row">
+      <h3>✏️ যাচাই করে ঠিক কর</h3>
+      <span class="count-text" id="countBadge">মোট: 0 জন</span>
+    </div>
+    <p style="color:#666; font-size:13px; margin-bottom:10px;">
+      AI যা বের করেছে — চেক কর, ভুল থাকলে edit কর।
+    </p>
     <div style="margin-bottom:10px;">
       <button class="btn-secondary" onclick="addEmptyRow()">+ নতুন Row</button>
-      <span id="countBadge" style="margin-left:10px; font-size:13px; color:#555;"></span>
     </div>
     <table id="studentTable">
       <thead>
         <tr>
-          <th style="width:40px;">#</th>
-          <th style="width:120px;">Roll</th>
+          <th style="width:50px;">#</th>
+          <th style="width:130px;">Roll</th>
           <th>Name</th>
-          <th style="width:60px;">Action</th>
+          <th style="width:70px;">Action</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -67,12 +153,9 @@
     </div>
     <div id="saveStatus" style="margin-top:12px; font-size:14px;"></div>
   </div>
-
-  <div class="card" id="rawCard" style="display:none;">
-    <label>🔍 Raw Gemini Response (debugging)</label>
-    <textarea id="rawResponse" rows="6" readonly></textarea>
-  </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
@@ -90,114 +173,78 @@ const fileInput = document.getElementById('fileInput');
 const progressBar = document.getElementById('progressBar');
 const progressFill = document.getElementById('progressFill');
 const statusEl = document.getElementById('status');
-const logEl = document.getElementById('log');
 const previewImg = document.getElementById('previewImg');
 const resultCard = document.getElementById('resultCard');
-const mainAlert = document.getElementById('mainAlert');
-const testResult = document.getElementById('testResult');
-const rawCard = document.getElementById('rawCard');
-const rawResponse = document.getElementById('rawResponse');
+const apiStatus = document.getElementById('apiStatus');
+const apiStatusText = document.getElementById('apiStatusText');
+const testBtn = document.getElementById('testBtn');
 
 // ---------- Helpers ----------
-function log(msg, type) {
-  logEl.style.display = 'block';
-  const cls = type ? `log-${type}` : '';
-  logEl.innerHTML += `<span class="${cls}">${escapeHtml(msg)}</span>\n`;
-  logEl.scrollTop = logEl.scrollHeight;
-  console.log(msg);
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
-function setStatus(msg, loading) {
-  statusEl.style.display = 'block';
-  statusEl.innerHTML = (loading ? '<span class="loading-spinner" style="border-color:#2c5aa0;border-top-color:transparent;"></span>' : '') + msg;
+function setStatus(msg, type) {
+  statusEl.className = 'status active ' + (type || '');
+  statusEl.innerHTML = msg;
 }
+function hideStatus() { statusEl.className = 'status'; }
 function setProgress(pct) {
   progressBar.style.display = 'block';
   progressFill.style.width = pct + '%';
 }
-function showAlert(el, msg, type) {
-  el.style.display = 'block';
-  el.className = 'alert-box alert-' + type;
-  el.innerHTML = msg;
-}
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, c =>
-    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+function hideProgress() { progressBar.style.display = 'none'; }
+
+let toastTimer;
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
 // ==========================================================
 // 🧪 API TEST
 // ==========================================================
 window.testAPI = async function() {
-  const btn = document.getElementById('testBtn');
-  btn.disabled = true;
-  btn.textContent = 'টেস্ট চলছে...';
-  testResult.style.display = 'none';
+  testBtn.disabled = true;
+  testBtn.innerHTML = '<span class="loading-spinner dark" style="width:12px;height:12px;"></span>Testing';
 
   try {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'PASTE_YOUR_GEMINI_API_KEY_HERE') {
-      throw new Error('API key সেট করা হয়নি! firebase-config.js এ GEMINI_API_KEY বসা।');
-    }
+    if (!GEMINI_API_KEY) throw new Error('API key নেই');
 
-    log('=== API Test শুরু ===');
-    log(`Key prefix: ${GEMINI_API_KEY.substring(0, 12)}...`);
-
-    // ✅ নতুন মডেল: gemini-3.6-flash
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent';
-
-    const body = {
-      contents: [{ parts: [{ text: "Reply with exactly this text: OK" }] }]
-    };
-
-    log('Request পাঠানো হচ্ছে...');
-
-    // ✅ নতুন কী-এর জন্য সঠিক হেডার: x-goog-api-key
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-goog-api-key': GEMINI_API_KEY
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: "Reply with: OK" }] }]
+      })
     });
 
-    log(`Response status: ${res.status} ${res.statusText}`);
-
     const data = await res.json();
-    log(`Response: ${JSON.stringify(data).slice(0, 300)}`);
+    if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
 
-    if (!res.ok) {
-      const errMsg = data.error?.message || JSON.stringify(data);
-      throw new Error(`HTTP ${res.status}: ${errMsg}`);
-    }
-
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    log(`✅ Response text: "${text}"`, 'ok');
-
-    showAlert(testResult,
-      `✅ <strong>API কাজ করছে!</strong><br>` +
-      `Model: <code>gemini-3.6-flash</code><br>` +
-      `Response: <code>${escapeHtml(text)}</code>`,
-      'success'
-    );
-    log('=== API Test সফল ===', 'ok');
+    apiStatus.className = 'api-status ok';
+    apiStatusText.textContent = '✅ API কাজ করছে (gemini-3.6-flash)';
+    testBtn.style.display = 'none';
+    showToast('✅ API সফলভাবে যাচাই হয়েছে', 'success');
 
   } catch (e) {
-    log(`❌ API Test failed: ${e.message}`, 'error');
-    showAlert(testResult,
-      `❌ <strong>API কাজ করছে না!</strong><br>` +
-      `<strong>Error:</strong> ${escapeHtml(e.message)}<br><br>` +
-      `<strong>সমাধান:</strong><br>` +
-      `১. <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> এ গিয়ে নতুন key নে<br>` +
-      `২. firebase-config.js এ key টা সঠিকভাবে বসা<br>` +
-      `৩. Page টা refresh কর (Ctrl+F5)<br>` +
-      `৪. Browser Console (F12) এ পুরো error দেখ`,
-      'error'
-    );
+    apiStatus.className = 'api-status error';
+    apiStatusText.textContent = '❌ ' + e.message;
+    showToast('❌ API Test ব্যর্থ', 'error');
+    testBtn.disabled = false;
+    testBtn.textContent = 'আবার Test কর';
   }
-
-  btn.disabled = false;
-  btn.textContent = '🧪 API Test কর';
 };
+
+// Auto-test on load
+testAPI();
 
 // ==========================================================
 // Upload handling
@@ -217,19 +264,9 @@ fileInput.addEventListener('change', e => {
 // Main flow
 // ==========================================================
 async function handleFile(file) {
-  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'PASTE_YOUR_GEMINI_API_KEY_HERE') {
-    showAlert(mainAlert, '⚠️ প্রথমে firebase-config.js এ Gemini API key বসা।', 'error');
-    return;
-  }
-
-  logEl.textContent = '';
-  logEl.style.display = 'none';
   resultCard.style.display = 'none';
-  rawCard.style.display = 'none';
-  mainAlert.style.display = 'none';
-  setProgress(0);
-
-  log(`📁 File: ${file.name} (${file.type}, ${(file.size/1024).toFixed(0)} KB)`);
+  hideProgress();
+  previewImg.style.display = 'none';
 
   try {
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
@@ -241,38 +278,36 @@ async function handleFile(file) {
     }
   } catch (e) {
     console.error(e);
-    setStatus('❌ ' + e.message);
-    showAlert(mainAlert, `❌ <strong>সমস্যা:</strong> ${escapeHtml(e.message)}`, 'error');
-    log(`❌ ${e.message}`, 'error');
+    setStatus('❌ ' + e.message, 'error');
+    showToast('❌ ' + e.message, 'error');
   }
 }
 
 async function processImage(file) {
-  setStatus('ছবি পড়া হচ্ছে...', true);
+  setStatus('ছবি প্রস্তুত হচ্ছে...', '');
   previewImg.src = URL.createObjectURL(file);
   previewImg.style.display = 'block';
 
   const base64 = await fileToBase64(file);
-  log(`✅ Base64 ready (${(base64.length/1024).toFixed(0)} KB)`);
-  setProgress(30);
+  setProgress(20);
 
   const students = await callGemini(base64, file.type);
   setProgress(100);
-  setStatus(`✅ ${students.length} জন পাওয়া গেছে!`);
+  setStatus(`✅ ${students.length} জন পাওয়া গেছে!`, 'ok');
   renderTable(students);
   resultCard.style.display = 'block';
+  showToast(`✅ ${students.length} জন স্টুডেন্ট পাওয়া গেছে`, 'success');
 }
 
 async function processPDF(file) {
-  setStatus('PDF লোড হচ্ছে...', true);
+  setStatus('PDF লোড হচ্ছে...', '');
   const buf = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-  log(`📄 PDF-এ ${pdf.numPages} page`);
 
   let allStudents = [];
 
   for (let p = 1; p <= pdf.numPages; p++) {
-    setStatus(`Page ${p}/${pdf.numPages} — AI পড়ছে...`, true);
+    setStatus(`Page ${p}/${pdf.numPages} — AI পড়ছে...`, '');
     setProgress(Math.round((p - 1) / pdf.numPages * 100));
 
     const page = await pdf.getPage(p);
@@ -290,7 +325,6 @@ async function processPDF(file) {
 
     const base64 = canvas.toDataURL('image/png').split(',')[1];
     const students = await callGemini(base64, 'image/png');
-    log(`✅ Page ${p}: ${students.length} জন`, 'ok');
     allStudents = allStudents.concat(students);
   }
 
@@ -302,9 +336,10 @@ async function processPDF(file) {
   });
 
   setProgress(100);
-  setStatus(`✅ ${allStudents.length} জন পাওয়া গেছে!`);
+  setStatus(`✅ ${allStudents.length} জন পাওয়া গেছে!`, 'ok');
   renderTable(allStudents);
   resultCard.style.display = 'block';
+  showToast(`✅ ${allStudents.length} জন স্টুডেন্ট পাওয়া গেছে`, 'success');
 }
 
 function fileToBase64(file) {
@@ -317,14 +352,9 @@ function fileToBase64(file) {
 }
 
 // ==========================================================
-// Gemini API — Multiple model fallback
+// Gemini API
 // ==========================================================
-const MODELS = [
-  'gemini-3.6-flash',           // ✅ নতুন (recommended)
-  'gemini-flash-latest',        // alias — সবসময় latest দেয়
-  'gemini-2.5-flash',           // পুরনো (fallback)
-  'gemini-2.0-flash'            // আরো পুরনো (fallback)
-];
+const MODELS = ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
 
 async function callGemini(base64Data, mimeType) {
   const prompt = `You are an expert OCR assistant. Analyze the attached image of a student list.
@@ -342,50 +372,37 @@ Rules:
 
   for (const model of MODELS) {
     try {
-      log(`🤖 Trying model: ${model}`);
-
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-
-      const body = {
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inline_data: { mime_type: mimeType, data: base64Data } }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.1,
-          responseMimeType: "application/json"
-        }
-      };
-
       const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-goog-api-key': GEMINI_API_KEY
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: mimeType, data: base64Data } }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: "application/json"
+          }
+        })
       });
-
-      log(`   Status: ${res.status}`);
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        const msg = errData.error?.message || `HTTP ${res.status}`;
-        log(`   ❌ ${msg}`, 'error');
-        lastError = new Error(msg);
-        continue; // try next model
+        lastError = new Error(errData.error?.message || `HTTP ${res.status}`);
+        continue;
       }
 
       const data = await res.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      log(`   📥 Response: ${text.length} chars`, 'ok');
 
-      rawResponse.value = text;
-      rawCard.style.display = 'block';
-
-      let cleaned = text.trim()
+      const cleaned = text.trim()
         .replace(/^```json\s*/i, '')
         .replace(/^```\s*/, '')
         .replace(/\s*```$/, '');
@@ -393,21 +410,17 @@ Rules:
       const parsed = JSON.parse(cleaned);
       if (!Array.isArray(parsed)) throw new Error('Response is not an array');
 
-      const students = parsed.map(s => ({
+      return parsed.map(s => ({
         roll: String(s.roll || '').trim(),
         name: String(s.name || '').trim()
       })).filter(s => s.roll && s.name);
 
-      log(`   ✅ ${students.length} students extracted`, 'ok');
-      return students;
-
     } catch (e) {
-      log(`   ❌ Model ${model} failed: ${e.message}`, 'error');
       lastError = e;
     }
   }
 
-  throw new Error(`সব model fail করেছে। শেষ error: ${lastError?.message || 'Unknown'}`);
+  throw new Error(lastError?.message || 'AI response পাওয়া যায়নি');
 }
 
 // ==========================================================
@@ -420,11 +433,11 @@ function renderTable(students) {
   students.forEach((s, i) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="text-align:center;">${i + 1}</td>
+      <td style="text-align:center; color:#888;">${i + 1}</td>
       <td><input type="text" value="${escapeHtml(s.roll)}" data-field="roll"></td>
       <td><input type="text" value="${escapeHtml(s.name)}" data-field="name"></td>
       <td style="text-align:center;">
-        <button style="background:#dc3545;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;"
+        <button style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;"
           onclick="this.closest('tr').remove(); updateCount();">✕</button>
       </td>`;
     tbody.appendChild(tr);
@@ -441,11 +454,11 @@ window.addEmptyRow = function() {
   const tbody = document.querySelector('#studentTable tbody');
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td style="text-align:center;">${tbody.children.length + 1}</td>
+    <td style="text-align:center; color:#888;">${tbody.children.length + 1}</td>
     <td><input type="text" value="" data-field="roll"></td>
     <td><input type="text" value="" data-field="name"></td>
     <td style="text-align:center;">
-      <button style="background:#dc3545;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;"
+      <button style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;"
         onclick="this.closest('tr').remove(); updateCount();">✕</button>
     </td>`;
   tbody.appendChild(tr);
@@ -457,10 +470,10 @@ window.addEmptyRow = function() {
 // ==========================================================
 window.saveToFirestore = async function() {
   const batchName = document.getElementById('batchName').value.trim();
-  if (!batchName) return alert('Batch Name দে');
+  if (!batchName) return showToast('⚠️ Batch Name দে', 'error');
 
   const rows = document.querySelectorAll('#studentTable tbody tr');
-  if (rows.length === 0) return alert('কোনো স্টুডেন্ট নেই');
+  if (rows.length === 0) return showToast('⚠️ কোনো স্টুডেন্ট নেই', 'error');
 
   const students = [];
   for (const tr of rows) {
@@ -470,7 +483,7 @@ window.saveToFirestore = async function() {
     students.push({ roll, name });
   }
 
-  if (students.length === 0) return alert('সব row খালি');
+  if (students.length === 0) return showToast('⚠️ সব row খালি', 'error');
   if (!confirm(`${students.length} জন স্টুডেন্ট সেভ করব — batch "${batchName}"?`)) return;
 
   const btn = document.getElementById('saveBtn');
@@ -487,7 +500,7 @@ window.saveToFirestore = async function() {
         where('batchName', '==', batchName),
         where('roll', '==', s.roll)
       ));
-      if (!dup.empty) { skipped++; log(`⚠️ Duplicate: ${s.roll}`); continue; }
+      if (!dup.empty) { skipped++; continue; }
 
       await addDoc(collection(db, 'students'), {
         roll: s.roll, name: s.name, batchName: batchName,
@@ -496,7 +509,7 @@ window.saveToFirestore = async function() {
       success++;
       saveStatus.textContent = `Progress: ${success}/${students.length}`;
     } catch (e) {
-      log(`❌ Save error on ${s.roll}: ${e.message}`, 'error');
+      console.error('Save error', e);
     }
   }
 
@@ -504,6 +517,7 @@ window.saveToFirestore = async function() {
   btn.textContent = '💾 Firestore-এ Save কর';
   saveStatus.innerHTML = `<span class="badge badge-ok">✅ ${success} জন সেভ হয়েছে</span>` +
     (skipped ? ` <span class="badge badge-warn">⚠️ ${skipped} ডুপ্লিকেট বাদ</span>` : '');
+  showToast(`✅ ${success} জন সেভ হয়েছে`, 'success');
 };
 </script>
 
