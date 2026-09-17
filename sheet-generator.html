@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sheet Generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #222; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  h1 { color: #2c5aa0; margin-bottom: 5px; }
+  .sub { color: #666; margin-bottom: 25px; font-size: 14px; }
+
+  .card {
+    background: white; padding: 25px; border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px;
+  }
+  .row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .col { flex: 1; min-width: 220px; }
+  label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 14px; }
+  input[type="text"], input[type="month"], input[type="date"], select {
+    width: 100%; padding: 11px 14px; border: 1.5px solid #ddd;
+    border-radius: 8px; font-size: 15px; font-family: inherit;
+    transition: 0.2s;
+  }
+  input:focus, select:focus { border-color: #2c5aa0; outline: none; }
+
+  button {
+    padding: 12px 24px; border: none; border-radius: 8px;
+    cursor: pointer; font-size: 14px; font-weight: 600;
+    margin-right: 8px; margin-top: 10px; transition: 0.2s;
+  }
+  .btn-primary { background: #2c5aa0; color: white; }
+  .btn-primary:hover { background: #1e4079; }
+  .btn-primary:disabled { background: #999; cursor: not-allowed; }
+  .btn-success { background: #28a745; color: white; }
+  .btn-success:hover { background: #1e7e34; }
+  .btn-secondary { background: #6c757d; color: white; }
+  .btn-secondary:hover { background: #5a6268; }
+
+  .mode-tabs {
+    display: flex; gap: 5px; margin-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+  }
+  .mode-tab {
+    padding: 12px 22px; background: transparent; border: none;
+    cursor: pointer; font-size: 14px; font-weight: 600;
+    color: #666; border-bottom: 3px solid transparent;
+    margin: 0; border-radius: 0;
+  }
+  .mode-tab.active { color: #2c5aa0; border-bottom-color: #2c5aa0; }
+
+  .info-banner {
+    padding: 12px 16px; border-radius: 8px; margin-bottom: 15px;
+    font-size: 13px; background: #e7f3ff;
+    border-left: 4px solid #2c5aa0; color: #004085;
+  }
+  .info-banner.warn { background: #fff3cd; border-left-color: #ff9800; color: #856404; }
+  .info-banner.ok { background: #d4edda; border-left-color: #28a745; color: #155724; }
+
+  .loading { text-align: center; padding: 40px; color: #666; }
+  .spinner {
+    display: inline-block; width: 20px; height: 20px;
+    border: 2px solid #e0e0e0; border-top-color: #2c5aa0;
+    border-radius: 50%; animation: spin 1s linear infinite;
+    margin-right: 8px; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* =====================================================
+     SHEET PREVIEW — A4 size scaled down
+     ===================================================== */
+  .preview-area {
+    background: #e9ecef; padding: 20px;
+    border-radius: 10px; max-height: 800px; overflow-y: auto;
+  }
+  .sheet-page {
+    width: 210mm; min-height: 297mm;
+    background: white; margin: 0 auto 20px;
+    padding: 10mm; position: relative;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    page-break-after: always;
+    font-family: Arial, sans-serif;
+  }
+
+  /* Corner markers for CV detection */
+  .marker {
+    position: absolute; width: 8mm; height: 8mm;
+    background: black;
+  }
+  .marker::after {
+    content: ''; position: absolute;
+    top: 2mm; left: 2mm; width: 4mm; height: 4mm;
+    background: white;
+  }
+  .marker.tl { top: 5mm; left: 5mm; }
+  .marker.tr { top: 5mm; right: 5mm; }
+  .marker.bl { bottom: 5mm; left: 5mm; }
+  .marker.br { bottom: 5mm; right: 5mm; }
+
+  .sheet-header {
+    text-align: center; margin: 8mm 0 4mm;
+    font-size: 14pt; font-weight: 700;
+  }
+  .sheet-meta {
+    text-align: center; font-size: 9pt;
+    margin-bottom: 4mm; color: #333;
+  }
+  .sheet-id {
+    text-align: right; font-size: 8pt;
+    margin-bottom: 2mm; color: #666;
+    font-family: 'Courier New', monospace;
+  }
+
+  .sheet-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  .sheet-table th, .sheet-table td {
+    border: 0.3mm solid #333;
+    padding: 0.8mm 1.5mm; text-align: center;
+    height: 6.5mm;
+  }
+  .sheet-table th {
+    background: #e8e8e8; font-size: 8pt;
+    font-weight: 700; line-height: 1.1;
+  }
+  .sheet-table .name-cell { text-align: left; padding-left: 2mm; }
+  .sheet-table .roll-cell {
+    text-align: center; font-family: 'Courier New', monospace;
+    font-weight: 700; width: 14mm;
+  }
+  .bubble {
+    display: inline-block; width: 4.5mm; height: 4.5mm;
+    border: 0.4mm solid #000; border-radius: 50%;
+  }
+
+  /* =====================================================
+     PRINT STYLES
+     ===================================================== */
+  @media print {
+    body { background: white; padding: 0; }
+    .container > *:not(.preview-area) { display: none !important; }
+    .preview-area { background: white; padding: 0; max-height: none; overflow: visible; }
+    .sheet-page {
+      margin: 0; padding: 8mm;
+      box-shadow: none; page-break-after: always;
+      width: 100%; min-height: auto;
+    }
+    .sheet-page:last-child { page-break-after: auto; }
+    .marker { background: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .sheet-table th { background: #e8e8e8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { size: A4; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>📄 Sheet Generator</h1>
+  <p class="sub">Batch-এর জন্য দৈনিক meal sheet বানাও — প্রিন্ট কর, canteen malik ব্যবহার করবে</p>
+
+  <!-- CONFIG CARD -->
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <label>Batch Name</label>
+        <select id="batchSelect">
+          <option value="">লোড হচ্ছে...</option>
+        </select>
+      </div>
+      <div class="col">
+        <label>Students per page</label>
+        <select id="perPage">
+          <option value="30">30 (comfortable)</option>
+          <option value="40" selected>40 (recommended)</option>
+          <option value="45">45 (dense)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- MODE TABS -->
+    <div style="margin-top:15px;">
+      <div class="mode-tabs">
+        <button class="mode-tab active" onclick="switchMode('day', event)">📅 একটা দিন</button>
+        <button class="mode-tab" onclick="switchMode('month', event)">🗓️ পুরো মাস</button>
+      </div>
+
+      <div id="modeDay">
+        <div class="row">
+          <div class="col">
+            <label>Date</label>
+            <input type="date" id="singleDate" />
+          </div>
+        </div>
+      </div>
+
+      <div id="modeMonth" style="display:none;">
+        <div class="row">
+          <div class="col">
+            <label>Month</label>
+            <input type="month" id="monthRange" />
+          </div>
+        </div>
+        <div class="info-banner" style="margin-top:12px;">
+          ⚠️ পুরো মাসের sheet একসাথে প্রিন্ট করলে <strong>কয়েকশো পৃষ্ঠা</strong> হতে পারে। একসাথে ৫-৭ দিনের বেশি না দেয়া ভালো।
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <button class="btn-primary" onclick="generatePreview()" id="genBtn">
+        🔨 Sheet বানাও
+      </button>
+      <button class="btn-success" onclick="printSheets()" id="printBtn" disabled>
+        🖨️ Print কর
+      </button>
+      <button class="btn-secondary" onclick="clearPreview()">🧹 Clear</button>
+    </div>
+
+    <div id="statusMsg" style="margin-top:15px;"></div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="card" id="previewCard" style="display:none;">
+    <h3 style="margin-bottom:12px; color:#2c5aa0;">👀 Preview</h3>
+    <div class="preview-area" id="previewArea"></div>
+  </div>
+</div>
+
+<script type="module">
+import { db, collection, getDocs, query, where } from './js/firebase-init.js';
+
+// ---------- Elements ----------
+const batchSelect = document.getElementById('batchSelect');
+const perPageSel = document.getElementById('perPage');
+const statusMsg = document.getElementById('statusMsg');
+const previewCard = document.getElementById('previewCard');
+const previewArea = document.getElementById('previewArea');
+const printBtn = document.getElementById('printBtn');
+
+let loadedStudents = [];
+let currentMode = 'day';
+
+// ---------- Init ----------
+init();
+
+async function init() {
+  // Default date = today
+  const today = new Date();
+  document.getElementById('singleDate').value =
+    today.toISOString().split('T')[0];
+
+  // Default month = current
+  const yyyymm = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  document.getElementById('monthRange').value = yyyymm;
+
+  await loadBatches();
+}
+
+async function loadBatches() {
+  try {
+    const snap = await getDocs(collection(db, 'students'));
+    const batches = [...new Set(snap.docs.map(d => d.data().batchName).filter(Boolean))].sort();
+
+    if (batches.length === 0) {
+      batchSelect.innerHTML = '<option value="">— কোনো batch নেই — Student Import কর —</option>';
+      return;
+    }
+
+    batchSelect.innerHTML = '<option value="">— Batch select কর —</option>' +
+      batches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+  } catch (e) {
+    console.error(e);
+    statusMsg.innerHTML = `<div class="info-banner warn">❌ Batch লোড হয়নি: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// ---------- Mode switching ----------
+window.switchMode = function(mode, event) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('modeDay').style.display = mode === 'day' ? 'block' : 'none';
+  document.getElementById('modeMonth').style.display = mode === 'month' ? 'block' : 'none';
+};
+
+// ---------- Generate Preview ----------
+window.generatePreview = async function() {
+  const batch = batchSelect.value;
+  if (!batch) {
+    statusMsg.innerHTML = '<div class="info-banner warn">⚠️ আগে Batch select কর</div>';
+    return;
+  }
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>লোড হচ্ছে...';
+
+  try {
+    // Fetch students for batch
+    const q = query(collection(db, 'students'), where('batchName', '==', batch));
+    const snap = await getDocs(q);
+
+    loadedStudents = snap.docs
+      .map(d => d.data())
+      .sort((a, b) => String(a.roll).localeCompare(String(b.roll), undefined, { numeric: true }));
+
+    if (loadedStudents.length === 0) {
+      throw new Error('এই batch-এ কোনো student নেই');
+    }
+
+    // Determine dates to generate
+    let dates = [];
+    if (currentMode === 'day') {
+      const d = document.getElementById('singleDate').value;
+      if (!d) throw new Error('Date select কর');
+      dates = [d];
+    } else {
+      const m = document.getElementById('monthRange').value;
+      if (!m) throw new Error('Month select কর');
+      const [year, month] = m.split('-').map(Number);
+      const days = new Date(year, month, 0).getDate();
+      for (let i = 1; i <= days; i++) {
+        dates.push(`${year}-${String(month).padStart(2, '0')}-${String(i).padStart(2, '0')}`);
+      }
+    }
+
+    // Build preview
+    previewArea.innerHTML = '';
+    const perPage = Number(perPageSel.value);
+    const pagesPerDay = Math.ceil(loadedStudents.length / perPage);
+    const totalSheets = dates.length * pagesPerDay;
+
+    for (const date of dates) {
+      for (let p = 0; p < pagesPerDay; p++) {
+        const slice = loadedStudents.slice(p * perPage, (p + 1) * perPage);
+        const page = makePage(batch, date, slice, p + 1, pagesPerDay);
+        previewArea.appendChild(page);
+      }
+    }
+
+    previewCard.style.display = 'block';
+    printBtn.disabled = false;
+    statusMsg.innerHTML = `<div class="info-banner ok">
+      ✅ <strong>${loadedStudents.length}</strong> student × <strong>${dates.length}</strong> দিন × <strong>${pagesPerDay}</strong> page = <strong>${totalSheets}</strong> sheet তৈরি হয়েছে
+    </div>`;
+
+    previewCard.scrollIntoView({ behavior: 'smooth' });
+
+  } catch (e) {
+    console.error(e);
+    statusMsg.innerHTML = `<div class="info-banner warn">❌ ${escapeHtml(e.message)}</div>`;
+    previewCard.style.display = 'none';
+    printBtn.disabled = true;
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '🔨 Sheet বানাও';
+};
+
+// ---------- Make one page ----------
+function makePage(batch, date, students, pageNum, totalPages) {
+  const div = document.createElement('div');
+  div.className = 'sheet-page';
+
+  const d = new Date(date + 'T00:00:00');
+  const dateStr = d.toLocaleDateString('en-GB', {
+    weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
+  });
+
+  // Sheet ID for later OMR recognition
+  const sheetId = `${date}-P${pageNum}`;
+
+  // Table rows
+  let rowsHtml = '';
+  students.forEach(s => {
+    rowsHtml += `
+      <tr>
+        <td class="roll-cell">${escapeHtml(s.roll)}</td>
+        <td class="name-cell">${escapeHtml(s.name)}</td>
+        <td><span class="bubble"></span></td>
+        <td><span class="bubble"></span></td>
+        <td><span class="bubble"></span></td>
+        <td><span class="bubble"></span></td>
+      </tr>`;
+  });
+
+  // Fill empty rows if less than perPage (for consistent grid)
+  const perPage = Number(perPageSel.value);
+  for (let i = students.length; i < perPage; i++) {
+    rowsHtml += `
+      <tr>
+        <td class="roll-cell">—</td>
+        <td class="name-cell">—</td>
+        <td><span class="bubble"></span></td>
+        <td><span class="bubble"></span></td>
+        <td><span class="bubble"></span></td>
+        <td><span class="bubble"></span></td>
+      </tr>`;
+  }
+
+  div.innerHTML = `
+    <div class="marker tl"></div>
+    <div class="marker tr"></div>
+    <div class="marker bl"></div>
+    <div class="marker br"></div>
+
+    <div class="sheet-header">${escapeHtml(batch)} — Daily Meal Sheet</div>
+    <div class="sheet-meta">Date: ${dateStr} | Page ${pageNum}/${totalPages}</div>
+    <div class="sheet-id">ID: ${sheetId}</div>
+
+    <table class="sheet-table">
+      <thead>
+        <tr>
+          <th style="width:14mm;">Roll</th>
+          <th>Name</th>
+          <th style="width:15mm;">Lunch<br>Full</th>
+          <th style="width:15mm;">Lunch<br>Half</th>
+          <th style="width:15mm;">Dinner<br>Full</th>
+          <th style="width:15mm;">Dinner<br>Half</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  `;
+
+  return div;
+}
+
+// ---------- Print ----------
+window.printSheets = function() {
+  window.print();
+};
+
+// ---------- Clear ----------
+window.clearPreview = function() {
+  previewArea.innerHTML = '';
+  previewCard.style.display = 'none';
+  printBtn.disabled = true;
+  statusMsg.innerHTML = '';
+  loadedStudents = [];
+};
+</script>
+
+</body>
+</html>
