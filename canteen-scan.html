@@ -2,8 +2,11 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Canteen Scan — AI Vision</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2c5aa0">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 15px; color: #222; }
@@ -72,7 +75,7 @@
 
   .ai-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
 
-  .page-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .page-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; padding-right: 60px; }
 </style>
 </head>
 <body>
@@ -176,10 +179,13 @@ import {
 } from './js/firebase-init.js';
 import { OPENROUTER_API_KEY } from './firebase-config.js';
 import { requireAdmin, adminLogout } from './js/admin-auth.js';
+import { createNotification, mountNotificationBell, requestBrowserNotificationPermission } from './js/notifications.js';
+import { initPWA } from './js/pwa.js';
 
 // ⭐ Require admin authentication
 await requireAdmin();
 window.doAdminLogout = adminLogout;
+initPWA();
 
 const OPENROUTER_MODEL = 'openrouter/free';
 
@@ -228,6 +234,13 @@ init();
 async function init() {
   scanDate.value = todayStr();
   await loadPricing();
+
+  // ⭐ Mount admin notification bell
+  mountNotificationBell({
+    recipientType: 'admin',
+    recipientId: 'ALL_ADMINS'
+  });
+  requestBrowserNotificationPermission();
 }
 
 async function loadPricing() {
@@ -528,15 +541,20 @@ window.saveResults = async function() {
       createdAt: serverTimestamp()
     });
 
+    let notifCount = 0;
+
     for (const r of records) {
       const studentRef = doc(db, 'students', r.studentId);
       const studentSnap = await getDoc(studentRef);
       if (!studentSnap.exists()) continue;
       const sData = studentSnap.data();
+      const newBal = Number(sData.balance || 0) - r.bill;
+
       await updateDoc(studentRef, {
-        balance: Number(sData.balance || 0) - r.bill,
+        balance: newBal,
         totalBill: Number(sData.totalBill || 0) + r.bill
       });
+
       await addDoc(collection(db, 'transactions'), {
         studentId: r.studentId, roll: r.roll, name: r.name,
         batchName, date: dateStr, type: 'meal', amount: -r.bill,
@@ -544,10 +562,66 @@ window.saveResults = async function() {
                    dinnerFull: r.dinnerFull, dinnerHalf: r.dinnerHalf },
         recordId: recordRef.id, createdAt: serverTimestamp()
       });
+
+      // ⭐ Meal notification to student
+      const mealDetails = [];
+      if (r.lunchFull) mealDetails.push('Lunch Full');
+      if (r.lunchHalf) mealDetails.push('Lunch Half');
+      if (r.dinnerFull) mealDetails.push('Dinner Full');
+      if (r.dinnerHalf) mealDetails.push('Dinner Half');
+
+      await createNotification({
+        recipientType: 'student',
+        recipientId: r.studentId,
+        type: 'meal_added',
+        title: '🍽️ Meal Added',
+        body: `${dateStr}: ${mealDetails.join(', ')} — Bill: ৳${r.bill}\nনতুন Balance: ৳${newBal}`,
+        link: 'student-dashboard.html',
+        priority: 'normal'
+      });
+      notifCount++;
+
+      // ⭐ Balance alerts
+      if (newBal < 0) {
+        await createNotification({
+          recipientType: 'student',
+          recipientId: r.studentId,
+          type: 'negative_balance',
+          title: '🚨 Balance Negative!',
+          body: `তোমার balance ৳${newBal} হয়ে গেছে। দ্রুত Admin-এর সাথে যোগাযোগ কর।`,
+          priority: 'urgent'
+        });
+        // Also alert admin
+        await createNotification({
+          recipientType: 'admin',
+          recipientId: 'ALL_ADMINS',
+          type: 'negative_balance',
+          title: `🚨 ${r.roll} — Negative Balance`,
+          body: `${r.name}-এর balance ৳${newBal}`,
+          link: 'admin/dashboard.html',
+          priority: 'high'
+        });
+      } else if (newBal < 500) {
+        await createNotification({
+          recipientType: 'student',
+          recipientId: r.studentId,
+          type: 'low_balance',
+          title: '⚠️ Low Balance',
+          body: `তোমার balance ৳${newBal}। দ্রুত deposit কর।`,
+          priority: 'high'
+        });
+      }
     }
 
-    showToast(`✅ ${records.length} জন — ৳${totalBill}`, 'success');
-    document.getElementById('statusMsg').innerHTML = `<div class="info-banner ok">✅ Save সফল! ${records.length} জন, মোট ৳${totalBill}</div>`;
+    // ⭐ Audit log
+    await addDoc(collection(db, 'adminLogs'), {
+      action: 'meal_scan',
+      details: { date: dateStr, batchName, studentCount: records.length, totalBill },
+      timestamp: serverTimestamp()
+    });
+
+    showToast(`✅ ${records.length} জন — ৳${totalBill} (${notifCount}টি notification পাঠানো হয়েছে)`, 'success');
+    document.getElementById('statusMsg').innerHTML = `<div class="info-banner ok">✅ Save সফল! ${records.length} জন, মোট ৳${totalBill}<br>📬 ${notifCount}টি student notification পাঠানো হয়েছে।</div>`;
     setTimeout(() => { if (confirm('আরেকটা scan করব?')) clearAll(); }, 800);
   } catch (e) {
     console.error(e);
