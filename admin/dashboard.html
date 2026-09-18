@@ -275,12 +275,35 @@ import {
   db, auth, collection, getDocs, query, where, doc, getDoc, updateDoc,
   addDoc, serverTimestamp, deleteDoc
 } from '../js/firebase-init.js';
-import { requireAdmin, adminLogout } from '../js/admin-auth.js';
+
+  
 import { mountNotificationBell, createNotification, requestBrowserNotificationPermission } from '../js/notifications.js';
 import { initPWA } from '../js/pwa.js';
+import { requireAdmin, adminLogout } from '../js/admin-auth.js';
 
 await requireAdmin();
-window.doAdminLogout = adminLogout;
+
+// ⭐ নতুন logout function — Firebase + OneSignal দুটো থেকেই logout
+window.doAdminLogout = async function() {
+  if (!confirm('Logout করব?')) return;
+
+  // Step 1: OneSignal logout
+  if (window.OneSignalDeferred) {
+    OneSignalDeferred.push(async function(OneSignal) {
+      try { 
+        await OneSignal.logout(); 
+        console.log('✅ OneSignal logged out');
+      } catch (e) { 
+        console.warn('OneSignal logout fail:', e); 
+      }
+    });
+  }
+
+  // Step 2: Firebase logout
+  await adminLogout();
+};
+
+  
 initPWA();
 
 let allStudents = [];
