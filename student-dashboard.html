@@ -2,14 +2,16 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Student Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2c5aa0">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 15px; color: #222; }
   .container { max-width: 720px; margin: 0 auto; }
 
-  /* Header */
   .header {
     background: linear-gradient(135deg, #2c5aa0, #1e4079);
     color: white; padding: 22px 25px; border-radius: 14px; margin-bottom: 15px;
@@ -23,7 +25,6 @@
     margin-left: 6px; font-weight: 600;
   }
 
-  /* Balance card */
   .balance-card {
     background: white; padding: 24px; border-radius: 14px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 15px;
@@ -34,7 +35,6 @@
   .balance-amount.neg { color: #dc3545; }
   .balance-note { color: #999; font-size: 12px; margin-top: 8px; }
 
-  /* Quick stats */
   .quick-stats {
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
     margin-bottom: 15px;
@@ -51,7 +51,6 @@
   .quick-stat.orange { border-left-color: #ff9800; }
   .quick-stat.orange .num { color: #ff9800; }
 
-  /* Tabs */
   .tabs {
     display: flex; gap: 4px; background: white; padding: 6px;
     border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
@@ -68,14 +67,12 @@
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
-  /* Info cards */
   .card {
     background: white; padding: 20px; border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 15px;
   }
   .card h3 { color: #2c5aa0; font-size: 15px; margin-bottom: 12px; }
 
-  /* Month selector */
   .month-selector {
     display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
     background: #f8f9fa; padding: 10px; border-radius: 10px;
@@ -91,7 +88,6 @@
     color: #2c5aa0; font-size: 15px;
   }
 
-  /* Data rows */
   .data-row {
     display: flex; justify-content: space-between; padding: 12px 0;
     border-bottom: 1px solid #f0f0f0; font-size: 14px;
@@ -103,7 +99,6 @@
   .data-row .right.pos { color: #28a745; }
   .data-row .right.neg { color: #dc3545; }
 
-  /* Meal history item */
   .meal-item {
     display: flex; justify-content: space-between; align-items: center;
     padding: 14px 0; border-bottom: 1px solid #f0f0f0;
@@ -120,7 +115,6 @@
   }
   .meal-amount { font-weight: 700; color: #dc3545; font-size: 14px; }
 
-  /* Transaction item */
   .tx-item {
     display: flex; justify-content: space-between; align-items: center;
     padding: 12px 0; border-bottom: 1px solid #f0f0f0;
@@ -133,7 +127,6 @@
   .tx-amount.pos { color: #28a745; }
   .tx-amount.neg { color: #dc3545; }
 
-  /* Type badges */
   .type-badge {
     display: inline-block; padding: 2px 8px; border-radius: 10px;
     font-size: 10px; font-weight: 600; margin-left: 4px;
@@ -142,11 +135,9 @@
   .type-meal { background: #cfe2ff; color: #084298; }
   .type-adjustment { background: #fff3cd; color: #856404; }
 
-  /* Empty */
   .empty { text-align: center; padding: 40px 20px; color: #999; font-size: 14px; }
   .empty-icon { font-size: 38px; margin-bottom: 10px; opacity: 0.4; }
 
-  /* Loading */
   .loading { text-align: center; padding: 80px 20px; color: #666; font-size: 15px; }
   .loading .spinner {
     display: inline-block; width: 32px; height: 32px;
@@ -156,7 +147,6 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Buttons */
   button.action {
     width: 100%; padding: 14px; border: none; border-radius: 10px;
     font-size: 15px; font-weight: 600; cursor: pointer;
@@ -173,7 +163,6 @@
   }
   .error-box a { color: #2c5aa0; font-weight: 600; }
 
-  /* Modal */
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.5);
     display: none; align-items: center; justify-content: center;
@@ -223,7 +212,6 @@
 
   <div id="content" style="display:none;">
 
-    <!-- HEADER -->
     <div class="header">
       <h1>👋 <span id="studentName">—</span></h1>
       <div class="roll">
@@ -232,14 +220,12 @@
       </div>
     </div>
 
-    <!-- BALANCE -->
     <div class="balance-card">
       <div class="balance-label">Current Balance</div>
       <div class="balance-amount" id="balance">৳0</div>
       <div class="balance-note" id="balanceNote">Advance deposit থেকে কাটা হবে</div>
     </div>
 
-    <!-- QUICK STATS -->
     <div class="quick-stats">
       <div class="quick-stat green">
         <div class="num" id="statTotalDeposit">৳0</div>
@@ -251,14 +237,12 @@
       </div>
     </div>
 
-    <!-- TABS -->
     <div class="tabs">
       <button class="tab active" onclick="switchTab('meals', event)">🍽️ Meals</button>
       <button class="tab" onclick="switchTab('transactions', event)">💰 Transactions</button>
       <button class="tab" onclick="switchTab('monthly', event)">📅 Monthly</button>
     </div>
 
-    <!-- MEAL HISTORY TAB -->
     <div class="tab-content active" id="tab-meals">
       <div class="card">
         <h3>🍽️ Meal History</h3>
@@ -268,7 +252,6 @@
       </div>
     </div>
 
-    <!-- TRANSACTIONS TAB -->
     <div class="tab-content" id="tab-transactions">
       <div class="card">
         <h3>💰 Transaction History</h3>
@@ -278,7 +261,6 @@
       </div>
     </div>
 
-    <!-- MONTHLY TAB -->
     <div class="tab-content" id="tab-monthly">
       <div class="card">
         <h3>📅 Monthly Summary</h3>
@@ -291,7 +273,6 @@
       </div>
     </div>
 
-    <!-- ACTIONS -->
     <button class="action pin-btn" onclick="openPinModal()">🔐 PIN Change কর</button>
     <button class="action logout-btn" onclick="logout()">🚪 Logout</button>
   </div>
@@ -299,7 +280,6 @@
   <div id="errorBox" style="display:none;"></div>
 </div>
 
-<!-- PIN Change Modal -->
 <div class="modal-overlay" id="pinModal">
   <div class="modal">
     <h3>🔐 PIN Change কর</h3>
@@ -325,22 +305,22 @@
 
 <script type="module">
 import { db, doc, getDoc, updateDoc, collection, getDocs, query, where } from './js/firebase-init.js';
+import { mountNotificationBell, requestBrowserNotificationPermission } from './js/notifications.js';
+import { initPWA } from './js/pwa.js';
 
-// ---------- Session Check ----------
+initPWA();
+
 const studentId = localStorage.getItem('npmc_student_id');
 const loginTime = Number(localStorage.getItem('npmc_login_time') || 0);
 
-// ⭐ Change 1: If pin setup pending, redirect to set-pin page (BEFORE anything else)
 if (localStorage.getItem('npmc_requires_pin_setup') === 'true') {
   window.location.replace('student-set-pin.html');
 }
 
-// If no session — go to login
 if (!studentId) {
   window.location.replace('student-login.html');
 }
 
-// 30-day session expiry
 const daysSince = (Date.now() - loginTime) / (1000 * 60 * 60 * 24);
 if (studentId && daysSince > 30) {
   localStorage.removeItem('npmc_student_id');
@@ -349,11 +329,10 @@ if (studentId && daysSince > 30) {
   window.location.replace('student-login.html');
 }
 
-// ---------- State ----------
 let currentStudent = null;
 let currentStudentId = null;
-let allTransactions = [];     // this student's transactions
-let monthOffset = 0;          // 0 = current month, -1 = last month, etc.
+let allTransactions = [];
+let monthOffset = 0;
 
 function escapeHtml(str) {
   return String(str || '').replace(/[&<>"']/g, c =>
@@ -384,7 +363,6 @@ function formatDate(d) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-// ---------- Load ----------
 async function loadDashboard() {
   if (!studentId) return;
 
@@ -401,7 +379,6 @@ async function loadDashboard() {
     currentStudentId = studentId;
     currentStudent = snap.data();
 
-    // ⭐ Extra safety: if pinIsDefault is true, redirect to set-pin
     if (currentStudent.pinIsDefault === true) {
       localStorage.setItem('npmc_requires_pin_setup', 'true');
       window.location.replace('student-set-pin.html');
@@ -411,7 +388,6 @@ async function loadDashboard() {
     renderHeader();
     renderBalance();
 
-    // Load transactions
     await loadTransactions();
     renderMealHistory();
     renderTransactionHistory();
@@ -419,6 +395,15 @@ async function loadDashboard() {
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'block';
+
+    // ⭐ Mount notification bell
+    mountNotificationBell({
+      recipientType: 'student',
+      recipientId: currentStudentId
+    });
+
+    // Request browser notification permission (once)
+    requestBrowserNotificationPermission();
 
   } catch (e) {
     console.error(e);
@@ -462,7 +447,7 @@ async function loadTransactions() {
       .sort((a, b) => {
         const da = a.date || '';
         const db_ = b.date || '';
-        if (da !== db_) return db_.localeCompare(da); // newest date first
+        if (da !== db_) return db_.localeCompare(da);
         const ta = a.createdAt?.toDate?.() || new Date(0);
         const tb = b.createdAt?.toDate?.() || new Date(0);
         return tb - ta;
@@ -473,7 +458,6 @@ async function loadTransactions() {
   }
 }
 
-// ---------- Tabs ----------
 window.switchTab = function(name, event) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -483,7 +467,6 @@ window.switchTab = function(name, event) {
   if (name === 'monthly') renderMonthlySummary();
 };
 
-// ---------- Meal History ----------
 function renderMealHistory() {
   const mealTx = allTransactions.filter(t => t.type === 'meal');
 
@@ -512,7 +495,6 @@ function renderMealHistory() {
   }).join('');
 }
 
-// ---------- Transaction History ----------
 function renderTransactionHistory() {
   const el = document.getElementById('transactionHistory');
   if (allTransactions.length === 0) {
@@ -554,7 +536,6 @@ function renderTransactionHistory() {
     : '');
 }
 
-// ---------- Monthly Summary ----------
 window.prevMonth = function() { monthOffset--; renderMonthlySummary(); };
 window.nextMonth = function() {
   if (monthOffset >= 0) return;
@@ -570,7 +551,6 @@ function renderMonthlySummary() {
   const monthName = target.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   document.getElementById('monthLabel').textContent = monthName;
 
-  // Filter transactions for this month
   const monthTx = allTransactions.filter(t => (t.date || '').startsWith(ym));
 
   let totalDeposit = 0, totalBill = 0, mealDays = 0;
@@ -643,7 +623,6 @@ function renderMonthlySummary() {
   `;
 }
 
-// ---------- PIN Change Modal ----------
 window.openPinModal = function() {
   document.getElementById('pinModal').classList.add('show');
   document.getElementById('currentPin').value = '';
@@ -694,7 +673,6 @@ window.changePin = async function() {
 
     const newHash = await hashPin(newPin, roll);
 
-    // ⭐ Change 3: pinIsDefault = false সহ update
     await updateDoc(doc(db, 'students', currentStudentId), {
       pinHash: newHash,
       pinIsDefault: false,
@@ -716,16 +694,14 @@ window.changePin = async function() {
   btn.innerHTML = '✅ Change';
 };
 
-// ---------- Logout ----------
 window.logout = function() {
   if (!confirm('Logout করব?')) return;
   localStorage.removeItem('npmc_student_id');
   localStorage.removeItem('npmc_login_time');
-  localStorage.removeItem('npmc_requires_pin_setup');  // ⭐ Change 2
+  localStorage.removeItem('npmc_requires_pin_setup');
   window.location.replace('student-login.html');
 };
 
-// ---------- Modal Keyboard ----------
 document.getElementById('pinModal').addEventListener('click', e => {
   if (e.target.id === 'pinModal') closePinModal();
 });
@@ -733,7 +709,6 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closePinModal();
 });
 
-// ---------- Init ----------
 loadDashboard();
 </script>
 
