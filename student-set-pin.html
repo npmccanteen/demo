@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>নতুন PIN Set কর</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #ff9800 0%, #e68900 100%);
+    min-height: 100vh; display: flex; align-items: center;
+    justify-content: center; padding: 20px;
+  }
+  .card {
+    background: white; border-radius: 16px; padding: 35px 30px;
+    max-width: 440px; width: 100%;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  }
+  .icon-big { text-align: center; font-size: 48px; margin-bottom: 10px; }
+  h1 { color: #ff9800; font-size: 22px; margin-bottom: 6px; text-align: center; }
+  .sub { color: #666; font-size: 13px; text-align: center; margin-bottom: 25px; line-height: 1.6; }
+  .student-info {
+    background: #fff8e1; padding: 14px; border-radius: 10px;
+    text-align: center; margin-bottom: 20px; font-size: 14px; color: #856404;
+  }
+  .student-info strong { color: #ff9800; font-size: 16px; }
+
+  label { display: block; font-weight: 600; margin: 14px 0 6px; font-size: 13px; color: #333; }
+  input {
+    width: 100%; padding: 14px; border: 1.5px solid #ddd;
+    border-radius: 8px; font-size: 20px; text-align: center;
+    letter-spacing: 8px; font-weight: 600; font-family: inherit;
+    transition: 0.2s;
+  }
+  input:focus { border-color: #ff9800; outline: none; box-shadow: 0 0 0 3px rgba(255,152,0,0.15); }
+
+  .hint { font-size: 12px; color: #888; margin-top: 6px; line-height: 1.5; }
+
+  button {
+    width: 100%; padding: 14px; background: #ff9800; color: white;
+    border: none; border-radius: 8px; font-size: 15px; font-weight: 600;
+    cursor: pointer; margin-top: 20px; transition: 0.2s;
+  }
+  button:hover { background: #e68900; }
+  button:disabled { background: #999; cursor: not-allowed; }
+
+  .msg {
+    margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 13px;
+    display: none; text-align: center;
+  }
+  .msg.show { display: block; }
+  .msg.error { background: #fee; color: #721c24; border-left: 4px solid #dc3545; }
+  .msg.ok { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+
+  .back-link {
+    display: block; text-align: center; margin-top: 20px;
+    color: #888; text-decoration: none; font-size: 13px;
+  }
+  .back-link:hover { color: #ff9800; }
+
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid #fff; border-top-color: transparent;
+    border-radius: 50%; animation: spin 1s linear infinite;
+    margin-right: 6px; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="icon-big">🔐</div>
+  <h1>নতুন PIN Set কর</h1>
+  <p class="sub">
+    নিরাপত্তার জন্য নিজের একটা PIN বানাও।<br>
+    এই PIN দিয়ে পরবর্তীতে login করবে।
+  </p>
+
+  <div class="student-info" id="studentInfo">
+    লোড হচ্ছে...
+  </div>
+
+  <label>নতুন PIN (৪-৬ সংখ্যা)</label>
+  <input type="text" id="newPin" maxlength="6" inputmode="numeric" placeholder="••••" />
+  <div class="hint">শুধু সংখ্যা — যেমন `1234`, `567890`</div>
+
+  <label>আবার লেখো (Confirm)</label>
+  <input type="text" id="confirmPin" maxlength="6" inputmode="numeric" placeholder="••••" />
+
+  <button onclick="setPin()" id="setBtn">✅ PIN Set কর</button>
+  <div class="msg" id="msg"></div>
+
+  <a href="#" class="back-link" onclick="logout(event)">Logout হয়ে আবার login কর</a>
+</div>
+
+<script type="module">
+import { db, doc, getDoc, updateDoc } from './js/firebase-init.js';
+
+const studentId = localStorage.getItem('npmc_student_id');
+const needsSetup = localStorage.getItem('npmc_requires_pin_setup') === 'true';
+
+// Guard: must be logged in AND need setup
+if (!studentId) {
+  window.location.replace('student-login.html');
+}
+
+let currentStudent = null;
+
+function showMsg(text, type) {
+  const el = document.getElementById('msg');
+  el.className = 'msg show ' + type;
+  el.innerHTML = text;
+}
+
+async function hashPin(pin, roll) {
+  const data = new TextEncoder().encode(pin + ':' + roll + ':npmc');
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function loadStudent() {
+  try {
+    const snap = await getDoc(doc(db, 'students', studentId));
+    if (!snap.exists()) {
+      localStorage.clear();
+      window.location.replace('student-login.html');
+      return;
+    }
+    currentStudent = snap.data();
+
+    // If already set personal PIN — no need to be here
+    if (currentStudent.pinIsDefault !== true && !needsSetup) {
+      window.location.replace('student-dashboard.html');
+      return;
+    }
+
+    document.getElementById('studentInfo').innerHTML = `
+      <strong>${currentStudent.roll}</strong> — ${currentStudent.name}<br>
+      Batch: ${currentStudent.batchName}
+    `;
+
+    document.getElementById('newPin').focus();
+
+  } catch (e) {
+    console.error(e);
+    showMsg('❌ Load fail: ' + e.message, 'error');
+  }
+}
+
+window.setPin = async function() {
+  const newPin = document.getElementById('newPin').value.trim();
+  const confirmPin = document.getElementById('confirmPin').value.trim();
+
+  if (!newPin || !confirmPin) {
+    return showMsg('⚠️ দুটো field পূরণ কর', 'error');
+  }
+  if (!/^\d{4,6}$/.test(newPin)) {
+    return showMsg('⚠️ PIN ৪-৬ সংখ্যার হতে হবে (শুধু digit)', 'error');
+  }
+  if (newPin !== confirmPin) {
+    return showMsg('⚠️ দুটো PIN মিলছে না', 'error');
+  }
+
+  const btn = document.getElementById('setBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Set হচ্ছে...';
+
+  try {
+    const newHash = await hashPin(newPin, currentStudent.roll);
+
+    await updateDoc(doc(db, 'students', studentId), {
+      pinHash: newHash,
+      pinIsDefault: false,
+      pinChangedAt: new Date().toISOString()
+    });
+
+    localStorage.removeItem('npmc_requires_pin_setup');
+
+    showMsg('✅ PIN সফলভাবে set হয়েছে! Dashboard-এ যাচ্ছি...', 'ok');
+    setTimeout(() => window.location.replace('student-dashboard.html'), 700);
+
+  } catch (e) {
+    console.error(e);
+    showMsg('❌ ' + e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '✅ PIN Set কর';
+  }
+};
+
+window.logout = function(e) {
+  e.preventDefault();
+  if (!confirm('Logout করব?')) return;
+  localStorage.removeItem('npmc_student_id');
+  localStorage.removeItem('npmc_login_time');
+  localStorage.removeItem('npmc_requires_pin_setup');
+  window.location.replace('student-login.html');
+};
+
+['newPin','confirmPin'].forEach(id => {
+  document.getElementById(id).addEventListener('keypress', e => {
+    if (e.key === 'Enter') setPin();
+  });
+});
+
+// Init
+loadStudent();
+</script>
+
+</body>
+</html>
