@@ -6,51 +6,147 @@
 <title>Student Dashboard</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #222; }
-  .container { max-width: 700px; margin: 0 auto; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 15px; color: #222; }
+  .container { max-width: 720px; margin: 0 auto; }
 
+  /* Header */
   .header {
     background: linear-gradient(135deg, #2c5aa0, #1e4079);
-    color: white; padding: 25px; border-radius: 12px; margin-bottom: 20px;
+    color: white; padding: 22px 25px; border-radius: 14px; margin-bottom: 15px;
     box-shadow: 0 4px 15px rgba(44,90,160,0.2);
   }
-  .header h1 { font-size: 20px; margin-bottom: 6px; }
-  .header .roll { opacity: 0.92; font-size: 14px; }
+  .header h1 { font-size: 19px; margin-bottom: 6px; }
+  .header .roll { opacity: 0.92; font-size: 13px; }
   .header .batch-badge {
     display: inline-block; background: rgba(255,255,255,0.2);
     padding: 3px 10px; border-radius: 12px; font-size: 12px;
     margin-left: 6px; font-weight: 600;
   }
 
+  /* Balance card */
   .balance-card {
-    background: white; padding: 28px; border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px;
+    background: white; padding: 24px; border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 15px;
     text-align: center;
   }
-  .balance-label { color: #666; font-size: 13px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-  .balance-amount { font-size: 44px; font-weight: 700; color: #28a745; line-height: 1; }
+  .balance-label { color: #666; font-size: 12px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .balance-amount { font-size: 42px; font-weight: 700; color: #28a745; line-height: 1; }
   .balance-amount.neg { color: #dc3545; }
   .balance-note { color: #999; font-size: 12px; margin-top: 8px; }
 
-  .info-card {
-    background: white; padding: 22px; border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px;
+  /* Quick stats */
+  .quick-stats {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-bottom: 15px;
   }
-  .info-card h3 { color: #2c5aa0; font-size: 15px; margin-bottom: 12px; }
-  .info-row {
+  .quick-stat {
+    background: white; padding: 16px; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    border-left: 3px solid #2c5aa0;
+  }
+  .quick-stat .num { font-size: 18px; font-weight: 700; color: #2c5aa0; }
+  .quick-stat .lbl { font-size: 11px; color: #666; margin-top: 4px; text-transform: uppercase; }
+  .quick-stat.green { border-left-color: #28a745; }
+  .quick-stat.green .num { color: #28a745; }
+  .quick-stat.orange { border-left-color: #ff9800; }
+  .quick-stat.orange .num { color: #ff9800; }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 4px; background: white; padding: 6px;
+    border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    margin-bottom: 15px; overflow-x: auto;
+  }
+  .tab {
+    padding: 10px 16px; background: transparent; border: none;
+    cursor: pointer; font-size: 13px; font-weight: 600;
+    color: #666; border-radius: 8px; white-space: nowrap;
+    transition: 0.2s; flex: 1;
+  }
+  .tab.active { background: #2c5aa0; color: white; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Info cards */
+  .card {
+    background: white; padding: 20px; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 15px;
+  }
+  .card h3 { color: #2c5aa0; font-size: 15px; margin-bottom: 12px; }
+
+  /* Month selector */
+  .month-selector {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
+    background: #f8f9fa; padding: 10px; border-radius: 10px;
+  }
+  .month-selector button {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: white; border: 1px solid #ddd; cursor: pointer;
+    font-size: 16px; font-weight: 700; color: #2c5aa0;
+  }
+  .month-selector button:hover { background: #2c5aa0; color: white; }
+  .month-selector .month-label {
+    flex: 1; text-align: center; font-weight: 600;
+    color: #2c5aa0; font-size: 15px;
+  }
+
+  /* Data rows */
+  .data-row {
     display: flex; justify-content: space-between; padding: 12px 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #f0f0f0; font-size: 14px;
+    align-items: center;
   }
-  .info-row:last-child { border-bottom: none; }
-  .info-label { color: #666; font-size: 14px; }
-  .info-value { font-weight: 600; font-size: 14px; color: #222; }
+  .data-row:last-child { border-bottom: none; }
+  .data-row .left { color: #666; }
+  .data-row .right { font-weight: 600; }
+  .data-row .right.pos { color: #28a745; }
+  .data-row .right.neg { color: #dc3545; }
 
-  .placeholder {
-    text-align: center; padding: 35px 20px; color: #999; font-size: 14px;
-    background: #f8f9fa; border-radius: 8px; line-height: 1.8;
+  /* Meal history item */
+  .meal-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 0; border-bottom: 1px solid #f0f0f0;
   }
-  .placeholder small { display: block; font-size: 12px; margin-top: 6px; }
+  .meal-item:last-child { border-bottom: none; }
+  .meal-date {
+    font-weight: 600; color: #2c5aa0; font-size: 14px;
+    min-width: 100px;
+  }
+  .meal-badges { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; margin: 0 10px; }
+  .meal-badge {
+    background: #e7f3ff; color: #004085; padding: 4px 10px;
+    border-radius: 12px; font-size: 11px; font-weight: 600;
+  }
+  .meal-amount { font-weight: 700; color: #dc3545; font-size: 14px; }
 
+  /* Transaction item */
+  .tx-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid #f0f0f0;
+  }
+  .tx-item:last-child { border-bottom: none; }
+  .tx-info { flex: 1; }
+  .tx-date { font-size: 12px; color: #888; }
+  .tx-note { font-size: 13px; color: #444; margin-top: 2px; }
+  .tx-amount { font-weight: 700; font-size: 15px; }
+  .tx-amount.pos { color: #28a745; }
+  .tx-amount.neg { color: #dc3545; }
+
+  /* Type badges */
+  .type-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 600; margin-left: 4px;
+  }
+  .type-deposit { background: #d4edda; color: #155724; }
+  .type-meal { background: #cfe2ff; color: #084298; }
+  .type-adjustment { background: #fff3cd; color: #856404; }
+
+  /* Empty */
+  .empty { text-align: center; padding: 40px 20px; color: #999; font-size: 14px; }
+  .empty-icon { font-size: 38px; margin-bottom: 10px; opacity: 0.4; }
+
+  /* Loading */
   .loading { text-align: center; padding: 80px 20px; color: #666; font-size: 15px; }
   .loading .spinner {
     display: inline-block; width: 32px; height: 32px;
@@ -60,15 +156,16 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  button {
+  /* Buttons */
+  button.action {
     width: 100%; padding: 14px; border: none; border-radius: 10px;
     font-size: 15px; font-weight: 600; cursor: pointer;
     margin-top: 10px; transition: 0.2s;
   }
-  button.pin-btn { background: #ff9800; color: white; }
-  button.pin-btn:hover { background: #e68900; }
-  button.logout-btn { background: #dc3545; color: white; }
-  button.logout-btn:hover { background: #b02a37; }
+  .pin-btn { background: #ff9800; color: white; }
+  .pin-btn:hover { background: #e68900; }
+  .logout-btn { background: #dc3545; color: white; }
+  .logout-btn:hover { background: #b02a37; }
 
   .error-box {
     background: #fee; color: #721c24; padding: 20px;
@@ -125,6 +222,8 @@
   </div>
 
   <div id="content" style="display:none;">
+
+    <!-- HEADER -->
     <div class="header">
       <h1>👋 <span id="studentName">—</span></h1>
       <div class="roll">
@@ -133,34 +232,68 @@
       </div>
     </div>
 
+    <!-- BALANCE -->
     <div class="balance-card">
       <div class="balance-label">Current Balance</div>
       <div class="balance-amount" id="balance">৳0</div>
       <div class="balance-note" id="balanceNote">Advance deposit থেকে কাটা হবে</div>
     </div>
 
-    <div class="info-card">
-      <h3>📊 Account Info</h3>
-      <div class="info-row">
-        <span class="info-label">Total Deposit</span>
-        <span class="info-value" id="totalDeposit">৳0</span>
+    <!-- QUICK STATS -->
+    <div class="quick-stats">
+      <div class="quick-stat green">
+        <div class="num" id="statTotalDeposit">৳0</div>
+        <div class="lbl">Total Deposit</div>
       </div>
-      <div class="info-row">
-        <span class="info-label">Total Bill</span>
-        <span class="info-value" id="totalBill">৳0</span>
-      </div>
-    </div>
-
-    <div class="info-card">
-      <h3>🍽️ Meal History</h3>
-      <div class="placeholder">
-        Meal history এখনো খালি<br>
-        <small>OMR স্ক্যান হলে এখানে দেখা যাবে</small>
+      <div class="quick-stat orange">
+        <div class="num" id="statTotalBill">৳0</div>
+        <div class="lbl">Total Bill</div>
       </div>
     </div>
 
-    <button class="pin-btn" onclick="openPinModal()">🔐 PIN Change কর</button>
-    <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('meals', event)">🍽️ Meals</button>
+      <button class="tab" onclick="switchTab('transactions', event)">💰 Transactions</button>
+      <button class="tab" onclick="switchTab('monthly', event)">📅 Monthly</button>
+    </div>
+
+    <!-- MEAL HISTORY TAB -->
+    <div class="tab-content active" id="tab-meals">
+      <div class="card">
+        <h3>🍽️ Meal History</h3>
+        <div id="mealHistory">
+          <div class="empty"><div class="empty-icon">🍽️</div>এখনো কোনো meal history নেই</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSACTIONS TAB -->
+    <div class="tab-content" id="tab-transactions">
+      <div class="card">
+        <h3>💰 Transaction History</h3>
+        <div id="transactionHistory">
+          <div class="empty"><div class="empty-icon">💰</div>এখনো কোনো transaction নেই</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONTHLY TAB -->
+    <div class="tab-content" id="tab-monthly">
+      <div class="card">
+        <h3>📅 Monthly Summary</h3>
+        <div class="month-selector">
+          <button onclick="prevMonth()">‹</button>
+          <div class="month-label" id="monthLabel">—</div>
+          <button onclick="nextMonth()">›</button>
+        </div>
+        <div id="monthlySummary"></div>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <button class="action pin-btn" onclick="openPinModal()">🔐 PIN Change কর</button>
+    <button class="action logout-btn" onclick="logout()">🚪 Logout</button>
   </div>
 
   <div id="errorBox" style="display:none;"></div>
@@ -191,18 +324,16 @@
 </div>
 
 <script type="module">
-import { db, doc, getDoc, updateDoc } from './js/firebase-init.js';
+import { db, doc, getDoc, updateDoc, collection, getDocs, query, where } from './js/firebase-init.js';
 
 // ---------- Session Check ----------
 const studentId = localStorage.getItem('npmc_student_id');
 const loginTime = Number(localStorage.getItem('npmc_login_time') || 0);
 
-// ⚠️ If no session — go to login (only ONCE, no loop)
 if (!studentId) {
   window.location.replace('student-login.html');
 }
 
-// 30-day session expiry
 const daysSince = (Date.now() - loginTime) / (1000 * 60 * 60 * 24);
 if (studentId && daysSince > 30) {
   localStorage.removeItem('npmc_student_id');
@@ -213,6 +344,8 @@ if (studentId && daysSince > 30) {
 // ---------- State ----------
 let currentStudent = null;
 let currentStudentId = null;
+let allTransactions = [];     // this student's transactions
+let monthOffset = 0;          // 0 = current month, -1 = last month, etc.
 
 function escapeHtml(str) {
   return String(str || '').replace(/[&<>"']/g, c =>
@@ -234,9 +367,18 @@ function showError(msg) {
   box.innerHTML = msg + '<br><br><a href="student-login.html">← আবার Login কর</a>';
 }
 
-// ---------- Load Dashboard ----------
+function fmtMoney(n) { return '৳' + Number(n || 0).toLocaleString('en-IN'); }
+
+function formatDate(d) {
+  if (!d) return '—';
+  if (d?.toDate) d = d.toDate();
+  if (typeof d === 'string') d = new Date(d + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+// ---------- Load ----------
 async function loadDashboard() {
-  if (!studentId) return; // already redirected
+  if (!studentId) return;
 
   try {
     const snap = await getDoc(doc(db, 'students', studentId));
@@ -251,23 +393,14 @@ async function loadDashboard() {
     currentStudentId = studentId;
     currentStudent = snap.data();
 
-    const s = currentStudent;
-    const balance = Number(s.balance || 0);
-    const totalDeposit = Number(s.totalDeposit || 0);
-    const totalBill = Number(s.totalBill || 0);
+    renderHeader();
+    renderBalance();
 
-    document.getElementById('studentName').textContent = s.name || '—';
-    document.getElementById('studentRoll').textContent = s.roll || '—';
-    document.getElementById('studentBatch').textContent = s.batchName || '—';
-    document.getElementById('totalDeposit').textContent = '৳' + totalDeposit;
-    document.getElementById('totalBill').textContent = '৳' + totalBill;
-
-    const balEl = document.getElementById('balance');
-    balEl.textContent = '৳' + balance;
-    if (balance < 0) {
-      balEl.classList.add('neg');
-      document.getElementById('balanceNote').textContent = '⚠️ Balance negative — Admin-এর সাথে যোগাযোগ কর';
-    }
+    // Load transactions
+    await loadTransactions();
+    renderMealHistory();
+    renderTransactionHistory();
+    renderMonthlySummary();
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'block';
@@ -278,7 +411,224 @@ async function loadDashboard() {
   }
 }
 
-// ---------- PIN Change ----------
+function renderHeader() {
+  const s = currentStudent;
+  document.getElementById('studentName').textContent = s.name || '—';
+  document.getElementById('studentRoll').textContent = s.roll || '—';
+  document.getElementById('studentBatch').textContent = s.batchName || '—';
+}
+
+function renderBalance() {
+  const s = currentStudent;
+  const balance = Number(s.balance || 0);
+  const totalDeposit = Number(s.totalDeposit || 0);
+  const totalBill = Number(s.totalBill || 0);
+
+  const balEl = document.getElementById('balance');
+  balEl.textContent = fmtMoney(balance);
+  if (balance < 0) {
+    balEl.classList.add('neg');
+    document.getElementById('balanceNote').textContent = '⚠️ Balance negative — Admin-এর সাথে যোগাযোগ কর';
+  }
+
+  document.getElementById('statTotalDeposit').textContent = fmtMoney(totalDeposit);
+  document.getElementById('statTotalBill').textContent = fmtMoney(totalBill);
+}
+
+async function loadTransactions() {
+  try {
+    const q = query(
+      collection(db, 'transactions'),
+      where('studentId', '==', currentStudentId)
+    );
+    const snap = await getDocs(q);
+
+    allTransactions = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const da = a.date || '';
+        const db_ = b.date || '';
+        if (da !== db_) return db_.localeCompare(da); // newest date first
+        const ta = a.createdAt?.toDate?.() || new Date(0);
+        const tb = b.createdAt?.toDate?.() || new Date(0);
+        return tb - ta;
+      });
+  } catch (e) {
+    console.error('Load transactions fail', e);
+    allTransactions = [];
+  }
+}
+
+// ---------- Tabs ----------
+window.switchTab = function(name, event) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  if (event) event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+
+  if (name === 'monthly') renderMonthlySummary();
+};
+
+// ---------- Meal History ----------
+function renderMealHistory() {
+  const mealTx = allTransactions.filter(t => t.type === 'meal');
+
+  const el = document.getElementById('mealHistory');
+  if (mealTx.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🍽️</div>এখনো কোনো meal history নেই<br><small>খাবার খাওয়ার পর এখানে দেখা যাবে</small></div>';
+    return;
+  }
+
+  el.innerHTML = mealTx.map(t => {
+    const parts = [];
+    if (t.details?.lunchFull) parts.push('🍛 Lunch Full');
+    if (t.details?.lunchHalf) parts.push('🍚 Lunch Half');
+    if (t.details?.dinnerFull) parts.push('🍽️ Dinner Full');
+    if (t.details?.dinnerHalf) parts.push('🥘 Dinner Half');
+
+    return `
+      <div class="meal-item">
+        <div class="meal-date">${formatDate(t.date)}</div>
+        <div class="meal-badges">
+          ${parts.map(p => `<span class="meal-badge">${p}</span>`).join('')}
+        </div>
+        <div class="meal-amount">-${fmtMoney(Math.abs(t.amount))}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ---------- Transaction History ----------
+function renderTransactionHistory() {
+  const el = document.getElementById('transactionHistory');
+  if (allTransactions.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">💰</div>এখনো কোনো transaction নেই</div>';
+    return;
+  }
+
+  el.innerHTML = allTransactions.slice(0, 100).map(t => {
+    const amt = Number(t.amount || 0);
+    const cls = amt >= 0 ? 'pos' : 'neg';
+    const sign = amt >= 0 ? '+' : '';
+
+    let typeLabel = '';
+    if (t.type === 'deposit') typeLabel = '<span class="type-badge type-deposit">Deposit</span>';
+    else if (t.type === 'meal') typeLabel = '<span class="type-badge type-meal">Meal</span>';
+    else if (t.type === 'adjustment') typeLabel = '<span class="type-badge type-adjustment">Adjust</span>';
+
+    let note = t.note || '';
+    if (t.type === 'meal' && t.details) {
+      const p = [];
+      if (t.details.lunchFull) p.push('L.Full');
+      if (t.details.lunchHalf) p.push('L.Half');
+      if (t.details.dinnerFull) p.push('D.Full');
+      if (t.details.dinnerHalf) p.push('D.Half');
+      note = p.join(', ');
+    }
+
+    return `
+      <div class="tx-item">
+        <div class="tx-info">
+          <div class="tx-date">${formatDate(t.date)}</div>
+          <div class="tx-note">${escapeHtml(note)} ${typeLabel}</div>
+        </div>
+        <div class="tx-amount ${cls}">${sign}${fmtMoney(Math.abs(amt))}</div>
+      </div>
+    `;
+  }).join('') + (allTransactions.length > 100
+    ? '<div style="text-align:center; padding:15px; color:#888; font-size:13px;">প্রথম ১০০টা দেখানো হচ্ছে</div>'
+    : '');
+}
+
+// ---------- Monthly Summary ----------
+window.prevMonth = function() { monthOffset--; renderMonthlySummary(); };
+window.nextMonth = function() {
+  if (monthOffset >= 0) return;
+  monthOffset++;
+  renderMonthlySummary();
+};
+
+function renderMonthlySummary() {
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const ym = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}`;
+
+  const monthName = target.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  document.getElementById('monthLabel').textContent = monthName;
+
+  // Filter transactions for this month
+  const monthTx = allTransactions.filter(t => (t.date || '').startsWith(ym));
+
+  let totalDeposit = 0, totalBill = 0, mealDays = 0;
+  const mealCounts = { lunchFull: 0, lunchHalf: 0, dinnerFull: 0, dinnerHalf: 0 };
+  const mealDaysSet = new Set();
+
+  monthTx.forEach(t => {
+    if (t.type === 'deposit') totalDeposit += Number(t.amount || 0);
+    if (t.type === 'adjustment') {
+      const a = Number(t.amount || 0);
+      if (a > 0) totalDeposit += a; else totalBill += Math.abs(a);
+    }
+    if (t.type === 'meal') {
+      totalBill += Math.abs(Number(t.amount || 0));
+      mealDaysSet.add(t.date);
+      if (t.details) {
+        if (t.details.lunchFull) mealCounts.lunchFull++;
+        if (t.details.lunchHalf) mealCounts.lunchHalf++;
+        if (t.details.dinnerFull) mealCounts.dinnerFull++;
+        if (t.details.dinnerHalf) mealCounts.dinnerHalf++;
+      }
+    }
+  });
+
+  mealDays = mealDaysSet.size;
+
+  const el = document.getElementById('monthlySummary');
+  if (monthTx.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📅</div>এই মাসে কোনো activity নেই</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="data-row">
+      <span class="left">💰 মোট Deposit</span>
+      <span class="right pos">+${fmtMoney(totalDeposit)}</span>
+    </div>
+    <div class="data-row">
+      <span class="left">🍽️ মোট Bill</span>
+      <span class="right neg">-${fmtMoney(totalBill)}</span>
+    </div>
+    <div class="data-row" style="background:#f0f7ff; padding:14px 10px; border-radius:8px; margin-top:8px;">
+      <span class="left" style="font-weight:600; color:#2c5aa0;">📊 মাসের Net</span>
+      <span class="right ${totalDeposit - totalBill >= 0 ? 'pos' : 'neg'}" style="font-size:16px;">
+        ${totalDeposit - totalBill >= 0 ? '+' : ''}${fmtMoney(totalDeposit - totalBill)}
+      </span>
+    </div>
+
+    <h4 style="margin: 20px 0 10px; color:#2c5aa0; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">🍽️ Meal Count</h4>
+    <div class="data-row">
+      <span class="left">🍛 Lunch Full</span>
+      <span class="right">${mealCounts.lunchFull} বার</span>
+    </div>
+    <div class="data-row">
+      <span class="left">🍚 Lunch Half</span>
+      <span class="right">${mealCounts.lunchHalf} বার</span>
+    </div>
+    <div class="data-row">
+      <span class="left">🍽️ Dinner Full</span>
+      <span class="right">${mealCounts.dinnerFull} বার</span>
+    </div>
+    <div class="data-row">
+      <span class="left">🥘 Dinner Half</span>
+      <span class="right">${mealCounts.dinnerHalf} বার</span>
+    </div>
+    <div class="data-row" style="background:#fff8e1; padding:12px 10px; border-radius:8px; margin-top:8px;">
+      <span class="left" style="font-weight:600;">📅 Meal খাওয়ার দিন</span>
+      <span class="right" style="color:#ff9800;">${mealDays} দিন</span>
+    </div>
+  `;
+}
+
+// ---------- PIN Change Modal ----------
 window.openPinModal = function() {
   document.getElementById('pinModal').classList.add('show');
   document.getElementById('currentPin').value = '';
@@ -313,7 +663,7 @@ window.changePin = async function() {
     return showModalMsg('⚠️ New PIN আর Confirm PIN মিলছে না', 'error');
   }
   if (newPin === currentPin) {
-    return showModalMsg('⚠️ নতুন PIN আগেরটার মতোই — ভিন্ন PIN দে', 'error');
+    return showModalMsg('⚠️ নতুন PIN আগেরটার মতোই', 'error');
   }
 
   const btn = document.getElementById('changePinBtn');
@@ -323,20 +673,17 @@ window.changePin = async function() {
   try {
     const roll = currentStudent.roll;
     const currentHash = await hashPin(currentPin, roll);
-
     if (currentHash !== currentStudent.pinHash) {
       throw new Error('Current PIN ভুল');
     }
 
     const newHash = await hashPin(newPin, roll);
-
     await updateDoc(doc(db, 'students', currentStudentId), {
       pinHash: newHash,
       pinChangedAt: new Date().toISOString()
     });
 
     currentStudent.pinHash = newHash;
-
     showModalMsg('✅ PIN সফলভাবে change হয়েছে!', 'ok');
     setTimeout(() => closePinModal(), 1500);
 
@@ -363,9 +710,6 @@ document.getElementById('pinModal').addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closePinModal();
-  if (e.key === 'Enter' && document.getElementById('pinModal').classList.contains('show')) {
-    changePin();
-  }
 });
 
 // ---------- Init ----------
