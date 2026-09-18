@@ -152,6 +152,9 @@
 <script type="module">
 import { db, collection, getDocs, query, where } from './js/firebase-init.js';
 
+import { requireAdmin } from './js/admin-auth.js';
+await requireAdmin();
+
 const batchSelect = document.getElementById('batchSelect');
 const perPageSel = document.getElementById('perPage');
 const statusMsg = document.getElementById('statusMsg');
