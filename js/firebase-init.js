@@ -1,28 +1,13 @@
 // js/firebase-init.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  where,
-  serverTimestamp,
-  doc,
-  deleteDoc,
-  orderBy,
-  updateDoc,
-  getDoc,
-  setDoc,
+  getFirestore, collection, addDoc, getDocs, query, where,
+  serverTimestamp, doc, deleteDoc, orderBy, updateDoc, getDoc, setDoc,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updatePassword
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged, updatePassword
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import { firebaseConfig } from "../firebase-config.js";
 
@@ -30,7 +15,7 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-// ----- createStudentAuth: secondary app দিয়ে user বানায় (admin session নষ্ট না করে) -----
+// ----- Secondary app for creating users without losing admin session -----
 let _secondaryApp = null;
 function getSecondaryAuth() {
   if (!_secondaryApp) {
@@ -48,21 +33,8 @@ export async function createStudentAuth(email, password) {
 }
 
 export {
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  where,
-  serverTimestamp,
-  doc,
-  deleteDoc,
-  orderBy,
-  updateDoc,
-  getDoc,
-  setDoc,
+  collection, addDoc, getDocs, query, where,
+  serverTimestamp, doc, deleteDoc, orderBy, updateDoc, getDoc, setDoc,
   writeBatch,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updatePassword
+  signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword
 };
