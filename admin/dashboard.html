@@ -2,15 +2,18 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Admin Dashboard</title>
+<link rel="manifest" href="../manifest.json">
+<meta name="theme-color" content="#2c5aa0">
+<link rel="icon" type="image/svg+xml" href="../icon.svg">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 15px; color: #222; }
   .container { max-width: 1300px; margin: 0 auto; }
   h1 { color: #2c5aa0; margin-bottom: 5px; font-size: 24px; }
   .sub { color: #666; margin-bottom: 20px; font-size: 13px; }
-  .page-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .page-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; padding-right: 60px; }
 
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
   .stat-card { background: white; padding: 18px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border-left: 4px solid #2c5aa0; }
@@ -260,10 +263,12 @@ import {
   addDoc, serverTimestamp, deleteDoc
 } from '../js/firebase-init.js';
 import { requireAdmin, adminLogout } from '../js/admin-auth.js';
+import { mountNotificationBell, createNotification, requestBrowserNotificationPermission } from '../js/notifications.js';
+import { initPWA } from '../js/pwa.js';
 
-// ⭐ Require admin authentication
 await requireAdmin();
 window.doAdminLogout = adminLogout;
+initPWA();
 
 let allStudents = [];
 let allRecords = [];
@@ -273,7 +278,6 @@ let batchList = [];
 let pendingStudent = null;
 let pinResetStudent = null;
 
-// ---------- Time zone: Bangladesh ----------
 function todayStr() {
   const now = new Date();
   const bd = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
@@ -283,7 +287,6 @@ function todayStr() {
   return `${y}-${m}-${d}`;
 }
 
-// ---------- Helpers ----------
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -327,11 +330,9 @@ window.switchTab = function(name, event) {
   if (event) event.target.classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
 
-  // ⭐ Lazy load audit logs
   if (name === 'logs') loadAuditLogs();
 };
 
-// ---------- Init ----------
 init();
 
 async function init() {
@@ -341,6 +342,13 @@ async function init() {
   renderStudents();
   renderRecords();
   renderTransactions();
+
+  // ⭐ Mount admin notification bell
+  mountNotificationBell({
+    recipientType: 'admin',
+    recipientId: 'ALL_ADMINS'
+  });
+  requestBrowserNotificationPermission();
 }
 
 async function loadAll() {
@@ -635,7 +643,6 @@ function renderTransactions() {
   ${filtered.length > 500 ? '<div style="padding:15px; text-align:center; color:#888; font-size:13px;">প্রথম ৫০০টা দেখানো হচ্ছে</div>' : ''}`;
 }
 
-// ---------- Audit Logs ----------
 async function loadAuditLogs() {
   try {
     const el = document.getElementById('auditLogsList');
@@ -726,7 +733,6 @@ window.clearOldLogs = async function() {
   await loadAuditLogs();
 };
 
-// ---------- Deposit Modal ----------
 window.openDeposit = function(studentId) {
   const s = allStudents.find(x => x.id === studentId);
   if (!s) return;
@@ -768,7 +774,39 @@ window.submitDeposit = async function() {
       amount: amount, note: note || 'Deposit', createdAt: serverTimestamp()
     });
 
-    // Audit log
+    // ⭐ Notification to student
+    await createNotification({
+      recipientType: 'student',
+      recipientId: pendingStudent.id,
+      type: 'deposit',
+      title: '💰 Deposit Received',
+      body: `${fmtMoney(amount)} deposit হয়েছে। নতুন balance: ${fmtMoney(newBalance)}`,
+      link: 'student-dashboard.html',
+      priority: 'normal'
+    });
+
+    // ⭐ Low/negative balance alerts
+    if (newBalance < 0) {
+      await createNotification({
+        recipientType: 'student',
+        recipientId: pendingStudent.id,
+        type: 'negative_balance',
+        title: '🚨 Balance Negative',
+        body: `তোমার balance ${fmtMoney(newBalance)} হয়ে গেছে। Admin-এর সাথে যোগাযোগ কর।`,
+        priority: 'urgent'
+      });
+    } else if (newBalance < 500) {
+      await createNotification({
+        recipientType: 'student',
+        recipientId: pendingStudent.id,
+        type: 'low_balance',
+        title: '⚠️ Low Balance',
+        body: `তোমার balance ${fmtMoney(newBalance)}। দ্রুত deposit কর।`,
+        priority: 'high'
+      });
+    }
+
+    // ⭐ Audit log
     await addDoc(collection(db, 'adminLogs'), {
       action: 'deposit',
       details: { roll: pendingStudent.roll, name: pendingStudent.name, amount, newBalance },
@@ -786,7 +824,6 @@ window.submitDeposit = async function() {
   btn.innerHTML = '✅ Deposit';
 };
 
-// ---------- Balance Adjust ----------
 window.openAdjust = function(studentId) {
   const s = allStudents.find(x => x.id === studentId);
   if (!s) return;
@@ -836,7 +873,6 @@ window.submitAdjustment = async function() {
       createdAt: serverTimestamp()
     });
 
-    // Audit log
     await addDoc(collection(db, 'adminLogs'), {
       action: 'adjustment',
       details: { roll: pendingStudent.roll, name: pendingStudent.name, oldBal, newBal, reason },
@@ -854,7 +890,6 @@ window.submitAdjustment = async function() {
   btn.innerHTML = '⚙️ Adjust';
 };
 
-// ---------- Per-Student PIN Reset ----------
 window.openPinReset = function(studentId) {
   const s = allStudents.find(x => x.id === studentId);
   if (!s) return;
@@ -896,7 +931,17 @@ window.submitPinReset = async function() {
       amount: 0, note: `PIN reset by admin`, createdAt: serverTimestamp()
     });
 
-    // Audit log
+    // ⭐ Notification to student
+    await createNotification({
+      recipientType: 'student',
+      recipientId: pinResetStudent.id,
+      type: 'pin_reset',
+      title: '🔐 PIN Reset হয়েছে',
+      body: `Admin তোমার PIN reset করেছে। নতুন PIN দিয়ে login করে নিজের PIN set কর।`,
+      priority: 'high'
+    });
+
+    // ⭐ Audit log
     await addDoc(collection(db, 'adminLogs'), {
       action: 'pin_reset',
       details: { roll: pinResetStudent.roll, name: pinResetStudent.name, newPin },
@@ -914,7 +959,6 @@ window.submitPinReset = async function() {
   btn.innerHTML = '🔐 Reset কর';
 };
 
-// ---------- Student Detail ----------
 window.openDetail = async function(studentId) {
   const s = allStudents.find(x => x.id === studentId);
   if (!s) return;
@@ -970,7 +1014,6 @@ window.openDetail = async function(studentId) {
     </div>`;
 };
 
-// ---------- Delete Record ----------
 window.deleteRecord = async function(recordId) {
   const r = allRecords.find(x => x.id === recordId);
   if (!r) return;
@@ -980,7 +1023,6 @@ window.deleteRecord = async function(recordId) {
   try {
     await deleteDoc(doc(db, 'mealRecords', recordId));
     
-    // Audit log
     await addDoc(collection(db, 'adminLogs'), {
       action: 'record_delete',
       details: { date: r.date, batchName: r.batchName, totalBill: r.totalBill },
@@ -997,7 +1039,6 @@ window.deleteRecord = async function(recordId) {
   }
 };
 
-// ---------- CSV ----------
 function downloadCSV(filename, rows) {
   if (rows.length === 0) return showToast('⚠️ কোনো data নেই', 'error');
   const headers = Object.keys(rows[0]);
