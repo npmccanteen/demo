@@ -2,8 +2,11 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>নতুন PIN Set কর</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ff9800">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -11,6 +14,8 @@
     background: linear-gradient(135deg, #ff9800 0%, #e68900 100%);
     min-height: 100vh; display: flex; align-items: center;
     justify-content: center; padding: 20px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
   .card {
     background: white; border-radius: 16px; padding: 35px 30px;
@@ -84,7 +89,7 @@
 
   <label>নতুন PIN (৪-৬ সংখ্যা)</label>
   <input type="text" id="newPin" maxlength="6" inputmode="numeric" placeholder="••••" />
-  <div class="hint">শুধু সংখ্যা — যেমন `1234`, `567890`</div>
+  <div class="hint">শুধু সংখ্যা — যেমন 1234, 567890</div>
 
   <label>আবার লেখো (Confirm)</label>
   <input type="text" id="confirmPin" maxlength="6" inputmode="numeric" placeholder="••••" />
@@ -97,11 +102,14 @@
 
 <script type="module">
 import { db, doc, getDoc, updateDoc } from './js/firebase-init.js';
+import { createNotification } from './js/notifications.js';
+import { initPWA } from './js/pwa.js';
+
+initPWA();
 
 const studentId = localStorage.getItem('npmc_student_id');
 const needsSetup = localStorage.getItem('npmc_requires_pin_setup') === 'true';
 
-// Guard: must be logged in AND need setup
 if (!studentId) {
   window.location.replace('student-login.html');
 }
@@ -131,7 +139,6 @@ async function loadStudent() {
     }
     currentStudent = snap.data();
 
-    // If already set personal PIN — no need to be here
     if (currentStudent.pinIsDefault !== true && !needsSetup) {
       window.location.replace('student-dashboard.html');
       return;
@@ -177,6 +184,16 @@ window.setPin = async function() {
       pinChangedAt: new Date().toISOString()
     });
 
+    // ⭐ Notify admin that student completed PIN setup
+    await createNotification({
+      recipientType: 'admin',
+      recipientId: 'ALL_ADMINS',
+      type: 'pin_setup_pending',
+      title: '✅ PIN Setup Complete',
+      body: `${currentStudent.roll} — ${currentStudent.name} তাদের নতুন PIN set করেছে।`,
+      priority: 'normal'
+    });
+
     localStorage.removeItem('npmc_requires_pin_setup');
 
     showMsg('✅ PIN সফলভাবে set হয়েছে! Dashboard-এ যাচ্ছি...', 'ok');
@@ -205,7 +222,6 @@ window.logout = function(e) {
   });
 });
 
-// Init
 loadStudent();
 </script>
 
