@@ -5,18 +5,66 @@ import {
 } from './firebase-init.js';
 
 // ==========================================================
-// Create a notification
+// OneSignal Config
+// ==========================================================
+const ONESIGNAL_APP_ID = "e4831469-cbc3-4a4e-b970-6332a29690e0";
+const ONESIGNAL_REST_API_KEY = "os_v2_app_4sbri2olynfe5olqmmzkffuq4c6mki2rlhguwgeyaw7dmrabgthvfw6tnksg5bjsjot5ly6wti24xni5e6kddfawezw7quyucexny6q";
+
+// ==========================================================
+// Send OneSignal Push Notification
+// ==========================================================
+async function sendOneSignalPush({ externalIds, title, body, url, priority }) {
+  if (!externalIds || externalIds.length === 0) return null;
+
+  const payload = {
+    app_id: ONESIGNAL_APP_ID,
+    include_aliases: { external_id: externalIds },
+    target_channel: "push",
+    headings: { en: title },
+    contents: { en: body },
+    priority: priority === 'urgent' ? 10 : (priority === 'high' ? 5 : 1)
+  };
+  if (url) payload.url = url;
+
+  try {
+    const response = await fetch('https://api.onesignal.com/notifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.warn('OneSignal push failed:', data);
+      return null;
+    }
+
+    console.log('✅ Push sent:', data);
+    return data;
+  } catch (e) {
+    console.warn('Push error:', e);
+    return null;
+  }
+}
+
+// ==========================================================
+// Create a notification (in-app + push)
 // ==========================================================
 export async function createNotification({
-  recipientType,    // 'student' | 'admin' | 'all'
-  recipientId,      // student doc ID, admin email, or 'ALL'
-  type,             // 'meal_added' | 'deposit' | 'low_balance' | 'negative_balance' | 'pin_reset' | 'pin_setup_pending' | 'daily_summary'
+  recipientType,
+  recipientId,
+  type,
   title,
   body,
   link = '',
-  priority = 'normal'  // 'normal' | 'high' | 'urgent'
+  priority = 'normal'
 }) {
   try {
+    // 1. Save in-app notification
     await addDoc(collection(db, 'notifications'), {
       recipientType,
       recipientId,
@@ -28,6 +76,24 @@ export async function createNotification({
       read: false,
       createdAt: serverTimestamp()
     });
+
+    // 2. Send push notification (non-blocking)
+    try {
+      if (recipientType === 'student' && recipientId && recipientId !== 'ALL') {
+        await sendOneSignalPush({
+          externalIds: [String(recipientId)],
+          title,
+          body,
+          url: link,
+          priority
+        });
+      }
+      // Note: Admin push requires knowing admin's External ID.
+      // We don't push to admin for now — they use the in-app bell.
+    } catch (pushErr) {
+      console.warn('Push dispatch failed (non-blocking):', pushErr);
+    }
+
   } catch (e) {
     console.warn('Create notification failed:', e);
   }
@@ -88,24 +154,24 @@ export async function deleteAllForUser(recipientType, recipientId) {
 }
 
 // ==========================================================
-// Notification icon/color per type
+// Icon/color per notification type
 // ==========================================================
 function typeConfig(type) {
   const map = {
-    meal_added:       { icon: '🍽️', color: '#2c5aa0' },
-    deposit:          { icon: '💰', color: '#28a745' },
-    low_balance:      { icon: '⚠️', color: '#ff9800' },
-    negative_balance: { icon: '🚨', color: '#dc3545' },
-    pin_reset:        { icon: '🔐', color: '#ff9800' },
-    pin_setup_pending:{ icon: '🔔', color: '#667eea' },
-    daily_summary:    { icon: '📊', color: '#2c5aa0' },
-    info:             { icon: 'ℹ️', color: '#6c757d' }
+    meal_added:        { icon: '🍽️', color: '#2c5aa0' },
+    deposit:           { icon: '💰', color: '#28a745' },
+    low_balance:       { icon: '⚠️', color: '#ff9800' },
+    negative_balance:  { icon: '🚨', color: '#dc3545' },
+    pin_reset:         { icon: '🔐', color: '#ff9800' },
+    pin_setup_pending: { icon: '🔔', color: '#667eea' },
+    daily_summary:     { icon: '📊', color: '#2c5aa0' },
+    info:              { icon: 'ℹ️', color: '#6c757d' }
   };
   return map[type] || map.info;
 }
 
 // ==========================================================
-// Format relative time
+// Relative time formatter
 // ==========================================================
 function timeAgo(date) {
   if (!date) return '—';
@@ -124,10 +190,9 @@ function timeAgo(date) {
 }
 
 // ==========================================================
-// Inject Bell UI + Dropdown
+// Bell UI + Dropdown
 // ==========================================================
 export function mountNotificationBell({ recipientType, recipientId }) {
-  // Prevent duplicates
   if (document.getElementById('notifBellContainer')) return;
 
   const container = document.createElement('div');
@@ -227,7 +292,6 @@ export function mountNotificationBell({ recipientType, recipientId }) {
   const btn = document.getElementById('notifBellBtn');
   const dropdown = document.getElementById('notifDropdown');
   const listEl = document.getElementById('notifList');
-  const badgeEl = document.getElementById('notifBadge');
 
   let currentNotifs = [];
 
@@ -239,14 +303,13 @@ export function mountNotificationBell({ recipientType, recipientId }) {
 
   function updateBadge() {
     const unreadCount = currentNotifs.filter(n => !n.read).length;
+    const b = document.getElementById('notifBadge');
+    if (!b) return;
     if (unreadCount > 0) {
-      badgeEl.textContent = unreadCount > 99 ? '99+' : unreadCount;
-      badgeEl.classList.add('show');
-      btn.textContent = '🔔';
-      btn.innerHTML = '🔔<span id="notifBadge" class="show">' + (unreadCount > 99 ? '99+' : unreadCount) + '</span>';
+      b.textContent = unreadCount > 99 ? '99+' : unreadCount;
+      b.classList.add('show');
     } else {
-      const b = document.getElementById('notifBadge');
-      if (b) b.classList.remove('show');
+      b.classList.remove('show');
     }
   }
 
@@ -275,7 +338,6 @@ export function mountNotificationBell({ recipientType, recipientId }) {
       `;
     }).join('');
 
-    // Click handler
     listEl.querySelectorAll('.notif-item').forEach(el => {
       el.onclick = async () => {
         const id = el.dataset.id;
@@ -292,7 +354,6 @@ export function mountNotificationBell({ recipientType, recipientId }) {
       ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   }
 
-  // Global handlers
   window.__notifMarkAllRead = async () => {
     await markAllAsRead(currentNotifs);
     await refresh();
@@ -317,16 +378,14 @@ export function mountNotificationBell({ recipientType, recipientId }) {
     if (!container.contains(e.target)) dropdown.classList.remove('show');
   });
 
-  // Initial load + auto-refresh every 30s
   refresh();
   setInterval(refresh, 30000);
 
-  // Return refresh function for external triggers
   return { refresh };
 }
 
 // ==========================================================
-// Optional: Browser Push Notification (asks permission)
+// Browser Notification Permission (optional)
 // ==========================================================
 export async function requestBrowserNotificationPermission() {
   if (!('Notification' in window)) return false;
@@ -341,10 +400,10 @@ export async function requestBrowserNotificationPermission() {
   }
 }
 
-export function showBrowserNotification(title, body, icon = '/icon.svg') {
+export function showBrowserNotification(title, body, icon = '/demo/icon.svg') {
   if (!('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
-  if (document.hasFocus()) return; // Skip if user is on the page
+  if (document.hasFocus()) return;
 
   try {
     const n = new Notification(title, {
