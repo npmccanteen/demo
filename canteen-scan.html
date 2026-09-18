@@ -27,6 +27,8 @@
   .btn-success:disabled { background: #999; cursor: not-allowed; }
   .btn-secondary { background: #6c757d; color: white; }
   .btn-secondary:hover { background: #5a6268; }
+  .btn-danger { background: #dc3545; color: white; }
+  .btn-danger:hover { background: #b02a37; }
 
   .dropzone { border: 2px dashed #2c5aa0; border-radius: 10px; padding: 40px 20px; text-align: center; cursor: pointer; background: #f8faff; transition: 0.2s; }
   .dropzone:hover, .dropzone.dragover { background: #e8f0ff; }
@@ -45,7 +47,7 @@
   th { background: #f0f4fa; font-weight: 600; color: #2c5aa0; font-size: 12px; }
   td.center { text-align: center; }
   .tick { color: #28a745; font-weight: 700; font-size: 16px; }
-  .empty { color: #ccc; }
+  .empty-cell { color: #ccc; }
 
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 14px 24px; border-radius: 8px; font-size: 14px; display: none; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); max-width: 90%; }
   .toast.show { display: block; }
@@ -69,13 +71,20 @@
   details.debug pre { font-family: monospace; font-size: 11px; margin-top: 8px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow: auto; background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; }
 
   .ai-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+  .page-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>📷 Canteen Scan <span class="ai-badge">✨ AI Vision</span></h1>
-  <p class="sub">ছবি upload কর → AI auto detect করবে → যাচাই → Save</p>
+  <div class="page-head">
+    <div>
+      <h1>📷 Canteen Scan <span class="ai-badge">✨ AI Vision</span></h1>
+      <p class="sub">ছবি upload কর → AI auto detect করবে → যাচাই → Save</p>
+    </div>
+    <button class="btn-danger" onclick="doAdminLogout()" style="padding:10px 18px;">🚪 Logout</button>
+  </div>
 
   <div class="card">
     <div class="row">
@@ -166,6 +175,11 @@ import {
   addDoc, updateDoc, serverTimestamp
 } from './js/firebase-init.js';
 import { OPENROUTER_API_KEY } from './firebase-config.js';
+import { requireAdmin, adminLogout } from './js/admin-auth.js';
+
+// ⭐ Require admin authentication
+await requireAdmin();
+window.doAdminLogout = adminLogout;
 
 const OPENROUTER_MODEL = 'openrouter/free';
 
@@ -200,7 +214,6 @@ function dbg(msg) {
   el.scrollTop = el.scrollHeight;
 }
 
-// ---------- Time zone: Bangladesh ----------
 function todayStr() {
   const now = new Date();
   const bd = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
@@ -230,7 +243,6 @@ async function loadPricing() {
   } catch (e) { console.warn(e); }
 }
 
-// ---------- Upload ----------
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
@@ -397,7 +409,6 @@ Example: {"101": {"lunchFull": true, "lunchHalf": false, "dinnerFull": true, "di
   return result;
 }
 
-// ---------- Render Result ----------
 function renderResult() {
   const tbody = document.querySelector('#resultTable tbody');
   tbody.innerHTML = '';
@@ -436,7 +447,7 @@ function renderResult() {
 
 function cell(filled, roll, col) {
   return `<td class="center" data-roll="${escapeHtml(roll)}" data-col="${col}">
-    ${filled ? '<span class="tick">✓</span>' : '<span class="empty">○</span>'}
+    ${filled ? '<span class="tick">✓</span>' : '<span class="empty-cell">○</span>'}
   </td>`;
 }
 
@@ -460,7 +471,6 @@ function updateStats() {
     <div class="stat-box" style="border-left-color:#ff9800;"><div class="num">৳${totalBill}</div><div class="lbl">মোট Bill</div></div>`;
 }
 
-// ---------- Actions ----------
 window.rerun = function() { if (lastFile) handleFile(lastFile); };
 window.clearAll = function() {
   document.getElementById('resultCard').style.display = 'none';
@@ -473,7 +483,6 @@ window.clearAll = function() {
   document.getElementById('statusMsg').innerHTML = '';
 };
 
-// ---------- Save ----------
 window.saveResults = async function() {
   const batchName = batchSelect.value;
   if (!scanDate.value) return showToast('⚠️ Date দে', 'error');
