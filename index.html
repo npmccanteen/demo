@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Meal System — Home</title>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "e4831469-cbc3-4a4e-b970-6332a29690e0",
+      safari_web_id: "web.onesignal.auto.13dd012d-81c7-44d8-8660-15690626d9c4",
+      serviceWorkerPath: "OneSignalSDKWorker.js",
+      serviceWorkerParam: { scope: "/demo/" },
+      notifyButton: { enable: false },
+    });
+  });
+</script>
 
 <!-- PWA Meta -->
 <link rel="manifest" href="manifest.json">
