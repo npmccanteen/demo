@@ -17,6 +17,7 @@
   label { display: block; font-weight: 600; margin: 10px 0 5px; font-size: 13px; }
   input, select { width: 100%; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; }
   input:focus, select:focus { border-color: #2c5aa0; outline: none; }
+  .batch-locked { background: #f0f4fa; cursor: not-allowed; font-weight: 600; color: #2c5aa0; border-color: #d0e0f5; }
 
   button { padding: 11px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-right: 6px; margin-top: 8px; transition: 0.2s; }
   .btn-primary { background: #2c5aa0; color: white; }
@@ -79,10 +80,9 @@
   <div class="card">
     <div class="row">
       <div class="col">
-        <label>Batch Name</label>
-<input type="text" value="8" readonly 
-  style="width:100%; padding:10px; border:1.5px solid #ddd; border-radius:8px; background:#f0f4fa; cursor:not-allowed; font-weight:600; color:#2c5aa0;" />
-<input type="hidden" id="batchSelect" value="8" />
+        <label>Batch Name (fixed)</label>
+        <input type="text" value="8" readonly class="batch-locked" />
+        <input type="hidden" id="batchSelect" value="8" />
       </div>
       <div class="col">
         <label>Date</label>
@@ -167,16 +167,13 @@ import {
 } from './js/firebase-init.js';
 import { OPENROUTER_API_KEY } from './firebase-config.js';
 
-// ---------- Config ----------
-const OPENROUTER_MODEL = 'openrouter/free'; // auto-picks a free model that supports image input + structured output
+const OPENROUTER_MODEL = 'openrouter/free';
 
-// ---------- State ----------
 let students = [];
 let pricing = { lunchFull: 80, lunchHalf: 60, dinnerFull: 80, dinnerHalf: 60 };
 let marking = {};
 let lastFile = null;
 
-// ---------- Elements ----------
 const batchSelect = document.getElementById('batchSelect');
 const scanDate = document.getElementById('scanDate');
 const perPageSel = document.getElementById('perPage');
@@ -203,24 +200,21 @@ function dbg(msg) {
   el.scrollTop = el.scrollHeight;
 }
 
+// ---------- Time zone: Bangladesh ----------
+function todayStr() {
+  const now = new Date();
+  const bd = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+  const y = bd.getFullYear();
+  const m = String(bd.getMonth() + 1).padStart(2, '0');
+  const d = String(bd.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 init();
 
 async function init() {
-  const today = new Date();
-  scanDate.value = today.toISOString().split('T')[0];
-  await loadBatches();
+  scanDate.value = todayStr();
   await loadPricing();
-}
-
-async function loadBatches() {
-  try {
-    const snap = await getDocs(collection(db, 'students'));
-    const batches = [...new Set(snap.docs.map(d => d.data().batchName).filter(Boolean))].sort();
-    if (batches.length === 0) { batchSelect.innerHTML = '<option value="">— Batch নেই —</option>'; return; }
-    batchSelect.innerHTML = '<option value="">— Select —</option>' +
-      batches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
-    if (batches.length === 1) batchSelect.value = batches[0];
-  } catch (e) { console.error(e); }
 }
 
 async function loadPricing() {
@@ -249,8 +243,9 @@ fileInput.addEventListener('change', e => {
 });
 
 async function handleFile(file) {
-  if (!batchSelect.value) return showToast('⚠️ আগে Batch select কর', 'error');
-  if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY.length < 10) return showToast('❌ OpenRouter API key নেই', 'error');
+  if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY.length < 10) {
+    return showToast('❌ OpenRouter API key নেই', 'error');
+  }
 
   lastFile = file;
   document.getElementById('debugPre').textContent = '';
@@ -263,7 +258,8 @@ async function handleFile(file) {
   progressText.textContent = 'Student list লোড হচ্ছে...';
 
   try {
-    const q = query(collection(db, 'students'), where('batchName', '==', batchSelect.value));
+    const batchName = batchSelect.value;
+    const q = query(collection(db, 'students'), where('batchName', '==', batchName));
     const snap = await getDocs(q);
     students = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => String(a.roll).localeCompare(String(b.roll), undefined, { numeric: true }));
@@ -274,16 +270,14 @@ async function handleFile(file) {
     dbg(`🤖 Model: ${OPENROUTER_MODEL}`);
     dbg(`📊 Students: ${students.length}\n`);
 
-    const detected = await callGeminiVision(file);
+    const detected = await callAIVision(file);
 
     marking = {};
     students.forEach(s => {
       const m = detected[s.roll] || {};
       marking[s.roll] = {
-        lunchFull: !!m.lunchFull,
-        lunchHalf: !!m.lunchHalf,
-        dinnerFull: !!m.dinnerFull,
-        dinnerHalf: !!m.dinnerHalf
+        lunchFull: !!m.lunchFull, lunchHalf: !!m.lunchHalf,
+        dinnerFull: !!m.dinnerFull, dinnerHalf: !!m.dinnerHalf
       };
     });
 
@@ -295,7 +289,6 @@ async function handleFile(file) {
     const totalDetected = Object.keys(detected).length;
     document.getElementById('resultBanner').className = 'info-banner ok';
     document.getElementById('resultBanner').innerHTML = `✅ AI <strong>${totalDetected}</strong> জনের meal detect করেছে। নিচে চেক করে ভুল থাকলে click করে ঠিক কর।`;
-
   } catch (e) {
     console.error(e);
     progressBox.classList.remove('show');
@@ -306,10 +299,7 @@ async function handleFile(file) {
   }
 }
 
-// ==========================================================
-//  🎯 Vision call via OpenRouter (free tier) — structured output
-// ==========================================================
-async function callGeminiVision(file) {
+async function callAIVision(file) {
   const base64 = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => resolve(e.target.result.split(',')[1]);
@@ -328,22 +318,17 @@ Only include a roll in the output if it has at least one filled bubble. Skip rol
 Respond with ONLY a JSON object, no markdown, no explanation — keys are roll numbers as strings, values are objects with boolean keys lunchFull, lunchHalf, dinnerFull, dinnerHalf.
 Example: {"101": {"lunchFull": true, "lunchHalf": false, "dinnerFull": true, "dinnerHalf": false}}`;
 
-  // Structured output schema — forces the model to return exactly this shape.
   const schema = {
     type: "object",
-    properties: Object.fromEntries(
-      students.map(s => [String(s.roll), {
-        type: "object",
-        properties: {
-          lunchFull: { type: "boolean" },
-          lunchHalf: { type: "boolean" },
-          dinnerFull: { type: "boolean" },
-          dinnerHalf: { type: "boolean" }
-        },
-        required: ["lunchFull", "lunchHalf", "dinnerFull", "dinnerHalf"],
-        additionalProperties: false
-      }])
-    ),
+    properties: Object.fromEntries(students.map(s => [String(s.roll), {
+      type: "object",
+      properties: {
+        lunchFull: { type: "boolean" }, lunchHalf: { type: "boolean" },
+        dinnerFull: { type: "boolean" }, dinnerHalf: { type: "boolean" }
+      },
+      required: ["lunchFull", "lunchHalf", "dinnerFull", "dinnerHalf"],
+      additionalProperties: false
+    }])),
     additionalProperties: false
   };
 
@@ -358,22 +343,16 @@ Example: {"101": {"lunchFull": true, "lunchHalf": false, "dinnerFull": true, "di
     body: JSON.stringify({
       model: OPENROUTER_MODEL,
       temperature: 0,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: `data:${file.type || 'image/jpeg'};base64,${base64}` } }
-          ]
-        }
-      ],
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: `data:${file.type || 'image/jpeg'};base64,${base64}` } }
+        ]
+      }],
       response_format: {
         type: 'json_schema',
-        json_schema: {
-          name: 'meal_marks',
-          strict: true,
-          schema: schema
-        }
+        json_schema: { name: 'meal_marks', strict: true, schema: schema }
       }
     })
   });
@@ -382,25 +361,24 @@ Example: {"101": {"lunchFull": true, "lunchHalf": false, "dinnerFull": true, "di
   const data = await response.json();
 
   if (!response.ok) {
-    dbg(`  ❌ Raw error body: ${JSON.stringify(data)}`);
+    dbg(`  ❌ Raw error: ${JSON.stringify(data)}`);
     const msg = data.error?.message || `HTTP ${response.status}`;
     throw new Error(msg);
   }
 
   const text = data.choices?.[0]?.message?.content;
   if (!text) {
-    dbg(`  ❌ No text in response — raw: ${JSON.stringify(data).slice(0, 300)}`);
-    throw new Error('Model থেকে কোনো text পাওয়া যায়নি');
+    dbg(`  ❌ No text — raw: ${JSON.stringify(data).slice(0, 300)}`);
+    throw new Error('Model থেকে text পাওয়া যায়নি');
   }
 
   dbg(`  ✅ Response received, parsing...`);
 
   let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch (e) {
+  try { parsed = JSON.parse(text); }
+  catch (e) {
     dbg(`  ❌ JSON parse failed: ${e.message}`);
-    throw new Error('Model-এর response valid JSON না — আবার try কর');
+    throw new Error('Model-এর response valid JSON না');
   }
 
   const validRolls = new Set(students.map(s => String(s.roll)));
@@ -409,10 +387,8 @@ Example: {"101": {"lunchFull": true, "lunchHalf": false, "dinnerFull": true, "di
     if (validRolls.has(String(roll))) {
       const m = parsed[roll] || {};
       result[String(roll)] = {
-        lunchFull: !!m.lunchFull,
-        lunchHalf: !!m.lunchHalf,
-        dinnerFull: !!m.dinnerFull,
-        dinnerHalf: !!m.dinnerHalf
+        lunchFull: !!m.lunchFull, lunchHalf: !!m.lunchHalf,
+        dinnerFull: !!m.dinnerFull, dinnerHalf: !!m.dinnerHalf
       };
     }
   });
@@ -421,9 +397,7 @@ Example: {"101": {"lunchFull": true, "lunchHalf": false, "dinnerFull": true, "di
   return result;
 }
 
-// ==========================================================
-//  Render Result
-// ==========================================================
+// ---------- Render Result ----------
 function renderResult() {
   const tbody = document.querySelector('#resultTable tbody');
   tbody.innerHTML = '';
@@ -444,17 +418,14 @@ function renderResult() {
       ${cell(m.lunchHalf, s.roll, 'lunchHalf')}
       ${cell(m.dinnerFull, s.roll, 'dinnerFull')}
       ${cell(m.dinnerHalf, s.roll, 'dinnerHalf')}
-      <td class="center" style="font-weight:600; color:${bill > 0 ? '#2c5aa0' : '#999'};">${bill > 0 ? '৳' + bill : '—'}</td>
-    `;
+      <td class="center" style="font-weight:600; color:${bill > 0 ? '#2c5aa0' : '#999'};">${bill > 0 ? '৳' + bill : '—'}</td>`;
     tbody.appendChild(tr);
   });
 
   tbody.querySelectorAll('td[data-roll]').forEach(td => {
     td.style.cursor = 'pointer';
     td.onclick = () => {
-      const roll = td.dataset.roll;
-      const col = td.dataset.col;
-      marking[roll][col] = !marking[roll][col];
+      marking[td.dataset.roll][td.dataset.col] = !marking[td.dataset.roll][td.dataset.col];
       renderResult();
       updateStats();
     };
@@ -486,8 +457,7 @@ function updateStats() {
     <div class="stat-box"><div class="num">${df}</div><div class="lbl">Dinner Full</div></div>
     <div class="stat-box"><div class="num">${dh}</div><div class="lbl">Dinner Half</div></div>
     <div class="stat-box" style="border-left-color:#28a745;"><div class="num">${ate}</div><div class="lbl">Meal খেয়েছে</div></div>
-    <div class="stat-box" style="border-left-color:#ff9800;"><div class="num">৳${totalBill}</div><div class="lbl">মোট Bill</div></div>
-  `;
+    <div class="stat-box" style="border-left-color:#ff9800;"><div class="num">৳${totalBill}</div><div class="lbl">মোট Bill</div></div>`;
 }
 
 // ---------- Actions ----------
@@ -505,7 +475,7 @@ window.clearAll = function() {
 
 // ---------- Save ----------
 window.saveResults = async function() {
-  if (!batchSelect.value) return showToast('⚠️ Batch select কর', 'error');
+  const batchName = batchSelect.value;
   if (!scanDate.value) return showToast('⚠️ Date দে', 'error');
 
   const perPage = Number(perPageSel.value);
@@ -531,11 +501,11 @@ window.saveResults = async function() {
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Save হচ্ছে...';
+  btn.innerHTML = '<span class="spinner"></span>Save...';
 
   try {
     const existingQ = query(collection(db, 'mealRecords'),
-      where('batchName', '==', batchSelect.value), where('date', '==', dateStr));
+      where('batchName', '==', batchName), where('date', '==', dateStr));
     const existing = await getDocs(existingQ);
     if (!existing.empty) {
       if (!confirm('⚠️ এই date-এর record আগেই আছে। চালিয়ে যাব?')) {
@@ -544,8 +514,8 @@ window.saveResults = async function() {
     }
 
     const recordRef = await addDoc(collection(db, 'mealRecords'), {
-      batchName: batchSelect.value, date: dateStr, perPage, totalBill,
-      studentCount: records.length, source: 'gemini-vision',
+      batchName, date: dateStr, perPage, totalBill,
+      studentCount: records.length, source: 'openrouter-vision',
       createdAt: serverTimestamp()
     });
 
@@ -560,8 +530,7 @@ window.saveResults = async function() {
       });
       await addDoc(collection(db, 'transactions'), {
         studentId: r.studentId, roll: r.roll, name: r.name,
-        batchName: batchSelect.value, date: dateStr,
-        type: 'meal', amount: -r.bill,
+        batchName, date: dateStr, type: 'meal', amount: -r.bill,
         details: { lunchFull: r.lunchFull, lunchHalf: r.lunchHalf,
                    dinnerFull: r.dinnerFull, dinnerHalf: r.dinnerHalf },
         recordId: recordRef.id, createdAt: serverTimestamp()
