@@ -18,7 +18,12 @@
     box-shadow: 0 10px 40px rgba(0,0,0,0.2);
   }
   h1 { color: #2c5aa0; font-size: 22px; margin-bottom: 6px; text-align: center; }
-  .sub { color: #666; font-size: 13px; text-align: center; margin-bottom: 25px; }
+  .sub { color: #666; font-size: 13px; text-align: center; margin-bottom: 20px; }
+  .batch-info {
+    text-align: center; padding: 12px; background: #e7f3ff;
+    border-radius: 10px; margin-bottom: 20px; font-size: 14px; color: #004085;
+  }
+  .batch-info strong { color: #2c5aa0; font-size: 16px; }
   label { display: block; font-weight: 600; margin: 14px 0 6px; font-size: 13px; color: #333; }
   input {
     width: 100%; padding: 12px 14px; border: 1.5px solid #ddd;
@@ -58,10 +63,12 @@
 
 <div class="card">
   <h1>🎓 Student Login</h1>
-  <p class="sub">Batch + Roll + PIN দিয়ে login কর</p>
+  <p class="sub">Roll + PIN দিয়ে login কর</p>
 
-  <label>Batch Name</label>
-  <input type="text" id="batchName" placeholder="যেমন: Batch A" />
+  <!-- Fixed batch name -->
+  <div class="batch-info">
+    Batch: <strong>8</strong>
+  </div>
 
   <label>Roll Number</label>
   <input type="text" id="roll" placeholder="যেমন: 101" />
@@ -78,11 +85,12 @@
 <script type="module">
 import { db, collection, getDocs, query, where } from './js/firebase-init.js';
 
-// ⚠️ IMPORTANT: If already logged in (localStorage has id), redirect to dashboard
-// BUT use a flag to avoid infinite loop
+// 🔒 FIXED BATCH NAME for testing phase
+const BATCH_NAME = "8";
+
+// Redirect if already logged in
 const existingId = localStorage.getItem('npmc_student_id');
 if (existingId) {
-  // Already logged in — go to dashboard
   window.location.replace('student-dashboard.html');
 }
 
@@ -100,12 +108,11 @@ async function hashPin(pin, roll) {
 }
 
 window.doLogin = async function() {
-  const batchName = document.getElementById('batchName').value.trim();
   const roll = document.getElementById('roll').value.trim();
   const pin = document.getElementById('pin').value.trim();
 
-  if (!batchName || !roll || !pin) {
-    return showMsg('⚠️ সব field পূরণ কর', 'error');
+  if (!roll || !pin) {
+    return showMsg('⚠️ Roll আর PIN দুটোই দে', 'error');
   }
 
   const btn = document.getElementById('loginBtn');
@@ -115,20 +122,20 @@ window.doLogin = async function() {
   try {
     const q = query(
       collection(db, 'students'),
-      where('batchName', '==', batchName),
+      where('batchName', '==', BATCH_NAME),
       where('roll', '==', roll)
     );
     const snap = await getDocs(q);
 
     if (snap.empty) {
-      throw new Error('Batch বা Roll ভুল');
+      throw new Error('Roll ভুল — Admin-এর সাথে যোগাযোগ কর');
     }
 
     const studentDoc = snap.docs[0];
     const student = studentDoc.data();
 
     if (!student.pinHash) {
-      throw new Error('এই batch-এর PIN এখনো সেট হয়নি — Admin-কে বল');
+      throw new Error('PIN set হয়নি — Admin-কে বল');
     }
 
     const inputHash = await hashPin(pin, roll);
@@ -136,7 +143,6 @@ window.doLogin = async function() {
       throw new Error('PIN ভুল');
     }
 
-    // Save session
     localStorage.setItem('npmc_student_id', studentDoc.id);
     localStorage.setItem('npmc_login_time', Date.now().toString());
 
@@ -151,7 +157,7 @@ window.doLogin = async function() {
   }
 };
 
-['batchName','roll','pin'].forEach(id => {
+['roll','pin'].forEach(id => {
   document.getElementById(id).addEventListener('keypress', e => {
     if (e.key === 'Enter') doLogin();
   });
