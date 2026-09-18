@@ -53,7 +53,7 @@
   .dropzone small { color: #888; font-size: 13px; }
 
   .progress-bar { height: 6px; background: #e0e0e0; border-radius: 4px; margin-top: 15px; overflow: hidden; display: none; }
-  .progress-bar > div { height: 100%; background: linear-gradient(90deg, #2c5aa0, #4a7fc1); width: 0%; transition: width 0.3s; }
+  .progress-bar > div { height: 100%; background: linear-gradient(90deg, #2c5aa0, #4a7fc1); width: 0%; transition: 0.3s; }
 
   .status { margin-top: 15px; font-size: 14px; color: #555; display: none; text-align: center; padding: 12px; background: #f8f9fa; border-radius: 6px; }
   .status.active { display: block; }
@@ -114,20 +114,17 @@
   <h1>📋 Student Import</h1>
   <p class="sub">Batch 8 — Student যোগ কর → PIN সেট কর</p>
 
-  <!-- BATCH NAME (FIXED) -->
   <div class="card">
     <label>Batch Name (fixed)</label>
     <input type="text" id="batchName" value="8" readonly class="batch-locked" />
   </div>
 
-  <!-- TABS -->
   <div class="card">
     <div class="tabs">
       <button class="tab active" onclick="switchTab('paste', event)">📋 Manual Paste</button>
       <button class="tab" onclick="switchTab('ocr', event)">📷 OCR Upload</button>
     </div>
 
-    <!-- TAB 1: MANUAL PASTE -->
     <div class="tab-content active" id="tab-paste">
       <label>এখানে স্টুডেন্ট লিস্ট paste কর</label>
       <p style="font-size:13px; color:#666; margin-bottom:8px;">
@@ -136,20 +133,17 @@
       <textarea id="pasteInput" rows="12" placeholder="101 Rahim Uddin
 102 Karim Ahmed
 103 Jamil Hossain
-104, Sabbir Rahman
-105 - Naeem Islam"></textarea>
+104, Sabbir Rahman"></textarea>
 
       <div class="tip-box">
         <strong>💡 Excel/Google Sheets থেকে:</strong> Roll + Name সিলেক্ট কর → কপি → এখানে paste কর।<br>
-        <strong>💡 ভুল হলে:</strong> নিচে টেবিলে edit করতে পারবি।<br>
-        <strong>💡 টিপস:</strong> Roll আর Name-এর মাঝে যেকোনো চিহ্ন (space, comma, dash, dot) থাকলেই হবে।
+        <strong>💡 ভুল হলে:</strong> নিচে টেবিলে edit করতে পারবি।
       </div>
 
       <button class="btn-primary" onclick="parsePaste()">➡️ টেবিলে দেখাও</button>
       <button class="btn-secondary" onclick="document.getElementById('pasteInput').value=''">🧹 Clear</button>
     </div>
 
-    <!-- TAB 2: OCR UPLOAD -->
     <div class="tab-content" id="tab-ocr">
       <div class="dropzone" id="dropzone">
         <div class="icon">📷</div>
@@ -170,7 +164,6 @@
     </div>
   </div>
 
-  <!-- RESULT TABLE -->
   <div class="card" id="resultCard" style="display:none;">
     <div class="actions-row">
       <h3>✏️ যাচাই করে ঠিক কর</h3>
@@ -200,7 +193,6 @@
     <div id="saveStatus" style="margin-top:12px; font-size:14px;"></div>
   </div>
 
-  <!-- PIN SETUP CARD -->
   <div class="card" id="loginCard" style="display:none; background: #f0f7ff; border-left: 4px solid #2c5aa0;">
     <h3 style="color:#2c5aa0; margin-bottom:8px;">🔐 Batch PIN সেট কর</h3>
     <p style="font-size:13px; color:#555; margin-bottom:12px;">
@@ -217,9 +209,7 @@
     </p>
 
     <div style="margin-top:15px;">
-      <button class="btn-warning" onclick="setBatchPin()" id="setPinBtn">
-        🔐 PIN সেট কর
-      </button>
+      <button class="btn-warning" onclick="setBatchPin()" id="setPinBtn">🔐 PIN সেট কর</button>
     </div>
 
     <div id="pinProgress" style="margin-top:15px; font-size:14px;"></div>
@@ -240,7 +230,6 @@ import { OCR_API_KEY } from './firebase-config.js';
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// ---------- Helpers ----------
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -254,9 +243,7 @@ function setProgress(pct) {
   document.getElementById('progressBar').style.display = 'block';
   document.getElementById('progressFill').style.width = pct + '%';
 }
-function hideProgress() {
-  document.getElementById('progressBar').style.display = 'none';
-}
+function hideProgress() { document.getElementById('progressBar').style.display = 'none'; }
 
 let toastTimer;
 function showToast(msg, type) {
@@ -267,7 +254,6 @@ function showToast(msg, type) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// ---------- Tabs ----------
 window.switchTab = function(name, e) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -275,9 +261,7 @@ window.switchTab = function(name, e) {
   document.getElementById('tab-' + name).classList.add('active');
 };
 
-// ==========================================================
-// PASTE PARSING
-// ==========================================================
+// ---------- Paste Parsing ----------
 window.parsePaste = function() {
   const text = document.getElementById('pasteInput').value.trim();
   if (!text) return showToast('⚠️ কিছু paste কর', 'error');
@@ -298,7 +282,6 @@ function parseStudents(text) {
     if (/^(roll|name|sl|no|student|list|page|batch|#)/i.test(line)) continue;
     if (line.length < 2) continue;
 
-    // Pattern 1: "101 Rahim Uddin"
     let match = line.match(/^(\d{1,8})[\s,.\-:)\]|]+(.+)$/);
     if (match) {
       const roll = match[1];
@@ -310,7 +293,6 @@ function parseStudents(text) {
       continue;
     }
 
-    // Pattern 2: "Rahim Uddin, 101"
     match = line.match(/^(.+?)[\s,]+(\d{1,8})$/);
     if (match) {
       const name = match[1].trim().replace(/[,.\-\s]+$/, '');
@@ -324,9 +306,7 @@ function parseStudents(text) {
   return students;
 }
 
-// ==========================================================
-// OCR UPLOAD (OCR.space)
-// ==========================================================
+// ---------- OCR Upload ----------
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
 const previewImg = document.getElementById('previewImg');
@@ -390,7 +370,6 @@ async function handleFile(file) {
     document.getElementById('resultCard').style.display = 'block';
     showToast(`✅ ${students.length} জন পাওয়া গেছে`, 'success');
     document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
-
   } catch (e) {
     console.error(e);
     setStatus('❌ ' + e.message, 'error');
@@ -430,9 +409,7 @@ async function ocrSpaceCall(canvas) {
   form.append('isTable', 'true');
 
   const res = await fetch('https://api.ocr.space/parse/image', {
-    method: 'POST',
-    headers: { 'apikey': OCR_API_KEY },
-    body: form
+    method: 'POST', headers: { 'apikey': OCR_API_KEY }, body: form
   });
 
   if (!res.ok) throw new Error('OCR API error: HTTP ' + res.status);
@@ -440,16 +417,13 @@ async function ocrSpaceCall(canvas) {
 
   if (data.IsErroredOnProcessing) {
     const errMsg = Array.isArray(data.ErrorMessage)
-      ? data.ErrorMessage.join(', ')
-      : (data.ErrorMessage || 'OCR failed');
+      ? data.ErrorMessage.join(', ') : (data.ErrorMessage || 'OCR failed');
     throw new Error(errMsg);
   }
   return data.ParsedResults?.[0]?.ParsedText || '';
 }
 
-// ==========================================================
-// TABLE
-// ==========================================================
+// ---------- Table ----------
 function renderTable(students) {
   const tbody = document.querySelector('#studentTable tbody');
   tbody.innerHTML = '';
@@ -474,12 +448,10 @@ function renumber() {
     tr.children[0].textContent = i + 1;
   });
 }
-
 function updateCount() {
   const n = document.querySelectorAll('#studentTable tbody tr').length;
   document.getElementById('countBadge').textContent = `মোট: ${n} জন`;
 }
-
 window.addEmptyRow = function() {
   const tbody = document.querySelector('#studentTable tbody');
   const tr = document.createElement('tr');
@@ -495,16 +467,13 @@ window.addEmptyRow = function() {
   renumber();
   updateCount();
 };
-
 window.clearAllRows = function() {
   if (!confirm('সব row মুছে ফেলব?')) return;
   document.querySelector('#studentTable tbody').innerHTML = '';
   updateCount();
 };
 
-// ==========================================================
-// SAVE TO FIRESTORE
-// ==========================================================
+// ---------- Save ----------
 window.saveToFirestore = async function() {
   const batchName = document.getElementById('batchName').value.trim();
   if (!batchName) return showToast('⚠️ Batch Name নেই', 'error');
@@ -540,22 +509,14 @@ window.saveToFirestore = async function() {
       if (!dup.empty) { skipped++; continue; }
 
       await addDoc(collection(db, 'students'), {
-        roll: s.roll,
-        name: s.name,
-        batchName: batchName,
-        balance: 0,
-        totalDeposit: 0,
-        totalBill: 0,
-        pinHash: null,
-        pinIsDefault: false,
-        active: true,
+        roll: s.roll, name: s.name, batchName: batchName,
+        balance: 0, totalDeposit: 0, totalBill: 0,
+        pinHash: null, pinIsDefault: false, active: true,
         createdAt: serverTimestamp()
       });
       success++;
       saveStatus.textContent = `Progress: ${success}/${students.length}`;
-    } catch (e) {
-      console.error('Save error', e);
-    }
+    } catch (e) { console.error('Save error', e); }
   }
 
   btn.disabled = false;
@@ -564,14 +525,11 @@ window.saveToFirestore = async function() {
     (skipped ? ` <span class="badge badge-warn">⚠️ ${skipped} ডুপ্লিকেট বাদ</span>` : '');
   showToast(`✅ ${success} জন সেভ হয়েছে`, 'success');
 
-  // Show PIN card
   document.getElementById('loginCard').style.display = 'block';
   document.getElementById('loginCard').scrollIntoView({ behavior: 'smooth' });
 };
 
-// ==========================================================
-// SET BATCH PIN — সব student-এর জন্য default PIN
-// ==========================================================
+// ---------- SET BATCH PIN ----------
 async function hashPin(pin, roll) {
   const data = new TextEncoder().encode(pin + ':' + roll + ':npmc');
   const buf = await crypto.subtle.digest('SHA-256', data);
@@ -585,6 +543,15 @@ window.setBatchPin = async function() {
 
   if (!batchName) return showToast('⚠️ Batch Name নেই', 'error');
   if (!/^\d{4,6}$/.test(pin)) return showToast('⚠️ PIN ৪-৬ সংখ্যার হতে হবে', 'error');
+
+  // ⚠️ Double confirmation
+  const warningMsg = `⚠️ সতর্কতা!\n\n` +
+    `এই PIN সেট করলে Batch "${batchName}"-এর সব student-এর PIN default-এ reset হয়ে যাবে।\n` +
+    `তারা সবাই পরবর্তী login-এ নতুন করে নিজের PIN set করবে।\n\n` +
+    `Default PIN হবে: ${pin}\n\n` +
+    `তুই কি নিশ্চিত?`;
+
+  if (!confirm(warningMsg)) return showToast('❌ Cancel করা হয়েছে', 'error');
 
   const btn = document.getElementById('setPinBtn');
   btn.disabled = true;
@@ -608,20 +575,17 @@ window.setBatchPin = async function() {
     for (const docSnap of snap.docs) {
       const s = docSnap.data();
       const pinHash = await hashPin(pin, s.roll);
-
       await updateDoc(doc(db, 'students', docSnap.id), {
         pinHash: pinHash,
         pinIsDefault: true,
         pinResetAt: new Date().toISOString()
       });
-
       done++;
       progress.textContent = `${done}/${snap.size} আপডেট হয়েছে`;
     }
 
     progress.innerHTML = `<span class="badge badge-ok">✅ ${done} জনের PIN সেট হয়েছে (Default: ${escapeHtml(pin)})</span>`;
     showToast(`✅ ${done} জনের জন্য default PIN: ${pin}`, 'success');
-
   } catch (e) {
     console.error(e);
     progress.innerHTML = `<span class="badge badge-warn">❌ ${escapeHtml(e.message)}</span>`;
