@@ -195,7 +195,7 @@
   }
   .modal input:focus { border-color: #2c5aa0; outline: none; }
   .modal .btn-row { display: flex; gap: 10px; margin-top: 20px; }
-  .modal .btn-row button { margin-top: 0; flex: 1; }
+  .modal .btn-row button { margin-top: 0; flex: 1; border: none; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
   .modal .btn-cancel { background: #6c757d; color: white; }
   .modal .msg {
     margin-top: 12px; padding: 10px; border-radius: 6px;
@@ -330,14 +330,22 @@ import { db, doc, getDoc, updateDoc, collection, getDocs, query, where } from '.
 const studentId = localStorage.getItem('npmc_student_id');
 const loginTime = Number(localStorage.getItem('npmc_login_time') || 0);
 
+// ⭐ Change 1: If pin setup pending, redirect to set-pin page (BEFORE anything else)
+if (localStorage.getItem('npmc_requires_pin_setup') === 'true') {
+  window.location.replace('student-set-pin.html');
+}
+
+// If no session — go to login
 if (!studentId) {
   window.location.replace('student-login.html');
 }
 
+// 30-day session expiry
 const daysSince = (Date.now() - loginTime) / (1000 * 60 * 60 * 24);
 if (studentId && daysSince > 30) {
   localStorage.removeItem('npmc_student_id');
   localStorage.removeItem('npmc_login_time');
+  localStorage.removeItem('npmc_requires_pin_setup');
   window.location.replace('student-login.html');
 }
 
@@ -392,6 +400,13 @@ async function loadDashboard() {
 
     currentStudentId = studentId;
     currentStudent = snap.data();
+
+    // ⭐ Extra safety: if pinIsDefault is true, redirect to set-pin
+    if (currentStudent.pinIsDefault === true) {
+      localStorage.setItem('npmc_requires_pin_setup', 'true');
+      window.location.replace('student-set-pin.html');
+      return;
+    }
 
     renderHeader();
     renderBalance();
@@ -678,12 +693,17 @@ window.changePin = async function() {
     }
 
     const newHash = await hashPin(newPin, roll);
+
+    // ⭐ Change 3: pinIsDefault = false সহ update
     await updateDoc(doc(db, 'students', currentStudentId), {
       pinHash: newHash,
+      pinIsDefault: false,
       pinChangedAt: new Date().toISOString()
     });
 
     currentStudent.pinHash = newHash;
+    currentStudent.pinIsDefault = false;
+
     showModalMsg('✅ PIN সফলভাবে change হয়েছে!', 'ok');
     setTimeout(() => closePinModal(), 1500);
 
@@ -701,6 +721,7 @@ window.logout = function() {
   if (!confirm('Logout করব?')) return;
   localStorage.removeItem('npmc_student_id');
   localStorage.removeItem('npmc_login_time');
+  localStorage.removeItem('npmc_requires_pin_setup');  // ⭐ Change 2
   window.location.replace('student-login.html');
 };
 
