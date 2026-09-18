@@ -86,6 +86,7 @@
     background: #333; color: white; padding: 14px 24px;
     border-radius: 8px; font-size: 14px; display: none;
     z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    max-width: 90%;
   }
   .toast.show { display: block; }
   .toast.success { background: #28a745; }
@@ -101,36 +102,32 @@
   .tip-box strong { color: #e68900; }
   .tip-box code { background: #fff; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
 
-  .credentials-box {
-    background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px;
-    padding: 15px; margin-top: 15px; max-height: 300px; overflow-y: auto;
-    font-family: 'Courier New', monospace; font-size: 13px;
-    display: none;
+  .batch-locked {
+    background: #f0f4fa; cursor: not-allowed; font-weight: 600;
+    color: #2c5aa0; border-color: #d0e0f5 !important;
   }
-  .credentials-box.show { display: block; }
-  .credentials-box .row { padding: 4px 0; border-bottom: 1px dashed #e0e0e0; }
-  .credentials-box .row:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
 
 <div class="container">
   <h1>📋 Student Import</h1>
-  <p class="sub">Batch Name দে → স্টুডেন্ট যোগ কর → Login Accounts তৈরি কর</p>
+  <p class="sub">Batch 8 — Student যোগ কর → PIN সেট কর</p>
 
+  <!-- BATCH NAME (FIXED) -->
   <div class="card">
-    <label>Batch Name</label>
-<input type="text" id="batchName" value="8" readonly 
-  style="background:#f0f4fa; cursor:not-allowed; font-weight:600; color:#2c5aa0;" />
+    <label>Batch Name (fixed)</label>
+    <input type="text" id="batchName" value="8" readonly class="batch-locked" />
   </div>
 
+  <!-- TABS -->
   <div class="card">
     <div class="tabs">
       <button class="tab active" onclick="switchTab('paste', event)">📋 Manual Paste</button>
       <button class="tab" onclick="switchTab('ocr', event)">📷 OCR Upload</button>
     </div>
 
-    <!-- TAB 1 -->
+    <!-- TAB 1: MANUAL PASTE -->
     <div class="tab-content active" id="tab-paste">
       <label>এখানে স্টুডেন্ট লিস্ট paste কর</label>
       <p style="font-size:13px; color:#666; margin-bottom:8px;">
@@ -144,14 +141,15 @@
 
       <div class="tip-box">
         <strong>💡 Excel/Google Sheets থেকে:</strong> Roll + Name সিলেক্ট কর → কপি → এখানে paste কর।<br>
-        <strong>💡 ভুল হলে:</strong> নিচে টেবিলে edit করতে পারবি।
+        <strong>💡 ভুল হলে:</strong> নিচে টেবিলে edit করতে পারবি।<br>
+        <strong>💡 টিপস:</strong> Roll আর Name-এর মাঝে যেকোনো চিহ্ন (space, comma, dash, dot) থাকলেই হবে।
       </div>
 
       <button class="btn-primary" onclick="parsePaste()">➡️ টেবিলে দেখাও</button>
       <button class="btn-secondary" onclick="document.getElementById('pasteInput').value=''">🧹 Clear</button>
     </div>
 
-    <!-- TAB 2 -->
+    <!-- TAB 2: OCR UPLOAD -->
     <div class="tab-content" id="tab-ocr">
       <div class="dropzone" id="dropzone">
         <div class="icon">📷</div>
@@ -172,7 +170,7 @@
     </div>
   </div>
 
-  <!-- Result Table -->
+  <!-- RESULT TABLE -->
   <div class="card" id="resultCard" style="display:none;">
     <div class="actions-row">
       <h3>✏️ যাচাই করে ঠিক কর</h3>
@@ -202,27 +200,29 @@
     <div id="saveStatus" style="margin-top:12px; font-size:14px;"></div>
   </div>
 
-  <!-- LOGIN ACCOUNTS CARD -->
+  <!-- PIN SETUP CARD -->
   <div class="card" id="loginCard" style="display:none; background: #f0f7ff; border-left: 4px solid #2c5aa0;">
-    <h3 style="color:#2c5aa0; margin-bottom:8px;">🔐 Login Accounts তৈরি কর</h3>
+    <h3 style="color:#2c5aa0; margin-bottom:8px;">🔐 Batch PIN সেট কর</h3>
     <p style="font-size:13px; color:#555; margin-bottom:12px;">
-      প্রতিটা স্টুডেন্টের জন্য Firebase Auth account তৈরি হবে — তারা Batch + Roll + Password দিয়ে login করতে পারবে।
+      এই PIN সব student-এর জন্য <strong>temporary</strong>। প্রথম login করার পর প্রতিটা student নিজের PIN set করবে।
     </p>
 
-    <label>Default Password (পুরো batch-এর জন্য)</label>
-    <input type="password" id="defaultPassword" placeholder="কমপক্ষে ৬ অক্ষর" />
-    <p style="font-size:12px; color:#856404; margin-top:5px;">
-      ⚠️ এই password সব স্টুডেন্টকে জানিয়ে দিবি। পরে তারা নিজে change করতে পারবে।
+    <label>Default PIN (৪-৬ সংখ্যা)</label>
+    <input type="password" id="batchPin" placeholder="যেমন: 1234" maxlength="6" inputmode="numeric"
+      style="font-size:20px; letter-spacing:6px; text-align:center; font-weight:600;" />
+
+    <p style="font-size:12px; color:#856404; margin-top:8px; line-height:1.6;">
+      ⚠️ এই PIN সব student-কে জানিয়ে দিবি। Student প্রথমবার এই PIN দিয়ে login করে নিজের PIN set করবে।<br>
+      ⚠️ Admin আবার এই PIN সেট করলে সব student-এর PIN default-এ reset হবে।
     </p>
 
     <div style="margin-top:15px;">
-      <button class="btn-warning" onclick="createLoginAccounts()" id="createAccountsBtn">
-        🔐 Login Accounts তৈরি কর
+      <button class="btn-warning" onclick="setBatchPin()" id="setPinBtn">
+        🔐 PIN সেট কর
       </button>
     </div>
 
-    <div id="accountProgress" style="margin-top:15px; font-size:14px;"></div>
-    <div class="credentials-box" id="credentialsBox"></div>
+    <div id="pinProgress" style="margin-top:15px; font-size:14px;"></div>
   </div>
 </div>
 
@@ -233,7 +233,7 @@
 <script type="module">
 import {
   db, collection, addDoc, getDocs, query, where,
-  serverTimestamp, updateDoc, doc, createStudentAuth
+  serverTimestamp, updateDoc, doc
 } from './js/firebase-init.js';
 import { OCR_API_KEY } from './firebase-config.js';
 
@@ -257,28 +257,23 @@ function setProgress(pct) {
 function hideProgress() {
   document.getElementById('progressBar').style.display = 'none';
 }
+
 let toastTimer;
 function showToast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = 'toast show ' + (type || '');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
 }
 
+// ---------- Tabs ----------
 window.switchTab = function(name, e) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   e.target.classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
 };
-
-// ---------- Email builder ----------
-function makeEmail(batchName, roll) {
-  // batch-name → "batcha" (lowercase, only alphanumerics)
-  const slug = batchName.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return `${slug}_${roll}@npmc.meal`.toLowerCase();
-}
 
 // ==========================================================
 // PASTE PARSING
@@ -303,6 +298,7 @@ function parseStudents(text) {
     if (/^(roll|name|sl|no|student|list|page|batch|#)/i.test(line)) continue;
     if (line.length < 2) continue;
 
+    // Pattern 1: "101 Rahim Uddin"
     let match = line.match(/^(\d{1,8})[\s,.\-:)\]|]+(.+)$/);
     if (match) {
       const roll = match[1];
@@ -314,6 +310,7 @@ function parseStudents(text) {
       continue;
     }
 
+    // Pattern 2: "Rahim Uddin, 101"
     match = line.match(/^(.+?)[\s,]+(\d{1,8})$/);
     if (match) {
       const name = match[1].trim().replace(/[,.\-\s]+$/, '');
@@ -328,7 +325,7 @@ function parseStudents(text) {
 }
 
 // ==========================================================
-// OCR UPLOAD
+// OCR UPLOAD (OCR.space)
 // ==========================================================
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
@@ -451,7 +448,7 @@ async function ocrSpaceCall(canvas) {
 }
 
 // ==========================================================
-// Table
+// TABLE
 // ==========================================================
 function renderTable(students) {
   const tbody = document.querySelector('#studentTable tbody');
@@ -477,10 +474,12 @@ function renumber() {
     tr.children[0].textContent = i + 1;
   });
 }
+
 function updateCount() {
   const n = document.querySelectorAll('#studentTable tbody tr').length;
   document.getElementById('countBadge').textContent = `মোট: ${n} জন`;
 }
+
 window.addEmptyRow = function() {
   const tbody = document.querySelector('#studentTable tbody');
   const tr = document.createElement('tr');
@@ -496,6 +495,7 @@ window.addEmptyRow = function() {
   renumber();
   updateCount();
 };
+
 window.clearAllRows = function() {
   if (!confirm('সব row মুছে ফেলব?')) return;
   document.querySelector('#studentTable tbody').innerHTML = '';
@@ -503,15 +503,11 @@ window.clearAllRows = function() {
 };
 
 // ==========================================================
-// Save to Firestore
+// SAVE TO FIRESTORE
 // ==========================================================
 window.saveToFirestore = async function() {
   const batchName = document.getElementById('batchName').value.trim();
-  if (!batchName) {
-    showToast('⚠️ Batch Name দে', 'error');
-    document.getElementById('batchName').focus();
-    return;
-  }
+  if (!batchName) return showToast('⚠️ Batch Name নেই', 'error');
 
   const rows = document.querySelectorAll('#studentTable tbody tr');
   if (rows.length === 0) return showToast('⚠️ কোনো স্টুডেন্ট নেই', 'error');
@@ -525,7 +521,7 @@ window.saveToFirestore = async function() {
   }
 
   if (students.length === 0) return showToast('⚠️ সব row খালি', 'error');
-  if (!confirm(`${students.length} জন স্টুডেন্ট সেভ করব — batch "${batchName}"?`)) return;
+  if (!confirm(`${students.length} জন স্টুডেন্ট সেভ করব — Batch "${batchName}"?`)) return;
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
@@ -550,8 +546,8 @@ window.saveToFirestore = async function() {
         balance: 0,
         totalDeposit: 0,
         totalBill: 0,
-        uid: null,
-        loginEmail: null,
+        pinHash: null,
+        pinIsDefault: false,
         active: true,
         createdAt: serverTimestamp()
       });
@@ -568,102 +564,71 @@ window.saveToFirestore = async function() {
     (skipped ? ` <span class="badge badge-warn">⚠️ ${skipped} ডুপ্লিকেট বাদ</span>` : '');
   showToast(`✅ ${success} জন সেভ হয়েছে`, 'success');
 
-  // Show login-accounts card
+  // Show PIN card
   document.getElementById('loginCard').style.display = 'block';
   document.getElementById('loginCard').scrollIntoView({ behavior: 'smooth' });
 };
 
 // ==========================================================
-// Create Login Accounts
+// SET BATCH PIN — সব student-এর জন্য default PIN
 // ==========================================================
-window.createLoginAccounts = async function() {
+async function hashPin(pin, roll) {
+  const data = new TextEncoder().encode(pin + ':' + roll + ':npmc');
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+window.setBatchPin = async function() {
   const batchName = document.getElementById('batchName').value.trim();
-  const password = document.getElementById('defaultPassword').value.trim();
+  const pin = document.getElementById('batchPin').value.trim();
 
-  if (!batchName) return showToast('⚠️ Batch Name দে', 'error');
-  if (password.length < 6) return showToast('⚠️ Password কমপক্ষে ৬ অক্ষর', 'error');
+  if (!batchName) return showToast('⚠️ Batch Name নেই', 'error');
+  if (!/^\d{4,6}$/.test(pin)) return showToast('⚠️ PIN ৪-৬ সংখ্যার হতে হবে', 'error');
 
-  const btn = document.getElementById('createAccountsBtn');
+  const btn = document.getElementById('setPinBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="loading-spinner"></span>তৈরি হচ্ছে...';
-
-  const progress = document.getElementById('accountProgress');
-  const credBox = document.getElementById('credentialsBox');
-  credBox.innerHTML = '';
-  credBox.classList.add('show');
+  btn.innerHTML = '<span class="loading-spinner"></span>সেট হচ্ছে...';
+  const progress = document.getElementById('pinProgress');
 
   try {
-    // Fetch all students for this batch without uid
     const q = query(collection(db, 'students'), where('batchName', '==', batchName));
     const snap = await getDocs(q);
 
-    const needAccounts = snap.docs.filter(d => !d.data().uid);
-
-    if (needAccounts.length === 0) {
-      progress.innerHTML = '<span class="badge badge-info">✅ সব স্টুডেন্টের account আগেই তৈরি হয়ে গেছে</span>';
+    if (snap.empty) {
+      progress.innerHTML = '<span class="badge badge-warn">⚠️ এই batch-এ কোনো student নেই</span>';
       btn.disabled = false;
-      btn.textContent = '🔐 Login Accounts তৈরি কর';
+      btn.textContent = '🔐 PIN সেট কর';
       return;
     }
 
-    progress.textContent = `0/${needAccounts.length} তৈরি হচ্ছে...`;
+    progress.textContent = `0/${snap.size} আপডেট হচ্ছে...`;
+    let done = 0;
 
-    let created = 0, failed = 0;
-
-    for (const docSnap of needAccounts) {
+    for (const docSnap of snap.docs) {
       const s = docSnap.data();
-      const email = makeEmail(batchName, s.roll);
-      const row = document.createElement('div');
-      row.className = 'row';
+      const pinHash = await hashPin(pin, s.roll);
 
-      try {
-        const uid = await createStudentAuth(email, password);
-        await updateDoc(doc(db, 'students', docSnap.id), {
-          uid: uid,
-          loginEmail: email
-        });
-        row.innerHTML = `✅ <strong>${s.roll}</strong> — ${escapeHtml(s.name)} → <code>${email}</code>`;
-        created++;
-      } catch (e) {
-        if (e.code === 'auth/email-already-in-use') {
-          // Account already exists, just mark
-          row.innerHTML = `⚠️ <strong>${s.roll}</strong> — ${escapeHtml(s.name)} → account আগেই আছে (Firebase Console-এ reset কর)`;
-        } else {
-          row.innerHTML = `❌ <strong>${s.roll}</strong> — ${escapeHtml(s.name)} → ${escapeHtml(e.message)}`;
-        }
-        failed++;
-      }
+      await updateDoc(doc(db, 'students', docSnap.id), {
+        pinHash: pinHash,
+        pinIsDefault: true,
+        pinResetAt: new Date().toISOString()
+      });
 
-      credBox.appendChild(row);
-      credBox.scrollTop = credBox.scrollHeight;
-      progress.textContent = `${created}/${needAccounts.length} তৈরি হয়েছে`;
-
-      // Small delay to avoid rate-limits
-      await new Promise(r => setTimeout(r, 400));
+      done++;
+      progress.textContent = `${done}/${snap.size} আপডেট হয়েছে`;
     }
 
-    progress.innerHTML = `<span class="badge badge-ok">✅ ${created} জন তৈরি</span>` +
-      (failed ? ` <span class="badge badge-warn">⚠️ ${failed} জন fail</span>` : '');
-
-    credBox.insertAdjacentHTML('afterbegin',
-      `<div style="margin-bottom:10px; padding:8px; background:#fffbe6; border-radius:6px;">
-        <strong>🔑 Login Credentials</strong><br>
-        Batch: <code>${escapeHtml(batchName)}</code><br>
-        Password: <code>${escapeHtml(password)}</code><br>
-        <em style="font-size:12px; color:#856404;">প্রতিটা স্টুডেন্টকে এই তথ্য জানিয়ে দে।</em>
-      </div>`
-    );
-
-    showToast(`✅ ${created} জনের account তৈরি হয়েছে`, 'success');
+    progress.innerHTML = `<span class="badge badge-ok">✅ ${done} জনের PIN সেট হয়েছে (Default: ${escapeHtml(pin)})</span>`;
+    showToast(`✅ ${done} জনের জন্য default PIN: ${pin}`, 'success');
 
   } catch (e) {
     console.error(e);
     progress.innerHTML = `<span class="badge badge-warn">❌ ${escapeHtml(e.message)}</span>`;
-    showToast('❌ ' + e.message, 'error');
   }
 
   btn.disabled = false;
-  btn.textContent = '🔐 Login Accounts তৈরি কর';
+  btn.textContent = '🔐 PIN সেট কর';
 };
 </script>
 
