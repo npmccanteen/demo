@@ -10,109 +10,59 @@
   .container { max-width: 800px; margin: 0 auto; }
   h1 { color: #2c5aa0; margin-bottom: 5px; }
   .sub { color: #666; margin-bottom: 25px; font-size: 14px; }
+  .page-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
 
-  .card {
-    background: white; padding: 25px; border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px;
-  }
+  .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px; }
 
-  .price-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 15px; margin-top: 15px;
-  }
+  .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
   @media (max-width: 500px) { .price-grid { grid-template-columns: 1fr; } }
 
-  .price-box {
-    background: #f8faff; border: 1px solid #e0eaff;
-    border-radius: 8px; padding: 15px;
-  }
+  .price-box { background: #f8faff; border: 1px solid #e0eaff; border-radius: 8px; padding: 15px; }
   .price-box .icon { font-size: 22px; margin-bottom: 6px; }
-  .price-box label {
-    font-size: 12px; margin: 0 0 8px;
-    color: #555; text-transform: uppercase;
-    letter-spacing: 0.5px; font-weight: 700;
-  }
+  .price-box label { font-size: 12px; margin: 0 0 8px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; display: block; }
   .price-box .input-wrap { position: relative; }
-  .price-box .input-wrap::before {
-    content: '৳'; position: absolute; left: 12px; top: 50%;
-    transform: translateY(-50%); color: #666; font-weight: 700;
-    font-size: 17px;
-  }
-  .price-box input {
-    width: 100%; padding: 11px 14px 11px 32px;
-    border: 1.5px solid #ddd; border-radius: 8px;
-    font-weight: 700; font-size: 17px; font-family: inherit;
-    transition: 0.2s;
-  }
-  .price-box input:focus {
-    border-color: #2c5aa0; outline: none;
-    box-shadow: 0 0 0 3px rgba(44,90,160,0.1);
-  }
+  .price-box .input-wrap::before { content: '৳'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #666; font-weight: 700; font-size: 17px; }
+  .price-box input { width: 100%; padding: 11px 14px 11px 32px; border: 1.5px solid #ddd; border-radius: 8px; font-weight: 700; font-size: 17px; font-family: inherit; transition: 0.2s; }
+  .price-box input:focus { border-color: #2c5aa0; outline: none; box-shadow: 0 0 0 3px rgba(44,90,160,0.1); }
 
-  button {
-    padding: 12px 24px; border: none; border-radius: 8px;
-    cursor: pointer; font-size: 14px; font-weight: 600;
-    margin-right: 8px; margin-top: 10px; transition: 0.2s;
-  }
+  button { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-right: 8px; margin-top: 10px; transition: 0.2s; }
   .btn-primary { background: #2c5aa0; color: white; }
   .btn-primary:hover { background: #1e4079; }
   .btn-primary:disabled { background: #999; cursor: not-allowed; }
   .btn-secondary { background: #6c757d; color: white; }
   .btn-secondary:hover { background: #5a6268; }
+  .btn-danger { background: #dc3545; color: white; }
+  .btn-danger:hover { background: #b02a37; }
 
-  .info-banner {
-    padding: 12px 16px; border-radius: 8px; margin-bottom: 15px;
-    font-size: 13px; background: #e7f3ff;
-    border-left: 4px solid #2c5aa0; color: #004085;
-  }
-  .info-banner.warn { background: #fff3cd; border-left-color: #ff9800; color: #856404; }
-  .info-banner.ok { background: #d4edda; border-left-color: #28a745; color: #155724; }
+  .info-banner { padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; background: #e7f3ff; border-left: 4px solid #2c5aa0; color: #004085; }
 
-  .toast {
-    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: #333; color: white; padding: 14px 24px;
-    border-radius: 8px; font-size: 14px; display: none;
-    z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 14px 24px; border-radius: 8px; font-size: 14px; display: none; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
   .toast.show { display: block; }
   .toast.success { background: #28a745; }
   .toast.error { background: #dc3545; }
 
-  .current-prices {
-    background: #f0f7ff; border-radius: 8px; padding: 18px;
-    margin-top: 18px; display: none;
-    border-left: 4px solid #2c5aa0;
-  }
+  .current-prices { background: #f0f7ff; border-radius: 8px; padding: 18px; margin-top: 18px; display: none; border-left: 4px solid #2c5aa0; }
   .current-prices.show { display: block; }
-  .current-prices h4 {
-    font-size: 13px; color: #2c5aa0; margin-bottom: 12px;
-    text-transform: uppercase; letter-spacing: 0.5px;
-  }
-  .price-row {
-    display: flex; justify-content: space-between;
-    padding: 9px 0; border-bottom: 1px solid #d5e3f5; font-size: 14px;
-  }
+  .current-prices h4 { font-size: 13px; color: #2c5aa0; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .price-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #d5e3f5; font-size: 14px; }
   .price-row:last-child { border-bottom: none; }
   .price-row strong { color: #2c5aa0; font-size: 15px; }
-  .updated-at {
-    text-align: right; font-size: 11px; color: #888;
-    margin-top: 10px; font-style: italic;
-  }
+  .updated-at { text-align: right; font-size: 11px; color: #888; margin-top: 10px; font-style: italic; }
 
-  .spinner {
-    display: inline-block; width: 14px; height: 14px;
-    border: 2px solid #fff; border-top-color: transparent;
-    border-radius: 50%; animation: spin 1s linear infinite;
-    margin-right: 6px; vertical-align: middle;
-  }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 6px; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>💰 Meal Pricing</h1>
-  <p class="sub">সব batch-এর জন্য একই rate — এখানে set করলে সবার জন্য apply হবে</p>
+  <div class="page-head">
+    <div>
+      <h1>💰 Meal Pricing</h1>
+      <p class="sub">সব batch-এর জন্য একই rate — এখানে set করলে সবার জন্য apply হবে</p>
+    </div>
+    <button class="btn-danger" onclick="doAdminLogout()" style="padding:10px 18px;">🚪 Logout</button>
+  </div>
 
   <div class="card">
     <div class="info-banner">
@@ -123,40 +73,27 @@
       <div class="price-box">
         <div class="icon">🍛</div>
         <label>Lunch Full</label>
-        <div class="input-wrap">
-          <input type="number" id="lunchFull" value="80" min="0" step="5" />
-        </div>
+        <div class="input-wrap"><input type="number" id="lunchFull" value="80" min="0" step="5" /></div>
       </div>
-
       <div class="price-box">
         <div class="icon">🍚</div>
         <label>Lunch Half</label>
-        <div class="input-wrap">
-          <input type="number" id="lunchHalf" value="60" min="0" step="5" />
-        </div>
+        <div class="input-wrap"><input type="number" id="lunchHalf" value="60" min="0" step="5" /></div>
       </div>
-
       <div class="price-box">
         <div class="icon">🍽️</div>
         <label>Dinner Full</label>
-        <div class="input-wrap">
-          <input type="number" id="dinnerFull" value="80" min="0" step="5" />
-        </div>
+        <div class="input-wrap"><input type="number" id="dinnerFull" value="80" min="0" step="5" /></div>
       </div>
-
       <div class="price-box">
         <div class="icon">🥘</div>
         <label>Dinner Half</label>
-        <div class="input-wrap">
-          <input type="number" id="dinnerHalf" value="60" min="0" step="5" />
-        </div>
+        <div class="input-wrap"><input type="number" id="dinnerHalf" value="60" min="0" step="5" /></div>
       </div>
     </div>
 
     <div style="margin-top:20px;">
-      <button class="btn-primary" onclick="savePrices()" id="saveBtn">
-        💾 Save কর
-      </button>
+      <button class="btn-primary" onclick="savePrices()" id="saveBtn">💾 Save কর</button>
       <button class="btn-secondary" onclick="loadPrices()">🔄 Reload</button>
     </div>
 
@@ -175,8 +112,13 @@
 
 <script type="module">
 import { db, doc, getDoc, setDoc, serverTimestamp } from '../js/firebase-init.js';
+import { requireAdmin, adminLogout } from '../js/admin-auth.js';
 
-const PRICING_DOC_ID = 'current';   // একটা মাত্র document — সব batch-এর জন্য
+// ⭐ Require admin authentication
+await requireAdmin();
+window.doAdminLogout = adminLogout;
+
+const PRICING_DOC_ID = 'current';
 
 let toastTimer;
 function showToast(msg, type) {
@@ -208,18 +150,15 @@ window.loadPrices = async function() {
       document.getElementById('curDF').textContent = '৳' + df;
       document.getElementById('curDH').textContent = '৳' + dh;
 
-      // Show updated-at if exists
       if (p.updatedAt?.toDate) {
         const d = p.updatedAt.toDate();
-        document.getElementById('updatedAt').textContent =
-          'Last updated: ' + d.toLocaleString('en-GB');
+        document.getElementById('updatedAt').textContent = 'Last updated: ' + d.toLocaleString('en-GB');
       } else {
         document.getElementById('updatedAt').textContent = '';
       }
 
       document.getElementById('currentPrices').classList.add('show');
     } else {
-      // No pricing doc — show defaults
       document.getElementById('lunchFull').value = 80;
       document.getElementById('lunchHalf').value = 60;
       document.getElementById('dinnerFull').value = 80;
@@ -263,7 +202,6 @@ window.savePrices = async function() {
   btn.innerHTML = '💾 Save কর';
 };
 
-// Init
 loadPrices();
 </script>
 
