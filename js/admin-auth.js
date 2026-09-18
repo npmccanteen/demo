@@ -1,34 +1,37 @@
 // js/admin-auth.js
-// Helper for protecting admin pages
 import { auth, onAuthStateChanged, signOut } from './firebase-init.js';
 
-/**
- * Call this at the top of every admin page.
- * If user not logged in → redirect to admin-login.html
- * Returns a Promise that resolves with the user object once authenticated.
- */
+function getLoginUrl() {
+  const path = window.location.pathname;
+  return path.includes('/admin/') ? '../admin-login.html' : 'admin-login.html';
+}
+
+function getRedirectPath() {
+  const path = window.location.pathname;
+  const inAdminFolder = path.includes('/admin/');
+  const fileName = path.split('/').pop();
+  return inAdminFolder ? `admin/${fileName}` : fileName;
+}
+
 export function requireAdmin() {
   return new Promise((resolve) => {
     onAuthStateChanged(auth, user => {
       if (user) {
         resolve(user);
       } else {
-        // Save current page for redirect back after login
-        sessionStorage.setItem('admin_redirect', window.location.pathname.split('/').slice(-2).join('/'));
-        window.location.replace('../admin-login.html');
+        sessionStorage.setItem('admin_redirect', getRedirectPath());
+        window.location.replace(getLoginUrl());
       }
     });
   });
 }
 
-/**
- * Logout helper — signs out and redirects to login page
- */
 export async function adminLogout() {
   if (!confirm('Logout করব?')) return;
   try {
     await signOut(auth);
-    window.location.replace('../admin-login.html');
+    sessionStorage.removeItem('admin_redirect');
+    window.location.replace(getLoginUrl());
   } catch (e) {
     alert('Logout fail: ' + e.message);
   }
