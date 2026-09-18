@@ -45,11 +45,17 @@
   .msg.show { display: block; }
   .msg.error { background: #fee; color: #721c24; border-left: 4px solid #dc3545; }
   .msg.ok { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+  .msg.info { background: #e7f3ff; color: #004085; border-left: 4px solid #2c5aa0; }
   .back-link {
     display: block; text-align: center; margin-top: 20px;
     color: #2c5aa0; text-decoration: none; font-size: 13px;
   }
   .back-link:hover { text-decoration: underline; }
+  .forgot-link {
+    display: block; text-align: center; margin-top: 12px;
+    color: #888; text-decoration: none; font-size: 12px;
+  }
+  .forgot-link:hover { color: #2c5aa0; }
   .spinner {
     display: inline-block; width: 14px; height: 14px;
     border: 2px solid #fff; border-top-color: transparent;
@@ -65,7 +71,6 @@
   <h1>🎓 Student Login</h1>
   <p class="sub">Roll + PIN দিয়ে login কর</p>
 
-  <!-- Fixed batch name -->
   <div class="batch-info">
     Batch: <strong>8</strong>
   </div>
@@ -79,19 +84,25 @@
   <button onclick="doLogin()" id="loginBtn">🔓 Login</button>
   <div class="msg" id="msg"></div>
 
+  <a href="#" class="forgot-link" onclick="showForgot(event)">PIN ভুলে গেছি?</a>
   <a href="index.html" class="back-link">← Home</a>
 </div>
 
 <script type="module">
 import { db, collection, getDocs, query, where } from './js/firebase-init.js';
 
-// 🔒 FIXED BATCH NAME for testing phase
+// 🔒 FIXED batch name for testing
 const BATCH_NAME = "8";
 
 // Redirect if already logged in
 const existingId = localStorage.getItem('npmc_student_id');
 if (existingId) {
-  window.location.replace('student-dashboard.html');
+  const needsSetup = localStorage.getItem('npmc_requires_pin_setup') === 'true';
+  if (needsSetup) {
+    window.location.replace('student-set-pin.html');
+  } else {
+    window.location.replace('student-dashboard.html');
+  }
 }
 
 function showMsg(text, type) {
@@ -99,6 +110,11 @@ function showMsg(text, type) {
   el.className = 'msg show ' + type;
   el.innerHTML = text;
 }
+
+window.showForgot = function(e) {
+  e.preventDefault();
+  showMsg('ℹ️ PIN ভুলে গেলে Batch Admin-এর সাথে যোগাযোগ কর। Admin তোমার PIN আবার default-এ reset করে দেবে।', 'info');
+};
 
 async function hashPin(pin, roll) {
   const data = new TextEncoder().encode(pin + ':' + roll + ':npmc');
@@ -143,9 +159,20 @@ window.doLogin = async function() {
       throw new Error('PIN ভুল');
     }
 
+    // Save session
     localStorage.setItem('npmc_student_id', studentDoc.id);
     localStorage.setItem('npmc_login_time', Date.now().toString());
 
+    // ⭐ Check if first-time setup needed
+    if (student.pinIsDefault === true) {
+      localStorage.setItem('npmc_requires_pin_setup', 'true');
+      showMsg('🔐 প্রথমবার login — নতুন PIN set করতে হবে...', 'ok');
+      setTimeout(() => window.location.replace('student-set-pin.html'), 700);
+      return;
+    }
+
+    // Normal login
+    localStorage.removeItem('npmc_requires_pin_setup');
     showMsg('✅ Login সফল! Dashboard-এ যাচ্ছি...', 'ok');
     setTimeout(() => window.location.replace('student-dashboard.html'), 500);
 
