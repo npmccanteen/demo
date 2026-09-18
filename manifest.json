@@ -1,0 +1,41 @@
+{
+  "name": "NPMC Meal System",
+  "short_name": "Meal System",
+  "description": "Hostel canteen meal management system",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2c5aa0",
+  "theme_color": "#2c5aa0",
+  "lang": "bn",
+  "categories": ["food", "productivity"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Student Login",
+      "short_name": "Student",
+      "url": "./student-login.html",
+      "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Admin Login",
+      "short_name": "Admin",
+      "url": "./admin-login.html",
+      "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}
