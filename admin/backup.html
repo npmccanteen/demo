@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backup & Restore</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #222; }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { color: #2c5aa0; margin-bottom: 5px; }
+  .sub { color: #666; margin-bottom: 25px; font-size: 14px; }
+  .page-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+
+  .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px; }
+  .card h3 { color: #2c5aa0; font-size: 17px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .card p { color: #666; font-size: 13px; line-height: 1.6; margin-bottom: 15px; }
+
+  button { padding: 12px 22px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-right: 8px; margin-top: 8px; transition: 0.2s; }
+  .btn-primary { background: #2c5aa0; color: white; }
+  .btn-primary:hover { background: #1e4079; }
+  .btn-primary:disabled { background: #999; cursor: not-allowed; }
+  .btn-success { background: #28a745; color: white; }
+  .btn-success:hover { background: #1e7e34; }
+  .btn-success:disabled { background: #999; cursor: not-allowed; }
+  .btn-secondary { background: #6c757d; color: white; }
+  .btn-secondary:hover { background: #5a6268; }
+  .btn-danger { background: #dc3545; color: white; }
+  .btn-danger:hover { background: #b02a37; }
+  .btn-danger:disabled { background: #999; cursor: not-allowed; }
+
+  .info-banner { padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; background: #e7f3ff; border-left: 4px solid #2c5aa0; color: #004085; }
+  .info-banner.warn { background: #fff3cd; border-left-color: #ff9800; color: #856404; }
+  .info-banner.ok { background: #d4edda; border-left-color: #28a745; color: #155724; }
+  .info-banner.err { background: #f8d7da; border-left-color: #dc3545; color: #721c24; }
+
+  .stat-row {
+    display: flex; gap: 12px; flex-wrap: wrap; margin: 15px 0;
+  }
+  .stat-box {
+    background: #f8f9fa; padding: 14px 18px; border-radius: 8px;
+    border-left: 3px solid #2c5aa0; flex: 1; min-width: 140px;
+  }
+  .stat-box .num { font-size: 22px; font-weight: 700; color: #2c5aa0; }
+  .stat-box .lbl { font-size: 11px; color: #666; text-transform: uppercase; margin-top: 3px; }
+
+  input[type="file"] {
+    width: 100%; padding: 10px; border: 1.5px dashed #2c5aa0;
+    border-radius: 8px; background: #f8faff; cursor: pointer;
+    font-family: inherit;
+  }
+
+  .log { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px;
+    font-family: 'Courier New', monospace; font-size: 12px;
+    max-height: 300px; overflow-y: auto; margin-top: 15px;
+    display: none; white-space: pre-wrap; }
+  .log.show { display: block; }
+  .log .ok { color: #51cf66; }
+  .log .err { color: #ff6b6b; }
+  .log .warn { color: #ffd43b; }
+
+  .loading-spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid #fff; border-top-color: transparent;
+    border-radius: 50%; animation: spin 1s linear infinite;
+    margin-right: 6px; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .restore-warning {
+    background: #fee; padding: 15px; border-radius: 8px;
+    border-left: 4px solid #dc3545; margin: 15px 0;
+    font-size: 13px; color: #721c24; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="page-head">
+    <div>
+      <h1>💾 Backup & Restore</h1>
+      <p class="sub">সব data export কর, দরকার হলে restore কর</p>
+    </div>
+    <button class="btn-danger" onclick="doAdminLogout()" style="padding:10px 18px;">🚪 Logout</button>
+  </div>
+
+  <!-- BACKUP CARD -->
+  <div class="card">
+    <h3>📥 Full Backup (সব data)</h3>
+    <p>
+      Students, Meal Records, Transactions, Pricing — সব কিছু একটা JSON file-এ save করবে।
+      <strong>সপ্তাহে একবার backup নেওয়া উচিত।</strong>
+    </p>
+
+    <div class="info-banner warn">
+      ⚠️ Backup file-টা নিরাপদ জায়গায় রাখ — এতে সব student-এর info আছে।
+    </div>
+
+    <div class="stat-row" id="statsRow">
+      <div class="stat-box"><div class="num" id="statStudents">—</div><div class="lbl">Students</div></div>
+      <div class="stat-box"><div class="num" id="statRecords">—</div><div class="lbl">Meal Records</div></div>
+      <div class="stat-box"><div class="num" id="statTx">—</div><div class="lbl">Transactions</div></div>
+      <div class="stat-box"><div class="num" id="statSize">—</div><div class="lbl">Est. Size</div></div>
+    </div>
+
+    <button class="btn-success" onclick="downloadBackup()" id="backupBtn">📥 Download Full Backup</button>
+    <button class="btn-secondary" onclick="refreshStats()">🔄 Refresh Stats</button>
+  </div>
+
+  <!-- CSV EXPORT CARD -->
+  <div class="card">
+    <h3>📊 CSV Export (Excel-এর জন্য)</h3>
+    <p>
+      Excel/Google Sheets-এ দেখার জন্য আলাদা আলাদা CSV file।
+    </p>
+    <button class="btn-primary" onclick="exportStudentsCSV()">👥 Students CSV</button>
+    <button class="btn-primary" onclick="exportRecordsCSV()">🍽️ Meal Records CSV</button>
+    <button class="btn-primary" onclick="exportTxCSV()">💰 Transactions CSV</button>
+  </div>
+
+  <!-- RESTORE CARD -->
+  <div class="card">
+    <h3>📤 Restore from Backup</h3>
+    <p>
+      Backup file থেকে data restore কর। <strong>⚠️ এটা dangerous — সাবধানে use কর।</strong>
+    </p>
+
+    <div class="restore-warning">
+      <strong>⚠️ সতর্কতা:</strong><br>
+      • Restore করলে <strong>existing data-এর উপর overwrite</strong> হতে পারে<br>
+      • আগে <strong>current data-এর একটা backup</strong> নিয়ে রাখ<br>
+      • শুধু emergency-তে use কর (accidental delete, corruption)
+    </div>
+
+    <label style="display:block; font-weight:600; margin-bottom:8px; font-size:13px;">Backup JSON file select কর:</label>
+    <input type="file" id="restoreFile" accept=".json" />
+
+    <button class="btn-danger" onclick="restoreBackup()" id="restoreBtn" disabled style="margin-top:15px;">
+      📤 Restore Data
+    </button>
+
+    <div class="log" id="restoreLog"></div>
+  </div>
+
+  <div class="log" id="mainLog"></div>
+</div>
+
+<script type="module">
+import {
+  db, collection, getDocs, doc, setDoc, addDoc, deleteDoc, serverTimestamp
+} from '../js/firebase-init.js';
+import { requireAdmin, adminLogout } from '../js/admin-auth.js';
+
+await requireAdmin();
+window.doAdminLogout = adminLogout;
+
+let cachedData = { students: [], records: [], transactions: [], pricing: null };
+
+function log(msg, type) {
+  const el = document.getElementById('mainLog');
+  el.className = 'log show';
+  const cls = type || '';
+  el.innerHTML += `<span class="${cls}">${escapeHtml(msg)}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+function logRestore(msg, type) {
+  const el = document.getElementById('restoreLog');
+  el.className = 'log show';
+  const cls = type || '';
+  el.innerHTML += `<span class="${cls}">${escapeHtml(msg)}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function todayStr() {
+  const now = new Date();
+  const bd = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+  return `${bd.getFullYear()}-${String(bd.getMonth()+1).padStart(2,'0')}-${String(bd.getDate()).padStart(2,'0')}`;
+}
+function fmtBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(2) + ' MB';
+}
+
+// ---------- Load all data ----------
+async function loadAll() {
+  log('→ Loading Firestore data...');
+  try {
+    const [studSnap, recSnap, txSnap, priceSnap] = await Promise.all([
+      getDocs(collection(db, 'students')),
+      getDocs(collection(db, 'mealRecords')),
+      getDocs(collection(db, 'transactions')),
+      getDocs(collection(db, 'pricing'))
+    ]);
+
+    cachedData.students = studSnap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    cachedData.records = recSnap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    cachedData.transactions = txSnap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    cachedData.pricing = priceSnap.docs.map(d => ({ _id: d.id, ...d.data() }));
+
+    document.getElementById('statStudents').textContent = cachedData.students.length;
+    document.getElementById('statRecords').textContent = cachedData.records.length;
+    document.getElementById('statTx').textContent = cachedData.transactions.length;
+
+    const est = JSON.stringify(cachedData).length;
+    document.getElementById('statSize').textContent = fmtBytes(est);
+
+    log(`✅ Loaded: ${cachedData.students.length} students, ${cachedData.records.length} records, ${cachedData.transactions.length} transactions`, 'ok');
+  } catch (e) {
+    console.error(e);
+    log('❌ Load fail: ' + e.message, 'err');
+  }
+}
+
+window.refreshStats = async function() {
+  log('→ Refreshing...');
+  await loadAll();
+};
+
+// ---------- Download backup ----------
+window.downloadBackup = async function() {
+  const btn = document.getElementById('backupBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner"></span>Preparing...';
+
+  try {
+    await loadAll();
+
+    const backup = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      projectId: 'anando-ee1df',
+      data: cachedData
+    };
+
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `meal-backup-${todayStr()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    log(`✅ Backup downloaded: meal-backup-${todayStr()}.json (${fmtBytes(json.length)})`, 'ok');
+
+    // Audit log
+    try {
+      await addDoc(collection(db, 'adminLogs'), {
+        action: 'backup_download',
+        details: {
+          students: cachedData.students.length,
+          records: cachedData.records.length,
+          transactions: cachedData.transactions.length
+        },
+        timestamp: serverTimestamp()
+      });
+    } catch (e) { console.warn('Audit log fail', e); }
+
+  } catch (e) {
+    log('❌ Backup fail: ' + e.message, 'err');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '📥 Download Full Backup';
+};
+
+// ---------- CSV Exports ----------
+function downloadCSV(filename, rows) {
+  if (rows.length === 0) {
+    log('⚠️ কোনো data নেই', 'warn');
+    return;
+  }
+  const headers = Object.keys(rows[0]);
+  const csv = [
+    headers.join(','),
+    ...rows.map(r => headers.map(h => {
+      const v = String(r[h] ?? '');
+      return v.includes(',') || v.includes('"') || v.includes('\n')
+        ? `"${v.replace(/"/g, '""')}"` : v;
+    }).join(','))
+  ].join('\n');
+
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  log(`✅ ${filename} downloaded (${rows.length} rows)`, 'ok');
+}
+
+window.exportStudentsCSV = async function() {
+  if (cachedData.students.length === 0) await loadAll();
+  downloadCSV(`students_${todayStr()}.csv`, cachedData.students.map(s => ({
+    Roll: s.roll || '', Name: s.name || '', Batch: s.batchName || '',
+    Balance: s.balance || 0, TotalBill: s.totalBill || 0, TotalDeposit: s.totalDeposit || 0,
+    PINStatus: s.pinIsDefault ? 'Default' : (s.pinHash ? 'Personal' : 'None'),
+    Active: s.active !== false ? 'Yes' : 'No'
+  })));
+};
+
+window.exportRecordsCSV = async function() {
+  if (cachedData.records.length === 0) await loadAll();
+  downloadCSV(`meal_records_${todayStr()}.csv`, cachedData.records.map(r => ({
+    Date: r.date || '', Batch: r.batchName || '', Students: r.studentCount || 0,
+    TotalBill: r.totalBill || 0, Source: r.source || 'manual'
+  })));
+};
+
+window.exportTxCSV = async function() {
+  if (cachedData.transactions.length === 0) await loadAll();
+  downloadCSV(`transactions_${todayStr()}.csv`, cachedData.transactions.map(t => ({
+    Date: t.date || '', Roll: t.roll || '', Name: t.name || '', Batch: t.batchName || '',
+    Type: t.type || '', Amount: t.amount || 0, Note: t.note || ''
+  })));
+};
+
+// ---------- Restore ----------
+document.getElementById('restoreFile').addEventListener('change', e => {
+  document.getElementById('restoreBtn').disabled = !e.target.files.length;
+});
+
+window.restoreBackup = async function() {
+  const file = document.getElementById('restoreFile').files[0];
+  if (!file) return;
+
+  document.getElementById('restoreLog').innerHTML = '';
+
+  if (!confirm('⚠️ Restore করলে existing data overwrite হতে পারে। চালিয়ে যাব?')) return;
+  if (!confirm('🚨 একদম নিশ্চিত? এটা reverse করা যাবে না।')) return;
+
+  const btn = document.getElementById('restoreBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner"></span>Restoring...';
+
+  try {
+    const text = await file.text();
+    const backup = JSON.parse(text);
+
+    if (!backup.data) throw new Error('Invalid backup file format');
+
+    logRestore(`📤 Restore শুরু — ${backup.exportedAt || 'unknown date'}`, '');
+
+    const data = backup.data;
+    let added = 0, failed = 0;
+
+    // Restore students
+    logRestore(`\n👥 Restoring ${data.students?.length || 0} students...`);
+    for (const s of (data.students || [])) {
+      try {
+        const id = s._id;
+        const copy = { ...s };
+        delete copy._id;
+        await setDoc(doc(db, 'students', id), copy);
+        added++;
+      } catch (e) { failed++; }
+    }
+    logRestore(`  → ${added} added, ${failed} failed`, failed ? 'warn' : 'ok');
+
+    // Restore mealRecords
+    logRestore(`\n🍽️ Restoring ${data.records?.length || 0} records...`);
+    let rAdd = 0, rFail = 0;
+    for (const r of (data.records || [])) {
+      try {
+        const id = r._id;
+        const copy = { ...r };
+        delete copy._id;
+        await setDoc(doc(db, 'mealRecords', id), copy);
+        rAdd++;
+      } catch (e) { rFail++; }
+    }
+    logRestore(`  → ${rAdd} added, ${rFail} failed`, rFail ? 'warn' : 'ok');
+
+    // Restore transactions
+    logRestore(`\n💰 Restoring ${data.transactions?.length || 0} transactions...`);
+    let tAdd = 0, tFail = 0;
+    for (const t of (data.transactions || [])) {
+      try {
+        const id = t._id;
+        const copy = { ...t };
+        delete copy._id;
+        await setDoc(doc(db, 'transactions', id), copy);
+        tAdd++;
+      } catch (e) { tFail++; }
+    }
+    logRestore(`  → ${tAdd} added, ${tFail} failed`, tFail ? 'warn' : 'ok');
+
+    // Restore pricing
+    logRestore(`\n💰 Restoring pricing...`);
+    for (const p of (data.pricing || [])) {
+      try {
+        const id = p._id;
+        const copy = { ...p };
+        delete copy._id;
+        await setDoc(doc(db, 'pricing', id), copy);
+      } catch (e) { /* skip */ }
+    }
+    logRestore(`  → done`, 'ok');
+
+    logRestore(`\n✅ Restore complete!`, 'ok');
+    logRestore(`Total: ${added + rAdd + tAdd} documents restored.`, 'ok');
+
+    // Audit log
+    try {
+      await addDoc(collection(db, 'adminLogs'), {
+        action: 'restore',
+        details: { from: backup.exportedAt, counts: { students: added, records: rAdd, transactions: tAdd } },
+        timestamp: serverTimestamp()
+      });
+    } catch (e) { console.warn(e); }
+
+    await loadAll();
+
+  } catch (e) {
+    console.error(e);
+    logRestore(`\n❌ Restore fail: ${e.message}`, 'err');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '📤 Restore Data';
+};
+
+// ---------- Init ----------
+await loadAll();
+</script>
+
+</body>
+</html>
