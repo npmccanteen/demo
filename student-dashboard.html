@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Student Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2c5aa0">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+
+<!-- OneSignal SDK -->
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -17,9 +22,7 @@
     });
   });
 </script>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2c5aa0">
-<link rel="icon" type="image/svg+xml" href="icon.svg">
+
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f9; padding: 15px; color: #222; }
@@ -415,6 +418,18 @@ async function loadDashboard() {
       recipientId: currentStudentId
     });
 
+    // ⭐ OneSignal Login with External ID = student doc ID
+    if (window.OneSignalDeferred) {
+      OneSignalDeferred.push(async function(OneSignal) {
+        try {
+          await OneSignal.login(currentStudentId);
+          console.log('✅ OneSignal logged in:', currentStudentId);
+        } catch (e) {
+          console.warn('OneSignal login failed:', e);
+        }
+      });
+    }
+
     // Request browser notification permission (once)
     requestBrowserNotificationPermission();
 
@@ -709,6 +724,14 @@ window.changePin = async function() {
 
 window.logout = function() {
   if (!confirm('Logout করব?')) return;
+
+  // ⭐ OneSignal logout
+  if (window.OneSignalDeferred) {
+    OneSignalDeferred.push(async function(OneSignal) {
+      try { await OneSignal.logout(); } catch (e) { console.warn(e); }
+    });
+  }
+
   localStorage.removeItem('npmc_student_id');
   localStorage.removeItem('npmc_login_time');
   localStorage.removeItem('npmc_requires_pin_setup');
