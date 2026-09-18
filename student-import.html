@@ -33,20 +33,12 @@
   .btn-warning:disabled { background: #999; cursor: not-allowed; }
 
   .tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; }
-  .tab {
-    padding: 12px 22px; background: transparent; border: none; cursor: pointer;
-    font-size: 14px; font-weight: 600; color: #666; border-bottom: 3px solid transparent;
-    margin: 0; border-radius: 0;
-  }
+  .tab { padding: 12px 22px; background: transparent; border: none; cursor: pointer; font-size: 14px; font-weight: 600; color: #666; border-bottom: 3px solid transparent; margin: 0; border-radius: 0; }
   .tab.active { color: #2c5aa0; border-bottom-color: #2c5aa0; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
-  .dropzone {
-    border: 2px dashed #2c5aa0; border-radius: 10px;
-    padding: 40px 20px; text-align: center; cursor: pointer;
-    background: #f8faff; transition: 0.2s;
-  }
+  .dropzone { border: 2px dashed #2c5aa0; border-radius: 10px; padding: 40px 20px; text-align: center; cursor: pointer; background: #f8faff; transition: 0.2s; }
   .dropzone:hover, .dropzone.dragover { background: #e8f0ff; border-color: #1e4079; }
   .dropzone .icon { font-size: 38px; margin-bottom: 10px; }
   .dropzone p { color: #2c5aa0; font-weight: 600; font-size: 15px; }
@@ -73,21 +65,10 @@
   .badge-warn { background: #fff3cd; color: #856404; }
   .badge-info { background: #cfe2ff; color: #084298; }
 
-  .loading-spinner {
-    display: inline-block; width: 16px; height: 16px;
-    border: 2px solid #fff; border-top-color: transparent;
-    border-radius: 50%; animation: spin 1s linear infinite;
-    margin-right: 6px; vertical-align: middle;
-  }
+  .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 6px; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .toast {
-    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: #333; color: white; padding: 14px 24px;
-    border-radius: 8px; font-size: 14px; display: none;
-    z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    max-width: 90%;
-  }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 14px 24px; border-radius: 8px; font-size: 14px; display: none; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); max-width: 90%; }
   .toast.show { display: block; }
   .toast.success { background: #28a745; }
   .toast.error { background: #dc3545; }
@@ -95,20 +76,24 @@
   .actions-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
   .count-text { font-size: 14px; color: #555; }
 
-  .tip-box {
-    background: #fffbe6; padding: 12px 16px; border-left: 4px solid #ff9800;
-    border-radius: 6px; font-size: 13px; color: #856404; margin-top: 15px; line-height: 1.7;
-  }
+  .tip-box { background: #fffbe6; padding: 12px 16px; border-left: 4px solid #ff9800; border-radius: 6px; font-size: 13px; color: #856404; margin-top: 15px; line-height: 1.7; }
   .tip-box strong { color: #e68900; }
   .tip-box code { background: #fff; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
 
-  .batch-locked {
-    background: #f0f4fa; cursor: not-allowed; font-weight: 600;
-    color: #2c5aa0; border-color: #d0e0f5 !important;
+  .batch-locked { background: #f0f4fa; cursor: not-allowed; font-weight: 600; color: #2c5aa0; border-color: #d0e0f5 !important; }
+
+  .logout-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: #dc3545; color: white; padding: 10px 16px;
+    border: none; border-radius: 8px; font-weight: 600; cursor: pointer;
+    font-size: 13px;
   }
+  .logout-btn:hover { background: #b02a37; }
 </style>
 </head>
 <body>
+
+<button class="logout-btn" onclick="doAdminLogout()">🚪 Logout</button>
 
 <div class="container">
   <h1>📋 Student Import</h1>
@@ -226,6 +211,10 @@ import {
   serverTimestamp, updateDoc, doc
 } from './js/firebase-init.js';
 import { OCR_API_KEY } from './firebase-config.js';
+import { requireAdmin, adminLogout } from './js/admin-auth.js';
+
+await requireAdmin();
+window.doAdminLogout = adminLogout;
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -261,7 +250,6 @@ window.switchTab = function(name, e) {
   document.getElementById('tab-' + name).classList.add('active');
 };
 
-// ---------- Paste Parsing ----------
 window.parsePaste = function() {
   const text = document.getElementById('pasteInput').value.trim();
   if (!text) return showToast('⚠️ কিছু paste কর', 'error');
@@ -306,7 +294,6 @@ function parseStudents(text) {
   return students;
 }
 
-// ---------- OCR Upload ----------
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
 const previewImg = document.getElementById('previewImg');
@@ -423,7 +410,6 @@ async function ocrSpaceCall(canvas) {
   return data.ParsedResults?.[0]?.ParsedText || '';
 }
 
-// ---------- Table ----------
 function renderTable(students) {
   const tbody = document.querySelector('#studentTable tbody');
   tbody.innerHTML = '';
@@ -473,7 +459,6 @@ window.clearAllRows = function() {
   updateCount();
 };
 
-// ---------- Save ----------
 window.saveToFirestore = async function() {
   const batchName = document.getElementById('batchName').value.trim();
   if (!batchName) return showToast('⚠️ Batch Name নেই', 'error');
@@ -529,7 +514,6 @@ window.saveToFirestore = async function() {
   document.getElementById('loginCard').scrollIntoView({ behavior: 'smooth' });
 };
 
-// ---------- SET BATCH PIN ----------
 async function hashPin(pin, roll) {
   const data = new TextEncoder().encode(pin + ':' + roll + ':npmc');
   const buf = await crypto.subtle.digest('SHA-256', data);
@@ -544,7 +528,6 @@ window.setBatchPin = async function() {
   if (!batchName) return showToast('⚠️ Batch Name নেই', 'error');
   if (!/^\d{4,6}$/.test(pin)) return showToast('⚠️ PIN ৪-৬ সংখ্যার হতে হবে', 'error');
 
-  // ⚠️ Double confirmation
   const warningMsg = `⚠️ সতর্কতা!\n\n` +
     `এই PIN সেট করলে Batch "${batchName}"-এর সব student-এর PIN default-এ reset হয়ে যাবে।\n` +
     `তারা সবাই পরবর্তী login-এ নতুন করে নিজের PIN set করবে।\n\n` +
