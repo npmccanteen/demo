@@ -69,7 +69,6 @@
   button.pin-btn:hover { background: #e68900; }
   button.logout-btn { background: #dc3545; color: white; }
   button.logout-btn:hover { background: #b02a37; }
-  button:disabled { background: #999; cursor: not-allowed; }
 
   .error-box {
     background: #fee; color: #721c24; padding: 20px;
@@ -96,13 +95,11 @@
     width: 100%; padding: 12px; border: 1.5px solid #ddd;
     border-radius: 8px; font-size: 18px; text-align: center;
     letter-spacing: 6px; font-weight: 600; font-family: inherit;
-    transition: 0.2s;
   }
-  .modal input:focus { border-color: #2c5aa0; outline: none; box-shadow: 0 0 0 3px rgba(44,90,160,0.1); }
+  .modal input:focus { border-color: #2c5aa0; outline: none; }
   .modal .btn-row { display: flex; gap: 10px; margin-top: 20px; }
   .modal .btn-row button { margin-top: 0; flex: 1; }
   .modal .btn-cancel { background: #6c757d; color: white; }
-  .modal .btn-cancel:hover { background: #5a6268; }
   .modal .msg {
     margin-top: 12px; padding: 10px; border-radius: 6px;
     font-size: 13px; display: none; text-align: center;
@@ -158,7 +155,7 @@
       <h3>🍽️ Meal History</h3>
       <div class="placeholder">
         Meal history এখনো খালি<br>
-        <small>OMR স্ক্যান হলে এখানে দেখা যাবে (Phase 4)</small>
+        <small>OMR স্ক্যান হলে এখানে দেখা যাবে</small>
       </div>
     </div>
 
@@ -196,7 +193,27 @@
 <script type="module">
 import { db, doc, getDoc, updateDoc } from './js/firebase-init.js';
 
-// ---------- Helpers ----------
+// ---------- Session Check ----------
+const studentId = localStorage.getItem('npmc_student_id');
+const loginTime = Number(localStorage.getItem('npmc_login_time') || 0);
+
+// ⚠️ If no session — go to login (only ONCE, no loop)
+if (!studentId) {
+  window.location.replace('student-login.html');
+}
+
+// 30-day session expiry
+const daysSince = (Date.now() - loginTime) / (1000 * 60 * 60 * 24);
+if (studentId && daysSince > 30) {
+  localStorage.removeItem('npmc_student_id');
+  localStorage.removeItem('npmc_login_time');
+  window.location.replace('student-login.html');
+}
+
+// ---------- State ----------
+let currentStudent = null;
+let currentStudentId = null;
+
 function escapeHtml(str) {
   return String(str || '').replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -218,32 +235,15 @@ function showError(msg) {
 }
 
 // ---------- Load Dashboard ----------
-let currentStudent = null;      // { id, data }
-let currentStudentId = null;
-
 async function loadDashboard() {
-  const studentId = localStorage.getItem('npmc_student_id');
-  const loginTime = Number(localStorage.getItem('npmc_login_time') || 0);
-
-  if (!studentId) {
-    window.location.href = 'student-login.html';
-    return;
-  }
-
-  // 30-day expiry
-  const daysSince = (Date.now() - loginTime) / (1000 * 60 * 60 * 24);
-  if (daysSince > 30) {
-    localStorage.removeItem('npmc_student_id');
-    localStorage.removeItem('npmc_login_time');
-    window.location.href = 'student-login.html';
-    return;
-  }
+  if (!studentId) return; // already redirected
 
   try {
     const snap = await getDoc(doc(db, 'students', studentId));
 
     if (!snap.exists()) {
       localStorage.removeItem('npmc_student_id');
+      localStorage.removeItem('npmc_login_time');
       showError('❌ তোমার record পাওয়া যায়নি — আবার login কর।');
       return;
     }
@@ -278,7 +278,7 @@ async function loadDashboard() {
   }
 }
 
-// ---------- PIN Change Modal ----------
+// ---------- PIN Change ----------
 window.openPinModal = function() {
   document.getElementById('pinModal').classList.add('show');
   document.getElementById('currentPin').value = '';
@@ -303,7 +303,6 @@ window.changePin = async function() {
   const newPin = document.getElementById('newPin').value.trim();
   const confirmPin = document.getElementById('confirmPin').value.trim();
 
-  // Validations
   if (!currentPin || !newPin || !confirmPin) {
     return showModalMsg('⚠️ সব field পূরণ কর', 'error');
   }
@@ -322,7 +321,6 @@ window.changePin = async function() {
   btn.innerHTML = '<span class="modal-spinner"></span>Change হচ্ছে...';
 
   try {
-    // Verify current PIN
     const roll = currentStudent.roll;
     const currentHash = await hashPin(currentPin, roll);
 
@@ -330,23 +328,17 @@ window.changePin = async function() {
       throw new Error('Current PIN ভুল');
     }
 
-    // Hash new PIN
     const newHash = await hashPin(newPin, roll);
 
-    // Update Firestore
     await updateDoc(doc(db, 'students', currentStudentId), {
       pinHash: newHash,
       pinChangedAt: new Date().toISOString()
     });
 
-    // Update local cache
     currentStudent.pinHash = newHash;
 
     showModalMsg('✅ PIN সফলভাবে change হয়েছে!', 'ok');
-
-    setTimeout(() => {
-      closePinModal();
-    }, 1500);
+    setTimeout(() => closePinModal(), 1500);
 
   } catch (e) {
     console.error(e);
@@ -362,10 +354,10 @@ window.logout = function() {
   if (!confirm('Logout করব?')) return;
   localStorage.removeItem('npmc_student_id');
   localStorage.removeItem('npmc_login_time');
-  window.location.href = 'student-login.html';
+  window.location.replace('student-login.html');
 };
 
-// ---------- Modal: ESC to close + click outside ----------
+// ---------- Modal Keyboard ----------
 document.getElementById('pinModal').addEventListener('click', e => {
   if (e.target.id === 'pinModal') closePinModal();
 });
