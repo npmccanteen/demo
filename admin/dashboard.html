@@ -362,6 +362,19 @@ async function init() {
     recipientId: 'ALL_ADMINS'
   });
   requestBrowserNotificationPermission();
+
+  // ⭐ OneSignal Admin Login
+  if (window.OneSignalDeferred) {
+    OneSignalDeferred.push(async function(OneSignal) {
+      try {
+        const email = auth?.currentUser?.email || 'default';
+        await OneSignal.login('admin_' + email);
+        console.log('✅ OneSignal admin logged in:', email);
+      } catch (e) {
+        console.warn('OneSignal admin login failed:', e);
+      }
+    });
+  }
 }
 
 async function loadAll() {
