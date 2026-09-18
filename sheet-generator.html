@@ -11,25 +11,18 @@
   h1 { color: #2c5aa0; margin-bottom: 5px; }
   .sub { color: #666; margin-bottom: 25px; font-size: 14px; }
 
-  .card {
-    background: white; padding: 25px; border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px;
-  }
+  .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px; }
   .row { display: flex; gap: 20px; flex-wrap: wrap; }
   .col { flex: 1; min-width: 220px; }
   label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 14px; }
   input[type="text"], input[type="month"], input[type="date"], select {
     width: 100%; padding: 11px 14px; border: 1.5px solid #ddd;
-    border-radius: 8px; font-size: 15px; font-family: inherit;
-    transition: 0.2s;
+    border-radius: 8px; font-size: 15px; font-family: inherit; transition: 0.2s;
   }
   input:focus, select:focus { border-color: #2c5aa0; outline: none; }
+  .batch-locked { background: #f0f4fa; cursor: not-allowed; font-weight: 600; color: #2c5aa0; border-color: #d0e0f5; }
 
-  button {
-    padding: 12px 24px; border: none; border-radius: 8px;
-    cursor: pointer; font-size: 14px; font-weight: 600;
-    margin-right: 8px; margin-top: 10px; transition: 0.2s;
-  }
+  button { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-right: 8px; margin-top: 10px; transition: 0.2s; }
   .btn-primary { background: #2c5aa0; color: white; }
   .btn-primary:hover { background: #1e4079; }
   .btn-primary:disabled { background: #999; cursor: not-allowed; }
@@ -39,173 +32,53 @@
   .btn-secondary { background: #6c757d; color: white; }
   .btn-secondary:hover { background: #5a6268; }
 
-  .mode-tabs {
-    display: flex; gap: 5px; margin-bottom: 20px;
-    border-bottom: 2px solid #e0e0e0;
-  }
-  .mode-tab {
-    padding: 12px 22px; background: transparent; border: none;
-    cursor: pointer; font-size: 14px; font-weight: 600;
-    color: #666; border-bottom: 3px solid transparent;
-    margin: 0; border-radius: 0;
-  }
+  .mode-tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; }
+  .mode-tab { padding: 12px 22px; background: transparent; border: none; cursor: pointer; font-size: 14px; font-weight: 600; color: #666; border-bottom: 3px solid transparent; margin: 0; border-radius: 0; }
   .mode-tab.active { color: #2c5aa0; border-bottom-color: #2c5aa0; }
 
-  .info-banner {
-    padding: 12px 16px; border-radius: 8px; margin-bottom: 15px;
-    font-size: 13px; background: #e7f3ff;
-    border-left: 4px solid #2c5aa0; color: #004085;
-  }
+  .info-banner { padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; background: #e7f3ff; border-left: 4px solid #2c5aa0; color: #004085; }
   .info-banner.warn { background: #fff3cd; border-left-color: #ff9800; color: #856404; }
   .info-banner.ok { background: #d4edda; border-left-color: #28a745; color: #155724; }
 
   .loading { text-align: center; padding: 40px; color: #666; }
-  .spinner {
-    display: inline-block; width: 20px; height: 20px;
-    border: 2px solid #e0e0e0; border-top-color: #2c5aa0;
-    border-radius: 50%; animation: spin 1s linear infinite;
-    margin-right: 8px; vertical-align: middle;
-  }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #e0e0e0; border-top-color: #2c5aa0; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* =====================================================
-     SHEET PREVIEW — A4 size scaled down
-     ===================================================== */
-  .preview-area {
-    background: #e9ecef; padding: 20px;
-    border-radius: 10px; max-height: 800px; overflow-y: auto;
-  }
-  .sheet-page {
-    width: 210mm; min-height: 297mm;
-    background: white; margin: 0 auto 20px;
-    padding: 10mm; position: relative;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    page-break-after: always;
-    font-family: Arial, sans-serif;
-  }
+  .preview-area { background: #e9ecef; padding: 20px; border-radius: 10px; max-height: 800px; overflow-y: auto; }
+  .sheet-page { width: 210mm; min-height: 297mm; background: white; margin: 0 auto 20px; padding: 10mm; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); page-break-after: always; font-family: Arial, sans-serif; }
   .sheet-page:last-child { page-break-after: auto; }
 
-  /* Corner markers for CV detection */
-  .marker {
-    position: absolute; width: 8mm; height: 8mm;
-    background: black;
-  }
-  .marker::after {
-    content: ''; position: absolute;
-    top: 2mm; left: 2mm; width: 4mm; height: 4mm;
-    background: white;
-  }
+  .marker { position: absolute; width: 8mm; height: 8mm; background: black; }
+  .marker::after { content: ''; position: absolute; top: 2mm; left: 2mm; width: 4mm; height: 4mm; background: white; }
   .marker.tl { top: 5mm; left: 5mm; }
   .marker.tr { top: 5mm; right: 5mm; }
   .marker.bl { bottom: 5mm; left: 5mm; }
   .marker.br { bottom: 5mm; right: 5mm; }
 
-  .sheet-header {
-    text-align: center; margin: 8mm 0 4mm;
-    font-size: 14pt; font-weight: 700;
-  }
-  .sheet-meta {
-    text-align: center; font-size: 9pt;
-    margin-bottom: 4mm; color: #333;
-  }
-  .sheet-id {
-    text-align: right; font-size: 8pt;
-    margin-bottom: 2mm; color: #666;
-    font-family: 'Courier New', monospace;
-  }
+  .sheet-header { text-align: center; margin: 8mm 0 4mm; font-size: 14pt; font-weight: 700; }
+  .sheet-meta { text-align: center; font-size: 9pt; margin-bottom: 4mm; color: #333; }
+  .sheet-id { text-align: right; font-size: 8pt; margin-bottom: 2mm; color: #666; font-family: 'Courier New', monospace; }
 
   .sheet-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-  .sheet-table th, .sheet-table td {
-    border: 0.3mm solid #333;
-    padding: 0.8mm 1.5mm; text-align: center;
-    height: 6.5mm;
-  }
-  .sheet-table th {
-    background: #e8e8e8; font-size: 8pt;
-    font-weight: 700; line-height: 1.1;
-  }
+  .sheet-table th, .sheet-table td { border: 0.3mm solid #333; padding: 0.8mm 1.5mm; text-align: center; height: 6.5mm; }
+  .sheet-table th { background: #e8e8e8; font-size: 8pt; font-weight: 700; line-height: 1.1; }
   .sheet-table .name-cell { text-align: left; padding-left: 2mm; }
-  .sheet-table .roll-cell {
-    text-align: center; font-family: 'Courier New', monospace;
-    font-weight: 700; width: 14mm;
-  }
-  .bubble {
-    display: inline-block; width: 4.5mm; height: 4.5mm;
-    border: 0.4mm solid #000; border-radius: 50%;
-  }
+  .sheet-table .roll-cell { text-align: center; font-family: 'Courier New', monospace; font-weight: 700; width: 14mm; }
+  .bubble { display: inline-block; width: 4.5mm; height: 4.5mm; border: 0.4mm solid #000; border-radius: 50%; }
 
-  /* =====================================================
-     PRINT STYLES — Fixed for correct output
-     ===================================================== */
   @media print {
-    /* 1. Reset body and hide non-preview elements */
-    html, body {
-      background: white !important;
-      padding: 0 !important;
-      margin: 0 !important;
-    }
-
-    /* Hide the header, sub-title, config card, all cards except previewCard */
-    .container > h1,
-    .container > .sub,
-    .container > .card:not(#previewCard) {
-      display: none !important;
-    }
-
-    /* Reset the preview card */
-    #previewCard {
-      box-shadow: none !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      border-radius: 0 !important;
-      background: white !important;
-      display: block !important;
-    }
+    html, body { background: white !important; padding: 0 !important; margin: 0 !important; }
+    .container > h1, .container > .sub, .container > .card:not(#previewCard) { display: none !important; }
+    #previewCard { box-shadow: none !important; padding: 0 !important; margin: 0 !important; border-radius: 0 !important; background: white !important; display: block !important; }
     #previewCard > h3 { display: none !important; }
-
-    /* Preview area — remove overflow/max-height so all pages print */
-    .preview-area {
-      background: white !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      max-height: none !important;
-      overflow: visible !important;
-      border-radius: 0 !important;
-      display: block !important;
-    }
-
-    /* Each sheet = one A4 page */
-    .sheet-page {
-      width: 100% !important;
-      min-height: auto !important;
-      margin: 0 !important;
-      padding: 8mm !important;
-      box-shadow: none !important;
-      page-break-after: always;
-      page-break-inside: avoid;
-      display: block !important;
-    }
+    .preview-area { background: white !important; padding: 0 !important; margin: 0 !important; max-height: none !important; overflow: visible !important; border-radius: 0 !important; display: block !important; }
+    .sheet-page { width: 100% !important; min-height: auto !important; margin: 0 !important; padding: 8mm !important; box-shadow: none !important; page-break-after: always; page-break-inside: avoid; display: block !important; }
     .sheet-page:last-child { page-break-after: auto; }
-
-    /* Force colors to print */
-    .marker {
-      background: black !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-    .marker::after {
-      background: white !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-    .sheet-table th {
-      background: #e8e8e8 !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
+    .marker { background: black !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .marker::after { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .sheet-table th { background: #e8e8e8 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     .sheet-table td { border: 0.3mm solid #000 !important; }
     .bubble { border: 0.4mm solid #000 !important; }
-
     @page { size: A4 portrait; margin: 0; }
   }
 </style>
@@ -214,16 +87,14 @@
 
 <div class="container">
   <h1>📄 Sheet Generator</h1>
-  <p class="sub">Batch-এর জন্য দৈনিক meal sheet বানাও — প্রিন্ট কর, canteen malik ব্যবহার করবে</p>
+  <p class="sub">Batch 8 — Meal sheet বানাও, প্রিন্ট কর</p>
 
-  <!-- CONFIG CARD -->
   <div class="card">
     <div class="row">
       <div class="col">
-        <label>Batch Name</label>
-<input type="text" value="8" readonly 
-  style="width:100%; padding:10px; border:1.5px solid #ddd; border-radius:8px; background:#f0f4fa; cursor:not-allowed; font-weight:600; color:#2c5aa0;" />
-<input type="hidden" id="batchSelect" value="8" />
+        <label>Batch Name (fixed)</label>
+        <input type="text" value="8" readonly class="batch-locked" />
+        <input type="hidden" id="batchSelect" value="8" />
       </div>
       <div class="col">
         <label>Students per page</label>
@@ -235,7 +106,6 @@
       </div>
     </div>
 
-    <!-- MODE TABS -->
     <div style="margin-top:15px;">
       <div class="mode-tabs">
         <button class="mode-tab active" onclick="switchMode('day', event)">📅 একটা দিন</button>
@@ -258,26 +128,21 @@
             <input type="month" id="monthRange" />
           </div>
         </div>
-        <div class="info-banner" style="margin-top:12px;">
-          ⚠️ পুরো মাসের sheet একসাথে প্রিন্ট করলে <strong>কয়েকশো পৃষ্ঠা</strong> হতে পারে। একসাথে ৫-৭ দিনের বেশি না দেয়া ভালো।
+        <div class="info-banner warn" style="margin-top:12px;">
+          ⚠️ পুরো মাসের sheet একসাথে print করলে <strong>কয়েকশো পৃষ্ঠা</strong> হতে পারে। ৫-৭ দিনের বেশি না দেয়া ভালো।
         </div>
       </div>
     </div>
 
     <div style="margin-top:20px;">
-      <button class="btn-primary" onclick="generatePreview()" id="genBtn">
-        🔨 Sheet বানাও
-      </button>
-      <button class="btn-success" onclick="printSheets()" id="printBtn" disabled>
-        🖨️ Print কর
-      </button>
+      <button class="btn-primary" onclick="generatePreview()" id="genBtn">🔨 Sheet বানাও</button>
+      <button class="btn-success" onclick="printSheets()" id="printBtn" disabled>🖨️ Print কর</button>
       <button class="btn-secondary" onclick="clearPreview()">🧹 Clear</button>
     </div>
 
     <div id="statusMsg" style="margin-top:15px;"></div>
   </div>
 
-  <!-- PREVIEW -->
   <div class="card" id="previewCard" style="display:none;">
     <h3 style="margin-bottom:12px; color:#2c5aa0;">👀 Preview</h3>
     <div class="preview-area" id="previewArea"></div>
@@ -287,7 +152,6 @@
 <script type="module">
 import { db, collection, getDocs, query, where } from './js/firebase-init.js';
 
-// ---------- Elements ----------
 const batchSelect = document.getElementById('batchSelect');
 const perPageSel = document.getElementById('perPage');
 const statusMsg = document.getElementById('statusMsg');
@@ -298,36 +162,27 @@ const printBtn = document.getElementById('printBtn');
 let loadedStudents = [];
 let currentMode = 'day';
 
-// ---------- Init ----------
-init();
-
-async function init() {
-  const today = new Date();
-  document.getElementById('singleDate').value =
-    today.toISOString().split('T')[0];
-
-  const yyyymm = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-  document.getElementById('monthRange').value = yyyymm;
-
-  await loadBatches();
+// ---------- Time zone: Bangladesh ----------
+function todayStr() {
+  const now = new Date();
+  const bd = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+  const y = bd.getFullYear();
+  const m = String(bd.getMonth() + 1).padStart(2, '0');
+  const d = String(bd.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
-async function loadBatches() {
-  try {
-    const snap = await getDocs(collection(db, 'students'));
-    const batches = [...new Set(snap.docs.map(d => d.data().batchName).filter(Boolean))].sort();
+function currentMonthStr() {
+  const now = new Date();
+  const bd = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+  return `${bd.getFullYear()}-${String(bd.getMonth() + 1).padStart(2, '0')}`;
+}
 
-    if (batches.length === 0) {
-      batchSelect.innerHTML = '<option value="">— কোনো batch নেই — Student Import কর —</option>';
-      return;
-    }
+init();
 
-    batchSelect.innerHTML = '<option value="">— Batch select কর —</option>' +
-      batches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
-  } catch (e) {
-    console.error(e);
-    statusMsg.innerHTML = `<div class="info-banner warn">❌ Batch লোড হয়নি: ${escapeHtml(e.message)}</div>`;
-  }
+function init() {
+  document.getElementById('singleDate').value = todayStr();
+  document.getElementById('monthRange').value = currentMonthStr();
 }
 
 function escapeHtml(str) {
@@ -335,7 +190,6 @@ function escapeHtml(str) {
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 
-// ---------- Mode switching ----------
 window.switchMode = function(mode, event) {
   currentMode = mode;
   document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
@@ -344,11 +198,10 @@ window.switchMode = function(mode, event) {
   document.getElementById('modeMonth').style.display = mode === 'month' ? 'block' : 'none';
 };
 
-// ---------- Generate Preview ----------
 window.generatePreview = async function() {
   const batch = batchSelect.value;
   if (!batch) {
-    statusMsg.innerHTML = '<div class="info-banner warn">⚠️ আগে Batch select কর</div>';
+    statusMsg.innerHTML = '<div class="info-banner warn">⚠️ Batch নেই</div>';
     return;
   }
 
@@ -364,9 +217,7 @@ window.generatePreview = async function() {
       .map(d => d.data())
       .sort((a, b) => String(a.roll).localeCompare(String(b.roll), undefined, { numeric: true }));
 
-    if (loadedStudents.length === 0) {
-      throw new Error('এই batch-এ কোনো student নেই');
-    }
+    if (loadedStudents.length === 0) throw new Error('এই batch-এ কোনো student নেই');
 
     let dates = [];
     if (currentMode === 'day') {
@@ -391,8 +242,7 @@ window.generatePreview = async function() {
     for (const date of dates) {
       for (let p = 0; p < pagesPerDay; p++) {
         const slice = loadedStudents.slice(p * perPage, (p + 1) * perPage);
-        const page = makePage(batch, date, slice, p + 1, pagesPerDay);
-        previewArea.appendChild(page);
+        previewArea.appendChild(makePage(batch, date, slice, p + 1, pagesPerDay));
       }
     }
 
@@ -401,9 +251,7 @@ window.generatePreview = async function() {
     statusMsg.innerHTML = `<div class="info-banner ok">
       ✅ <strong>${loadedStudents.length}</strong> student × <strong>${dates.length}</strong> দিন × <strong>${pagesPerDay}</strong> page = <strong>${totalSheets}</strong> sheet তৈরি হয়েছে
     </div>`;
-
     previewCard.scrollIntoView({ behavior: 'smooth' });
-
   } catch (e) {
     console.error(e);
     statusMsg.innerHTML = `<div class="info-banner warn">❌ ${escapeHtml(e.message)}</div>`;
@@ -415,7 +263,6 @@ window.generatePreview = async function() {
   btn.innerHTML = '🔨 Sheet বানাও';
 };
 
-// ---------- Make one page ----------
 function makePage(batch, date, students, pageNum, totalPages) {
   const div = document.createElement('div');
   div.className = 'sheet-page';
@@ -475,19 +322,12 @@ function makePage(batch, date, students, pageNum, totalPages) {
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
-    </table>
-  `;
-
+    </table>`;
   return div;
 }
 
-// ---------- Print ----------
-window.printSheets = function() {
-  // Small delay ensures DOM is fully rendered
-  setTimeout(() => window.print(), 100);
-};
+window.printSheets = function() { setTimeout(() => window.print(), 100); };
 
-// ---------- Clear ----------
 window.clearPreview = function() {
   previewArea.innerHTML = '';
   previewCard.style.display = 'none';
