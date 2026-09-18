@@ -25,6 +25,7 @@
     border-radius: 8px; font-size: 15px; font-family: inherit; transition: 0.2s;
   }
   input:focus { border-color: #2c5aa0; outline: none; box-shadow: 0 0 0 3px rgba(44,90,160,0.1); }
+  #pin { text-align: center; font-size: 22px; letter-spacing: 8px; font-weight: 600; }
   button {
     width: 100%; padding: 14px; background: #2c5aa0; color: white;
     border: none; border-radius: 8px; font-size: 15px; font-weight: 600;
@@ -57,7 +58,7 @@
 
 <div class="card">
   <h1>🎓 Student Login</h1>
-  <p class="sub">Batch + Roll + Password দিয়ে login কর</p>
+  <p class="sub">Batch + Roll + PIN দিয়ে login কর</p>
 
   <label>Batch Name</label>
   <input type="text" id="batchName" placeholder="যেমন: Batch A" />
@@ -65,8 +66,8 @@
   <label>Roll Number</label>
   <input type="text" id="roll" placeholder="যেমন: 101" />
 
-  <label>Password</label>
-  <input type="password" id="password" placeholder="পাসওয়ার্ড" />
+  <label>PIN</label>
+  <input type="text" id="pin" placeholder="••••" maxlength="6" inputmode="numeric" />
 
   <button onclick="doLogin()" id="loginBtn">🔓 Login</button>
   <div class="msg" id="msg"></div>
@@ -75,18 +76,14 @@
 </div>
 
 <script type="module">
-import {
-  auth, signInWithEmailAndPassword, onAuthStateChanged
-} from './js/firebase-init.js';
+import { db, collection, getDocs, query, where } from './js/firebase-init.js';
 
-// Already logged in → dashboard
-onAuthStateChanged(auth, user => {
-  if (user) window.location.href = 'student-dashboard.html';
-});
-
-function makeEmail(batchName, roll) {
-  const slug = batchName.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return `${slug}_${roll}@npmc.meal`.toLowerCase();
+// ⚠️ IMPORTANT: If already logged in (localStorage has id), redirect to dashboard
+// BUT use a flag to avoid infinite loop
+const existingId = localStorage.getItem('npmc_student_id');
+if (existingId) {
+  // Already logged in — go to dashboard
+  window.location.replace('student-dashboard.html');
 }
 
 function showMsg(text, type) {
@@ -95,12 +92,19 @@ function showMsg(text, type) {
   el.innerHTML = text;
 }
 
+async function hashPin(pin, roll) {
+  const data = new TextEncoder().encode(pin + ':' + roll + ':npmc');
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 window.doLogin = async function() {
   const batchName = document.getElementById('batchName').value.trim();
   const roll = document.getElementById('roll').value.trim();
-  const password = document.getElementById('password').value;
+  const pin = document.getElementById('pin').value.trim();
 
-  if (!batchName || !roll || !password) {
+  if (!batchName || !roll || !pin) {
     return showMsg('⚠️ সব field পূরণ কর', 'error');
   }
 
@@ -109,28 +113,45 @@ window.doLogin = async function() {
   btn.innerHTML = '<span class="spinner"></span>Login হচ্ছে...';
 
   try {
-    const email = makeEmail(batchName, roll);
-    await signInWithEmailAndPassword(auth, email, password);
+    const q = query(
+      collection(db, 'students'),
+      where('batchName', '==', batchName),
+      where('roll', '==', roll)
+    );
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      throw new Error('Batch বা Roll ভুল');
+    }
+
+    const studentDoc = snap.docs[0];
+    const student = studentDoc.data();
+
+    if (!student.pinHash) {
+      throw new Error('এই batch-এর PIN এখনো সেট হয়নি — Admin-কে বল');
+    }
+
+    const inputHash = await hashPin(pin, roll);
+    if (inputHash !== student.pinHash) {
+      throw new Error('PIN ভুল');
+    }
+
+    // Save session
+    localStorage.setItem('npmc_student_id', studentDoc.id);
+    localStorage.setItem('npmc_login_time', Date.now().toString());
+
     showMsg('✅ Login সফল! Dashboard-এ যাচ্ছি...', 'ok');
-    setTimeout(() => window.location.href = 'student-dashboard.html', 800);
+    setTimeout(() => window.location.replace('student-dashboard.html'), 500);
+
   } catch (e) {
     console.error(e);
-    let msg = e.message;
-    if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found') {
-      msg = 'Batch / Roll / Password ভুল';
-    } else if (e.code === 'auth/too-many-requests') {
-      msg = 'অনেকবার try করা হয়েছে — কিছুক্ষণ পর try কর';
-    } else if (e.code === 'auth/invalid-email') {
-      msg = 'Batch Name বা Roll format ভুল';
-    }
-    showMsg('❌ ' + msg, 'error');
+    showMsg('❌ ' + e.message, 'error');
     btn.disabled = false;
     btn.textContent = '🔓 Login';
   }
 };
 
-// Enter key support
-['batchName','roll','password'].forEach(id => {
+['batchName','roll','pin'].forEach(id => {
   document.getElementById(id).addEventListener('keypress', e => {
     if (e.key === 'Enter') doLogin();
   });
